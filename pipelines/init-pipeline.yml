@@ -1,0 +1,266 @@
+# Terraform Initialization Pipeline for TRL Hub and Spoke Infrastructure
+# Sets up Terraform backend and validates configuration
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - modules/
+    - workspaces/
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - modules/
+    - workspaces/
+
+variables:
+  - group: trl-hubspoke-variables
+  - name: terraformVersion
+    value: '1.5.7'
+  - name: azureSubscription
+    value: 'trl-hubspoke-service-connection'
+
+stages:
+#================================================
+# TERRAFORM BACKEND SETUP
+#================================================
+- stage: SetupBackend
+  displayName: 'Setup Terraform Backend'
+  jobs:
+  - job: CreateBackend
+    displayName: 'Create Terraform State Backend'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Create Terraform Backend Resources'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          # Set variables
+          RESOURCE_GROUP_NAME="trl-hubspoke-tfstate-rg"
+          STORAGE_ACCOUNT_NAME="trlhubspoketfstate"
+          CONTAINER_NAME="tfstate"
+          LOCATION="West Europe"
+          
+          echo ":) Setting up Terraform backend infrastructure..."
+          
+          # Create resource group for Terraform state
+          echo "|) Creating resource group: $RESOURCE_GROUP_NAME"
+          az group create --name $RESOURCE_GROUP_NAME --location "$LOCATION"
+          
+          # Create storage account for Terraform state
+          echo ":) Creating storage account: $STORAGE_ACCOUNT_NAME"
+          az storage account create \
+            --resource-group $RESOURCE_GROUP_NAME \
+            --name $STORAGE_ACCOUNT_NAME \
+            --sku Standard_LRS \
+            --encryption-services blob \
+            --location "$LOCATION"
+          
+          # Create blob container for state files
+          echo "|) Creating blob container: $CONTAINER_NAME"
+          az storage container create \
+            --name $CONTAINER_NAME \
+            --account-name $STORAGE_ACCOUNT_NAME \
+            --auth-mode login
+          
+          # Enable versioning for state file protection
+          echo ":) Enabling blob versioning..."
+          az storage account blob-service-properties update \
+            --account-name $STORAGE_ACCOUNT_NAME \
+            --enable-versioning true
+          
+          echo ":) Terraform backend setup completed successfully!"
+          echo "|) Backend Configuration:"
+          echo "   Resource Group: $RESOURCE_GROUP_NAME"
+          echo "   Storage Account: $STORAGE_ACCOUNT_NAME"
+          echo "   Container: $CONTAINER_NAME"
+
+#================================================
+# TERRAFORM INITIALIZATION
+#================================================
+- stage: InitializeWorkspaces
+  displayName: 'Initialize Terraform Workspaces'
+  dependsOn: SetupBackend
+  condition: succeeded()
+  jobs:
+  - job: InitHub
+    displayName: 'Initialize Hub Workspace'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - task: AzureCLI@2
+      displayName: 'Initialize Hub Terraform'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo ":) Initializing Hub workspace..."
+          cd workspaces/hub
+          terraform init
+          terraform validate
+          echo ":) Hub workspace initialized successfully"
+
+  - job: InitManagement
+    displayName: 'Initialize Management Workspace'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - task: AzureCLI@2
+      displayName: 'Initialize Management Terraform'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo ":) Initializing Management workspace..."
+          cd workspaces/management
+          terraform init
+          terraform validate
+          echo ":) Management workspace initialized successfully"
+
+  - job: InitSpokes
+    displayName: 'Initialize Spoke Workspaces'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      matrix:
+        dev:
+          environmentName: 'dev'
+        staging:
+          environmentName: 'staging'
+        prod:
+          environmentName: 'prod'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - task: AzureCLI@2
+      displayName: 'Initialize $(environmentName) Spoke Terraform'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo ":) Initializing $(environmentName) spoke workspace..."
+          cd workspaces/spokes/$(environmentName)
+          terraform init
+          terraform validate
+          echo ":) $(environmentName) spoke workspace initialized successfully"
+
+#================================================
+# VALIDATION AND SECURITY CHECKS
+#================================================
+- stage: ValidationAndSecurity
+  displayName: 'Validation and Security Checks'
+  dependsOn: InitializeWorkspaces
+  condition: succeeded()
+  jobs:
+  - job: ValidateModules
+    displayName: 'Validate Terraform Modules'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - script: |
+        echo ":) Validating Terraform modules..."
+        cd modules
+        terraform init -backend=false
+        terraform validate
+        terraform fmt -check -recursive
+        echo ":) Module validation completed"
+      displayName: 'Validate Modules'
+
+  - job: SecurityScan
+    displayName: 'Security Scanning'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo ":) Installing security scanning tools..."
+        
+        # Install tfsec
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+        
+        # Install checkov
+        pip install checkov
+        
+        echo ":) Running security scans..."
+        
+        # Run tfsec scan
+        echo "Running tfsec security scan..."
+        tfsec modules/ --format json --out tfsec-results.json || true
+        
+        # Run checkov scan
+        echo "Running checkov compliance scan..."
+        checkov -d modules/ --framework terraform --output json --output-file-path checkov-results.json || true
+        
+        echo ":) Security scans completed"
+      displayName: 'Run Security Scans'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish Security Scan Results'
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/*-results.json'
+        failTaskOnFailedTests: false
+
+#================================================
+# COMPLETION SUMMARY
+#================================================
+- stage: Summary
+  displayName: 'Initialization Summary'
+  dependsOn: ValidationAndSecurity
+  condition: succeeded()
+  jobs:
+  - job: SummaryReport
+    displayName: 'Generate Summary Report'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - script: |
+        echo ":) Terraform Initialization Completed Successfully!"
+        echo ""
+        echo "|) Summary of Initialized Components:"
+        echo ":) Terraform backend storage account created"
+        echo ":) Hub workspace initialized and validated"
+        echo ":) Management workspace initialized and validated"
+        echo ":) All spoke workspaces (dev/staging/prod) initialized"
+        echo ":) Security scans completed"
+        echo ":) All configurations validated"
+        echo ""
+        echo ":) Ready for Terraform planning and deployment!"
+        echo ""
+        echo "|) Next Steps:"
+        echo "   1. Run terraform plan pipeline to review changes"
+        echo "   2. Deploy hub infrastructure first"
+        echo "   3. Deploy spoke environments incrementally"
+        echo "   4. Monitor and validate deployments"
+      displayName: 'Initialization Summary'

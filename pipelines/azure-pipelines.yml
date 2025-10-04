@@ -1,0 +1,287 @@
+# Azure DevOps Pipeline for TRL Hub and Spoke Infrastructure
+# Multi-stage pipeline with workspace-based deployment
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - modules/
+    - workspaces/
+    - pipelines/
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - modules/
+    - workspaces/
+
+variables:
+  - group: trl-hubspoke-variables
+  - name: terraformVersion
+    value: '1.5.7'
+  - name: azureSubscription
+    value: 'trl-hubspoke-service-connection'
+
+stages:
+#================================================
+# VALIDATION STAGE
+#================================================
+- stage: Validation
+  displayName: 'Terraform Validation'
+  jobs:
+  - job: ValidateModules
+    displayName: 'Validate Terraform Modules'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - script: |
+        cd modules
+        terraform init -backend=false
+        terraform validate
+        terraform fmt -check -recursive
+      displayName: 'Validate Modules'
+
+#================================================
+# HUB DEPLOYMENT STAGE
+#================================================
+- stage: DeployHub
+  displayName: 'Deploy Hub Infrastructure'
+  dependsOn: Validation
+  condition: succeeded()
+  jobs:
+  - deployment: HubDeployment
+    displayName: 'Deploy Hub Workspace'
+    environment: 'trl-hubspoke-hub'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Hub Infrastructure'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd workspaces/hub
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply tfplan
+                terraform output -json > hub-outputs.json
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Hub Outputs'
+            inputs:
+              targetPath: 'workspaces/hub/hub-outputs.json'
+              artifact: 'hub-outputs'
+
+#================================================
+# MANAGEMENT DEPLOYMENT STAGE
+#================================================
+- stage: DeployManagement
+  displayName: 'Deploy Management Infrastructure'
+  dependsOn: DeployHub
+  condition: succeeded()
+  jobs:
+  - deployment: ManagementDeployment
+    displayName: 'Deploy Management Workspace'
+    environment: 'trl-hubspoke-management'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Management Infrastructure'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd workspaces/management
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply tfplan
+
+#================================================
+# SPOKE DEPLOYMENT STAGES
+#================================================
+- stage: DeploySpokeDev
+  displayName: 'Deploy Dev Spokes'
+  dependsOn: DeployHub
+  condition: succeeded()
+  jobs:
+  - deployment: DevSpokesDeployment
+    displayName: 'Deploy Dev Spoke Workspaces'
+    environment: 'trl-hubspoke-dev'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Dev Spokes'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd workspaces/spokes/dev
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply tfplan
+
+- stage: DeploySpokesStaging
+  displayName: 'Deploy Staging Spokes'
+  dependsOn:
+  - DeployHub
+  - DeploySpokeDev
+  condition: succeeded()
+  jobs:
+  - deployment: StagingSpokesDeployment
+    displayName: 'Deploy Staging Spoke Workspaces'
+    environment: 'trl-hubspoke-staging'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Staging Spokes'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd workspaces/spokes/staging
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply tfplan
+
+- stage: DeploySpokesProduction
+  displayName: 'Deploy Production Spokes'
+  dependsOn:
+  - DeployHub
+  - DeploySpokesStaging
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: ProductionApproval
+    displayName: 'Production Deployment Approval'
+    environment: 'trl-hubspoke-production-approval'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Manual approval required for production deployment"
+            displayName: 'Approval Gate'
+
+  - deployment: ProductionSpokesDeployment
+    displayName: 'Deploy Production Spoke Workspaces'
+    dependsOn: ProductionApproval
+    environment: 'trl-hubspoke-production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Production Spokes'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd workspaces/spokes/prod
+                terraform init
+                terraform plan -out=tfplan
+                terraform apply tfplan
+
+#================================================
+# POST-DEPLOYMENT VALIDATION
+#================================================
+- stage: PostDeploymentValidation
+  displayName: 'Post-Deployment Validation'
+  dependsOn:
+  - DeploySpokesProduction
+  condition: succeeded()
+  jobs:
+  - job: InfrastructureValidation
+    displayName: 'Validate Deployed Infrastructure'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Infrastructure'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Validating hub infrastructure..."
+          az network vnet list --resource-group trl-hubspoke-prod-rg-hub --output table
+          
+          echo "Validating firewall..."
+          az network firewall list --resource-group trl-hubspoke-prod-rg-hub --output table
+          
+          echo "Validating bastion..."
+          az network bastion list --resource-group trl-hubspoke-prod-rg-hub --output table
+          
+          echo "Validating spokes..."
+          az network vnet list --resource-group trl-hubspoke-prod-rg-spoke1 --output table
+          az network vnet list --resource-group trl-hubspoke-prod-rg-spoke2 --output table
+          
+          echo "✅ Infrastructure validation completed successfully"

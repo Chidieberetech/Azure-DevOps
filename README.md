@@ -5,6 +5,122 @@ Azure DevOps is a cloud-based platform that provides integrated tools for softwa
 
 This project implements a secure Hub and Spoke network topology in Azure using Terraform, with all traffic routing through Azure Firewall and utilizing Azure free tier services.
 
+## TRL Naming Convention
+
+This project follows the standardized TRL naming convention: `<org>-<project>-<env>-<resourceType>[-<suffix>]`
+
+- **Organization**: `trl`
+- **Project**: `Azure.IAC.hubspoke` 
+- **Environment**: `dev`, `staging`, `prod`
+- **Resource Type**: See abbreviations table below
+- **Suffix**: Optional descriptive suffix (e.g., `main`, `01`, `web`)
+
+## Azure Resources and Naming Conventions
+
+### Core Infrastructure
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Resource Group | `rg` | 90 | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-rg-hub` |
+| Virtual Network | `vnet` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-vnet-hub` |
+| Subnet | `snet` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-snet-workload` |
+| Network Interface | `nic` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nic-vm01` |
+| Public IP | `pip` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pip-afw` |
+| Load Balancer | `lb` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-lb-web` |
+| Application Gateway | `agw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-agw-web` |
+
+### Security & Identity
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Network Security Group | `nsg` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nsg-web` |
+| Route Table | `rt` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-rt-spoke1` |
+| Azure Firewall | `afw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afw` |
+| Firewall Policy | `afwp` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afwp` |
+| Bastion | `bas` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bas` |
+| Key Vault | `kv` | 24 | Alphanumeric, hyphen | `trl-hubspoke-prod-kv` |
+| Private Endpoint | `pep` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pep-sql` |
+| Private DNS Zone | `pdns` | 63 | Alphanumeric, hyphen, period | `privatelink.database.windows.net` |
+| User Assigned Identity | `id` | 128 | Alphanumeric, underscore, hyphen | `trl-hubspoke-prod-id-vm` |
+
+### Compute & Web
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Virtual Machine | `vm` | 64 (Win), 15 (Linux) | Alphanumeric, hyphen | `trl-hubspoke-prod-vm-web01` |
+| VM Scale Set | `vmss` | 64 (Win), 15 (Linux) | Alphanumeric, hyphen | `trl-hubspoke-prod-vmss-web` |
+| Availability Set | `avail` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-avail-web` |
+| Managed Disk | `disk` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-disk-vm01-os` |
+| App Service Plan | `plan` | 40 | Alphanumeric, hyphen | `trl-hubspoke-prod-plan-web` |
+| App Service | `app` | 60 | Alphanumeric, hyphen | `trl-hubspoke-prod-app-web` |
+| Function App | `func` | 60 | Alphanumeric, hyphen | `trl-hubspoke-prod-func-api` |
+
+### Data & Storage
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Storage Account | `st` | 24 | Lowercase alphanumeric | `trlhubspokeprodst` |
+| SQL Server | `sql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-sql` |
+| SQL Database | `sqldb` | 128 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqldb-main` |
+| Cosmos DB | `cosmos` | 44 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-cosmos` |
+| Redis Cache | `redis` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-redis` |
+| MySQL Database | `mysql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-mysql` |
+| PostgreSQL Database | `psql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-psql` |
+| Data Factory | `adf` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-adf` |
+| Synapse Workspace | `syn` | 45 | Alphanumeric, hyphen | `trl-hubspoke-prod-syn` |
+
+### Containers & DevOps
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Container Registry | `cr` | 50 | Alphanumeric | `trlhubspokeprodcr` |
+| Kubernetes Service | `aks` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-aks` |
+| Container Instance | `ci` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-ci-web` |
+| Service Bus Namespace | `sb` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-sb` |
+| Service Bus Queue | `sbq` | 50 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbq-orders` |
+| Event Hub Namespace | `evhns` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-evhns` |
+| Event Hub | `evh` | 50 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-evh-logs` |
+
+### Monitoring & Management
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Log Analytics Workspace | `log` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-log` |
+| Application Insights | `appi` | 260 | Unicode characters | `trl-hubspoke-prod-appi-web` |
+| Recovery Services Vault | `rsv` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-rsv` |
+| Automation Account | `aa` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-aa` |
+| Policy Definition | `policy` | 128 | Unicode characters | `trl-hubspoke-prod-policy-deny-pip` |
+| Policy Assignment | `assign` | 128 | Unicode characters | `trl-hubspoke-prod-assign-deny-pip` |
+
+### AI & Cognitive Services
+
+| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
+|---------------|--------------|------------|-------------------|---------|
+| Cognitive Services | `cog` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cog-vision` |
+| Machine Learning Workspace | `mlw` | 260 | Unicode characters | `trl-hubspoke-prod-mlw` |
+| Search Service | `srch` | 60 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-srch` |
+
+## Character Restrictions Summary
+
+### Common Rules:
+- **No spaces allowed** in any resource names
+- **Case sensitivity varies** by resource type
+- **Special characters** are limited and resource-specific
+- **Global uniqueness required** for some resources (Storage Accounts, Key Vaults, etc.)
+
+### Character Categories:
+- **Alphanumeric**: `a-z`, `A-Z`, `0-9`
+- **Hyphen**: `-` (not at start/end for most resources)
+- **Underscore**: `_`
+- **Period**: `.`
+- **Parentheses**: `()`
+
+### Length Considerations:
+- Consider the **full naming convention length** when planning
+- Leave room for **environment suffixes** and **incremental numbers**
+- Some resources have **very short limits** (Storage Accounts: 24 chars)
+- Plan for **automated deployments** that might add suffixes
+
 ## Architecture Overview
 
 ### Hub and Spoke Topology
@@ -21,7 +137,7 @@ This project implements a secure Hub and Spoke network topology in Azure using T
 - Private endpoints for all Azure services
 - Azure Bastion for secure remote access
 - Key Vault integration for all credentials
-- Network Security Groups (NSGs) for additional protection
+- **NO Network Security Groups (NSGs)** - All traffic managed by Azure Firewall
 
 ## Step-by-Step Solution Architecture
 

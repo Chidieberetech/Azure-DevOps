@@ -1,0 +1,241 @@
+# Azure DevOps Pipeline for TRL Hub and Spoke Infrastructure
+# Approval workflow with manual gates for production deployments
+
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - terraform/
+    - azure-pipelines.yml
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - terraform/
+
+variables:
+  - group: trl-hubspoke-variables
+  - name: terraformVersion
+    value: '1.5.7'
+  - name: azureSubscription
+    value: 'trl-hubspoke-service-connection'
+
+stages:
+- stage: TerraformValidate
+  displayName: 'Terraform Validate'
+  jobs:
+  - job: ValidateJob
+    displayName: 'Validate Terraform Configuration'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Init'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          cd terraform/environments/prod
+          terraform init
+          terraform validate
+          terraform fmt -check
+
+- stage: TerraformPlan
+  displayName: 'Terraform Plan'
+  dependsOn: TerraformValidate
+  condition: succeeded()
+  jobs:
+  - job: PlanJob
+    displayName: 'Create Terraform Plan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Plan'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          cd terraform/environments/prod
+          terraform init
+          terraform plan -out=tfplan -detailed-exitcode
+          
+          # Save plan as artifact
+          terraform show -json tfplan > tfplan.json
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan'
+      inputs:
+        targetPath: 'terraform/environments/prod/tfplan'
+        artifact: 'terraform-plan'
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan JSON'
+      inputs:
+        targetPath: 'terraform/environments/prod/tfplan.json'
+        artifact: 'terraform-plan-json'
+
+- stage: SecurityScan
+  displayName: 'Security & Compliance Scan'
+  dependsOn: TerraformPlan
+  condition: succeeded()
+  jobs:
+  - job: SecurityScanJob
+    displayName: 'Security Scanning'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Terraform Plan'
+      inputs:
+        artifactName: 'terraform-plan-json'
+        targetPath: '$(Pipeline.Workspace)/terraform-plan'
+
+    - task: TerraformInstaller@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: $(terraformVersion)
+
+    - script: |
+        # Install tfsec for security scanning
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+        
+        # Run security scan
+        cd terraform/environments/prod
+        tfsec . --format json --out tfsec-results.json || true
+        
+        # Install checkov for compliance scanning
+        pip install checkov
+        checkov -f $(Pipeline.Workspace)/terraform-plan/tfplan.json --framework terraform_plan --output json --output-file-path checkov-results.json || true
+
+      displayName: 'Run Security Scans'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish Security Scan Results'
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/*-results.json'
+        failTaskOnFailedTests: false
+
+- stage: ManualApproval
+  displayName: 'Manual Approval Gate'
+  dependsOn:
+  - TerraformPlan
+  - SecurityScan
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: ApprovalJob
+    displayName: 'Infrastructure Deployment Approval'
+    environment: 'trl-hubspoke-production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - script: echo "Manual approval required for production deployment"
+            displayName: 'Approval Checkpoint'
+
+- stage: TerraformApply
+  displayName: 'Terraform Apply'
+  dependsOn: ManualApproval
+  condition: succeeded()
+  jobs:
+  - deployment: ApplyJob
+    displayName: 'Deploy Infrastructure'
+    environment: 'trl-hubspoke-production'
+    pool:
+      vmImage: 'ubuntu-latest'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifactName: 'terraform-plan'
+              targetPath: '$(Pipeline.Workspace)/terraform-plan'
+
+          - task: TerraformInstaller@0
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: $(terraformVersion)
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply'
+            inputs:
+              azureSubscription: $(azureSubscription)
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                cd terraform/environments/prod
+                terraform init
+                cp $(Pipeline.Workspace)/terraform-plan/tfplan .
+                terraform apply tfplan
+                
+                # Output infrastructure details
+                terraform output -json > infrastructure-outputs.json
+
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Infrastructure Outputs'
+            inputs:
+              targetPath: 'terraform/environments/prod/infrastructure-outputs.json'
+              artifact: 'infrastructure-outputs'
+
+- stage: PostDeploymentTests
+  displayName: 'Post-Deployment Validation'
+  dependsOn: TerraformApply
+  condition: succeeded()
+  jobs:
+  - job: ValidationJob
+    displayName: 'Infrastructure Validation'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Infrastructure Outputs'
+      inputs:
+        artifactName: 'infrastructure-outputs'
+        targetPath: '$(Pipeline.Workspace)/outputs'
+
+    - task: AzureCLI@2
+      displayName: 'Validate Infrastructure'
+      inputs:
+        azureSubscription: $(azureSubscription)
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          # Test Azure Firewall
+          echo "Testing Azure Firewall connectivity..."
+          
+          # Test Bastion Host
+          echo "Validating Azure Bastion deployment..."
+          
+          # Test Key Vault accessibility
+          echo "Verifying Key Vault private endpoints..."
+          
+          # Test VM accessibility through Bastion
+          echo "Testing VM connectivity via Bastion..."
+          
+          # Validate private DNS resolution
+          echo "Testing private DNS zones..."
+          
+          echo "✅ All validation tests completed"

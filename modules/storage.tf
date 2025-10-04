@@ -1,0 +1,91 @@
+#================================================
+# STORAGE ACCOUNTS
+#================================================
+
+# Storage Account
+resource "azurerm_storage_account" "main" {
+  name                     = "${replace(local.resource_prefix, "-", "")}st${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.spokes[0].name
+  location                 = azurerm_resource_group.spokes[0].location
+  account_tier             = var.storage_account_tier
+  account_replication_type = var.storage_replication_type
+
+  # Security settings
+  public_network_access_enabled   = false
+  allow_nested_items_to_be_public = false
+  shared_access_key_enabled       = true
+
+  # Enable blob encryption
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+    container_delete_retention_policy {
+      days = 7
+    }
+  }
+
+  tags = local.common_tags
+}
+
+# Private Endpoint for Blob Storage
+resource "azurerm_private_endpoint" "storage_blob" {
+  name                = "${local.resource_prefix}-pep-st-blob"
+  location            = azurerm_resource_group.spokes[0].location
+  resource_group_name = azurerm_resource_group.spokes[0].name
+  subnet_id           = azurerm_subnet.spoke1_private_endpoint[0].id
+  tags                = local.common_tags
+
+  private_service_connection {
+    name                           = "psc-storage-blob"
+    private_connection_resource_id = azurerm_storage_account.main.id
+    subresource_names              = ["blob"]
+    is_manual_connection           = false
+  }
+
+  dynamic "private_dns_zone_group" {
+    for_each = var.enable_private_dns ? [1] : []
+    content {
+      name                 = "storage-blob-dns-zone-group"
+      private_dns_zone_ids = [azurerm_private_dns_zone.storage_blob[0].id]
+    }
+  }
+}
+
+# Private Endpoint for File Storage
+resource "azurerm_private_endpoint" "storage_file" {
+  name                = "${local.resource_prefix}-pep-st-file"
+  location            = azurerm_resource_group.spokes[0].location
+  resource_group_name = azurerm_resource_group.spokes[0].name
+  subnet_id           = azurerm_subnet.spoke1_private_endpoint[0].id
+  tags                = local.common_tags
+
+  private_service_connection {
+    name                           = "psc-storage-file"
+    private_connection_resource_id = azurerm_storage_account.main.id
+    subresource_names              = ["file"]
+    is_manual_connection           = false
+  }
+
+  dynamic "private_dns_zone_group" {
+    for_each = var.enable_private_dns ? [1] : []
+    content {
+      name                 = "storage-file-dns-zone-group"
+      private_dns_zone_ids = [azurerm_private_dns_zone.storage_file[0].id]
+    }
+  }
+}
+
+# Storage Container for application data
+resource "azurerm_storage_container" "app_data" {
+  name                  = "app-data"
+  storage_account_name  = azurerm_storage_account.main.name
+  container_access_type = "private"
+}
+
+# File Share for shared data (Free tier: 1GB)
+resource "azurerm_storage_share" "shared_data" {
+  name                 = "shared-data"
+  storage_account_name = azurerm_storage_account.main.name
+  quota                = 1  # 1GB for free tier
+}

@@ -1,4 +1,4 @@
-e r# Contributing to TRL Hub and Spoke Azure Infrastructure
+# Contributing to TRL Hub and Spoke Azure Infrastructure
 
 Thank you for your interest in contributing to the TRL Hub and Spoke Azure Infrastructure project! This document provides guidelines and instructions for contributing to this Terraform-based Azure infrastructure project.
 
@@ -676,7 +676,6 @@ resource "azurerm_virtual_network" "hub" {
 
 - **Issues**: GitHub issues for bugs and feature requests
 - **Discussions**: GitHub discussions for questions and ideas
-- **Email**: infrastructure-team@trl.com for private communications
 - **Wiki**: Project wiki for detailed documentation
 
 ### Resources

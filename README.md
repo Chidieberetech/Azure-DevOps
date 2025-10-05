@@ -3,7 +3,7 @@ Azure DevOps is a cloud-based platform that provides integrated tools for softwa
 
 # Azure DevOps Hub and Spoke Infrastructure with Terraform
 
-This project implements a secure Hub and Spoke network topology in Azure using Terraform, with all traffic routing through Azure Firewall and utilizing Azure free tier services.
+This project implements a secure Hub and Spoke network topology in Azure using Terraform, with comprehensive Azure service coverage across all major categories and utilizing Azure free tier services.
 
 ## TRL Naming Convention
 
@@ -14,6 +14,189 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 - **Environment**: `dev`, `staging`, `prod`
 - **Resource Type**: See abbreviations table below
 - **Suffix**: Optional descriptive suffix (e.g., `main`, `01`, `web`)
+
+## Azure Service Categories Covered
+
+This infrastructure deployment covers **all major Azure service categories**:
+
+### 🤖 AI + Machine Learning
+- **Cognitive Services**: Text analytics, computer vision, speech recognition
+- **Machine Learning Workspace**: ML model training and deployment
+- **Application Insights**: AI-powered application monitoring
+- **Container Registry for ML**: ML model container storage
+
+### 📊 Analytics
+- **Azure Synapse Analytics**: Enterprise data warehousing
+- **Data Factory**: Data integration and ETL pipelines
+- **Event Hub**: Real-time data streaming
+- **Stream Analytics**: Real-time data processing
+- **Time Series Insights**: IoT data analytics
+
+### 🐳 Containers
+- **Azure Kubernetes Service (AKS)**: Managed Kubernetes orchestration
+- **Container Registry**: Container image storage and management
+- **Container Instances**: Serverless container hosting
+- **Private AKS clusters**: Secure Kubernetes deployments
+
+### 🔧 DevOps
+- **Container Registry for DevOps**: Build artifact storage
+- **Storage Accounts**: DevOps artifact storage
+- **Key Vault**: DevOps secrets management
+- **App Configuration**: Feature flag management
+- **Service Bus**: Build notification messaging
+
+### ⚙️ General Services
+- **Logic Apps**: Workflow automation
+- **Automation Account**: Runbook execution
+- **API Management**: API gateway and management
+- **Service Bus**: Enterprise messaging
+- **Notification Hub**: Push notifications
+- **Azure Search**: Full-text search service
+
+### 🌐 Hybrid + Multicloud
+- **Azure Arc**: Hybrid and multicloud management
+- **Site Recovery**: Disaster recovery services
+- **Database Migration Service**: Database migration tools
+- **Azure Migrate**: Assessment and migration
+- **Storage Sync**: Hybrid file synchronization
+- **ExpressRoute/VPN Gateways**: Hybrid connectivity
+
+### 🔐 Identity
+- **Azure AD Domain Services**: Managed domain services
+- **Managed Identity**: Secure service authentication
+- **Azure AD B2C**: Customer identity management
+- **Key Vault for Identity**: Identity secret storage
+- **Custom Roles**: Fine-grained access control
+
+### 🔗 Integration
+- **Service Bus**: Enterprise message queuing
+- **Event Grid**: Event-driven architecture
+- **Logic Apps**: Integration workflows
+- **Application Gateway**: Load balancing and WAF
+- **Azure Relay**: Hybrid connection service
+
+### 🌐 Internet of Things (IoT)
+- **IoT Hub**: Device connectivity and messaging
+- **IoT Device Provisioning**: Automated device setup
+- **Digital Twins**: IoT device modeling
+- **Time Series Insights**: IoT data analytics
+- **IoT Central**: IoT application platform
+- **Azure Maps**: Location services
+
+### 📋 Management and Governance
+- **Azure Policy**: Compliance and governance
+- **Management Groups**: Hierarchical organization
+- **Azure Blueprints**: Repeatable deployments
+- **Cost Management**: Cost tracking and optimization
+- **Resource Graph**: Resource queries and inventory
+- **Azure Advisor**: Best practice recommendations
+
+### 📦 Migration
+- **Azure Migrate**: Migration assessment and execution
+- **Database Migration Service**: Database migration
+- **Azure Data Box**: Offline data transfer
+- **Site Recovery**: VM migration and DR
+- **Import/Export Service**: Large data transfer
+
+### 🥽 Mixed Reality
+- **Spatial Anchors**: Shared spatial experiences
+- **Remote Rendering**: Cloud-based 3D rendering
+- **Object Anchors**: Real-world object detection
+- **CDN for Mixed Reality**: Content delivery optimization
+
+### 📈 Monitor
+- **Application Insights**: Application performance monitoring
+- **Log Analytics**: Centralized logging
+- **Azure Monitor**: Infrastructure monitoring
+- **Action Groups**: Alert notification management
+- **Workbooks**: Custom monitoring dashboards
+- **Data Collection Rules**: Monitoring data configuration
+
+### 🌐 Web & Mobile
+- **App Service**: Web application hosting
+- **Function Apps**: Serverless compute
+- **Static Web Apps**: Static site hosting
+- **CDN**: Content delivery network
+- **Azure Front Door**: Global load balancing
+- **SignalR Service**: Real-time communication
+- **Communication Services**: Messaging and calling APIs
+
+
+## Azure Resource Naming Conventions
+
+All resources follow the standardized naming pattern:
+`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
+
+### Environment Abbreviations
+- **PRD**: Production
+- **STG**: Staging  
+- **DEV**: Development
+
+### Location Abbreviations
+- **WEU**: West Europe
+- **EUS**: East US
+- **NEU**: North Europe
+- **CUS**: Central US
+
+### Resource Examples
+- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-PRD-WEU-beta-001`
+- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-PRD-WEU-alpha-001`
+- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
+- **Storage Accounts**: `stprdweu001`, `stdiagprdweu001`
+- **Key Vaults**: `kv-PRD-WEU-001`
+- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
+- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
+- **Azure Firewall**: `afw-PRD-WEU-001`
+- **SQL Server**: `sql-PRD-WEU-001`
+
+## Infrastructure Architecture
+
+### Hub and Spoke Design
+The infrastructure implements a centralized hub with dedicated spoke networks:
+
+#### Hub (RG-TRL-Hub-weu)
+- **Purpose**: Shared services and central security
+- **VNet**: `vnet-PRD-WEU-hub-001` (10.0.0.0/16)
+- **Key Components**:
+  - Azure Firewall: `afw-PRD-WEU-001`
+  - Azure Bastion: `bastion-PRD-WEU-001`
+  - Key Vault: `kv-PRD-WEU-001`
+  - Diagnostics Storage: `stdiagprdweu001`
+
+#### Spoke Alpha
+- **Purpose**: Primary workload environment
+- **VNet**: `vnet-PRD-WEU-alpha-001` (10.1.0.0/16)
+- **VM**: `vm-PRD-WEU-alpha-001` (10.1.4.10)
+- **Storage**: `stprdweu001`
+
+#### Spoke Beta
+- **Purpose**: Secondary workload environment
+- **VNet**: `vnet-PRD-WEU-beta-001` (10.2.0.0/16)
+- **VM**: `vm-PRD-WEU-beta-001` (10.2.4.10)
+
+## Network Design
+
+### IP Address Allocation
+```
+Hub VNet (10.0.0.0/16) - vnet-PRD-WEU-hub-001
+├── AzureFirewallSubnet (10.0.1.0/26)
+├── AzureBastionSubnet (10.0.2.0/27)
+├── Shared Services (10.0.3.0/24) - snet-PRD-WEU-shared-001
+├── Private Endpoints (10.0.4.0/24) - snet-PRD-WEU-pe-hub-001
+└── Gateway Subnet (10.0.5.0/27)
+
+Spoke Alpha VNet (10.1.0.0/16) - vnet-PRD-WEU-alpha-001
+├── Workload Subnet (10.1.1.0/24) - snet-PRD-WEU-alpha-workload-001
+├── Database Subnet (10.1.2.0/24) - snet-PRD-WEU-alpha-db-001
+├── Private Endpoints (10.1.3.0/24) - snet-PRD-WEU-alpha-pe-001
+└── VM Subnet (10.1.4.0/24) - snet-PRD-WEU-alpha-vm-001
+
+Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
+├── Workload Subnet (10.2.1.0/24) - snet-PRD-WEU-beta-workload-001
+├── Database Subnet (10.2.2.0/24) - snet-PRD-WEU-beta-db-001
+├── Private Endpoints (10.2.3.0/24) - snet-PRD-WEU-beta-pe-001
+└── VM Subnet (10.2.4.0/24) - snet-PRD-WEU-beta-vm-001
+```
 
 ## Azure Resources and Naming Conventions
 
@@ -446,151 +629,95 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 - Service Bus Standard (750 hours)
 - Container Registry Standard (31 days)
 
-## Terraform Structure (Updated)
+## Connectivity Model
+- **Hub-to-Spoke Peering**: Centralized connectivity
+- **Spoke-to-Hub Routing**: All traffic via Azure Firewall
+- **Private Endpoints**: Secure PaaS service access
+- **Azure Bastion**: Secure VM management access
 
-```
-Azure DevOps/
-├── modules/                    # Core Terraform module (single module approach)
-│   ├── main.tf                # Resource groups and core configuration
-│   ├── network.tf             # All networking resources (hub, spokes, routing)
-│   ├── security.tf            # Firewall, Bastion, Key Vault
-│   ├── compute.tf             # Virtual machines and compute resources
-│   ├── storage.tf             # Storage accounts and containers
-│   ├── database.tf            # SQL and Cosmos DB resources
-│   ├── variables.tf           # All input variables
-│   ├── outputs.tf             # All output values
-│   ├── locals.tf              # Local values and computed data
-│   └── versions.tf            # Provider requirements
-├── pipelines/                 # Azure DevOps pipeline configurations
-│   ├── azure-pipelines.yml    # Main deployment pipeline
-│   ├── destroy-pipeline.yml   # Infrastructure destruction pipeline
-│   ├── init-pipeline.yml      # Terraform initialization pipeline
-│   ├── plan-pipeline.yml      # Terraform planning pipeline
-│   ├── apply-pipeline.yml     # Terraform apply pipeline
-│   ├── password-rotation.yml  # VM password rotation pipeline
-│   └── templates/             # Reusable pipeline templates
-│       ├── terraform-init.yml      # Terraform initialization template
-│       ├── terraform-plan.yml      # Terraform planning template
-│       ├── terraform-apply.yml     # Terraform apply template
-│       ├── terraform-destroy.yml   # Terraform destroy template
-│       ├── security-scan.yml       # Security scanning template
-│       └── infrastructure-validation.yml # Infrastructure validation template
-├── workspaces/                # Terraform workspaces for different deployments
-│   ├── hub/                   # Hub infrastructure workspace
-│   │   ├── main.tf            # Hub-specific configuration
-│   │   ├── variables.tf       # Hub variables
-│   │   └── outputs.tf         # Hub outputs
-│   ├── management/            # Management infrastructure workspace
-│   │   └── main.tf            # Management configuration
-│   └── spokes/                # Spoke workspaces by environment
-│       ├── dev/               # Development environment
-│       │   └── main.tf        # Dev spoke configuration
-│       ├── staging/           # Staging environment
-│       │   └── main.tf        # Staging spoke configuration
-│       └── prod/              # Production environment
-│           └── main.tf        # Production spoke configuration
-├── scripts/                   # Infrastructure management scripts
-│   ├── vm-password-rotation.sh    # Automated VM password rotation
-│   ├── cost-analysis.sh           # Cost analysis and optimization
-│   ├── health-check.sh            # Infrastructure health monitoring
-│   ├── backup-management.sh       # Backup operations and validation
-│   ├── environment-cleanup.sh     # Environment cleanup and optimization
-│   ├── init.sh                    # Terraform initialization
-│   ├── plan.sh                    # Terraform planning
-│   ├── apply.sh                   # Terraform apply
-│   └── destroy.sh                 # Terraform destroy
-├── README.md                  # Main project documentation
-├── CONTRIBUTING.md            # Contribution guidelines
-├── PIPELINE-SETUP-GUIDE.md    # Complete pipeline implementation guide
-└── PROJECT-STRUCTURE.md       # Detailed project structure documentation
-```
+## Security Architecture
 
-# TRL Hub-Spoke Azure Infrastructure
+### Defense in Depth
+1. **Network Level**: Azure Firewall with comprehensive rules
+2. **Subnet Level**: Network Security Groups (NSGs)
+3. **Application Level**: Private endpoints and secure protocols
+4. **Identity Level**: Key Vault and managed identities
+5. **Management Level**: Azure Bastion and just-in-time access
 
-This repository contains Terraform Infrastructure as Code (IaC) for deploying a secure hub-and-spoke network architecture on Microsoft Azure. The infrastructure follows Azure naming conventions and best practices for enterprise-grade deployments.
+### Key Security Features
+- **Zero Trust Networking**: No implicit trust, verify everything
+- **Private Connectivity**: No public IPs on workload VMs
+- **Centralized Logging**: All network traffic logged and monitored
+- **Credential Management**: Automated password rotation via Key Vault
+- **Encrypted Storage**: All data encrypted at rest and in transit
 
-## Architecture Overview
+## Deployment Patterns
 
-The solution deploys a centralized hub with multiple spoke networks:
+### Single Deployment (Hub Workspace)
+- Deploys complete hub infrastructure
+- Includes Spoke Alpha and Beta
+- Suitable for development and testing
 
-- **Hub**: Centralized services including Azure Firewall, Bastion, and shared resources
-- **Spoke Alpha**: First spoke network with Windows Server VM and workloads
-- **Spoke Beta**: Second spoke network with Windows Server VM and workloads
+### Multi-Workspace Deployment
+- Hub deployed separately
+- Spokes deployed per environment
+- Suitable for production with strict separation
 
-## Azure Resource Naming Conventions
+### Environment Progression
+1. **Development**: Single workspace deployment
+2. **Staging**: Multi-workspace with production-like setup
+3. **Production**: Full multi-workspace with governance
 
-All resources follow standardized Azure naming conventions:
+## Monitoring and Observability
 
-### Naming Pattern
-`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
+### Built-in Monitoring
+- **Azure Monitor**: Centralized logging and metrics
+- **Network Watcher**: Network topology and diagnostics
+- **Azure Security Center**: Security posture monitoring
+- **Cost Management**: Spend tracking and optimization
 
-### Examples
-- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-DEV-WEU-beta-001`
-- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-PRD-WEU-alpha-001`
-- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
-- **Storage Accounts**: `stprdweu001`, `stdiagprdweu001`
-- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
-- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
-- **Azure Firewall**: `afw-PRD-WEU-001`
-- **Key Vault**: `kv-PRD-WEU-001`
-- **SQL Server**: `sql-PRD-WEU-001`
-- **Cosmos DB**: `cosmos-PRD-WEU-001`
+### Custom Monitoring
+- **Health Check Scripts**: Automated infrastructure validation
+- **Cost Analysis**: Regular cost optimization reports
+- **Backup Validation**: Automated backup testing
+- **Performance Monitoring**: Application and infrastructure metrics
 
-### Abbreviations Used
-- **Environments**: PRD (Production), STG (Staging), DEV (Development)
-- **Locations**: WEU (West Europe), EUS (East US), NEU (North Europe)
-- **Resource Types**: vm (Virtual Machine), vnet (Virtual Network), rg (Resource Group), st (Storage Account), etc.
+## Best Practices Implementation
 
-## Infrastructure Components
+### Terraform Best Practices
+- **State Management**: Remote state with locking
+- **Module Design**: Reusable, configurable modules
+- **Variable Validation**: Input validation and type checking
+- **Output Organization**: Structured, meaningful outputs
 
-### Hub Resources (RG-TRL-Hub-weu)
-- **Azure Firewall**: `afw-PRD-WEU-001` - Centralized network security and routing
-- **Azure Bastion**: `bastion-PRD-WEU-001` - Secure RDP/SSH access to VMs
-- **Key Vault**: `kv-PRD-WEU-001` - Secure storage for VM passwords and certificates
-- **Diagnostics Storage**: `stdiagprdweu001` - Boot diagnostics for all VMs
-- **Private DNS Zones**: Internal name resolution
+### Azure Best Practices
+- **Resource Organization**: Logical resource grouping
+- **Naming Conventions**: Consistent, descriptive naming
+- **Security Configuration**: The Least privilege access
+- **Cost Optimization**: Right-sizing and automation
 
-### Spoke Alpha Resources
-- **Windows Server VM**: `vm-PRD-WEU-alpha-001` (10.1.4.10)
-- **Virtual Network**: `vnet-PRD-WEU-alpha-001` (10.1.0.0/16)
-- **Subnets**: VM, workload, database, and private endpoint subnets
-- **Storage Account**: `stprdweu001` - Private storage with blob and file shares
+### DevOps Best Practices
+- **Infrastructure as Code**: Version-controlled infrastructure
+- **Automated Testing**: Pipeline validation and testing
+- **Approval Gates**: Manual approvals for production
+- **Rollback Capability**: Safe deployment with rollback options
 
-### Spoke Beta Resources
-- **Windows Server VM**: `vm-PRD-WEU-beta-001` (10.2.4.10)
-- **Virtual Network**: `vnet-PRD-WEU-beta-001` (10.2.0.0/16)
-- **Subnets**: VM, workload, database, and private endpoint subnets
+## Maintenance and Operations
 
-## Network Architecture
+### Regular Tasks
+- **Password Rotation**: Automated via Key Vault and pipelines
+- **Cost Review**: Monthly cost analysis and optimization
+- **Security Updates**: Automated VM patching and updates
+- **Backup Validation**: Regular restore testing
+- **Performance Monitoring**: Capacity planning and optimization
 
-```
-Hub VNet (10.0.0.0/16) - vnet-PRD-WEU-hub-001
-├── Azure Firewall (10.0.1.0/26) - afw-PRD-WEU-001
-├── Azure Bastion (10.0.2.0/27) - bastion-PRD-WEU-001
-├── Shared Services (10.0.3.0/24) - snet-PRD-WEU-shared-001
-└── Private Endpoints (10.0.4.0/24) - snet-PRD-WEU-pe-hub-001
+### Emergency Procedures
+- **Incident Response**: Documented response procedures
+- **Disaster Recovery**: Backup and restore procedures
+- **Security Incidents**: Isolation and investigation procedures
+- **Performance Issues**: Troubleshooting and resolution guides
 
-Spoke Alpha VNet (10.1.0.0/16) - vnet-PRD-WEU-alpha-001
-├── VM Subnet (10.1.4.0/24) - snet-PRD-WEU-alpha-vm-001
-├── Workload Subnet (10.1.1.0/24) - snet-PRD-WEU-alpha-workload-001
-├── Database Subnet (10.1.2.0/24) - snet-PRD-WEU-alpha-db-001
-└── Private Endpoints (10.1.3.0/24) - snet-PRD-WEU-alpha-pe-001
-
-Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
-├── VM Subnet (10.2.4.0/24) - snet-PRD-WEU-beta-vm-001
-├── Workload Subnet (10.2.1.0/24) - snet-PRD-WEU-beta-workload-001
-├── Database Subnet (10.2.2.0/24) - snet-PRD-WEU-beta-db-001
-└── Private Endpoints (10.2.3.0/24) - snet-PRD-WEU-beta-pe-001
-```
-
-## Security Features
-
-- **Zero Trust Network**: All traffic routed through Azure Firewall
-- **Network Segmentation**: Separate subnets for different workload types
-- **Private Endpoints**: Secure connectivity to Azure PaaS services
-- **Azure Bastion**: Secure management access without public IPs on VMs
-- **Network Security Groups**: Granular traffic control at subnet level
-- **Key Vault Integration**: Secure credential management
+This structure provides a comprehensive, scalable, and maintainable foundation for enterprise Azure infrastructure deployment using Terraform and Azure DevOps.
 
 ## Quick Start
 
@@ -610,27 +737,6 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 3. **Access VMs**
    - Via Azure Bastion: Use Azure Portal
    - Via Firewall: RDP to firewall public IP on port 3389
-
-## Project Structure
-
-```
-.
-├── modules/                    # Reusable Terraform modules
-│   ├── main.tf                # Resource groups and core config
-│   ├── network.tf             # VNets, subnets, and peering
-│   ├── security.tf            # Firewall, Bastion, NSGs
-│   ├── compute.tf             # Virtual machines and extensions
-│   ├── storage.tf             # Storage accounts and containers
-│   ├── keyvault.tf            # Key Vault and secrets
-│   ├── database.tf            # SQL Server and Cosmos DB
-│   ├── locals.tf              # Local values and naming
-│   ├── variables.tf           # Input variables
-│   └── outputs.tf             # Output values
-├── workspaces/                # Environment-specific deployments
-│   └── hub/                   # Hub workspace (includes spokes)
-├── pipelines/                 # Azure DevOps CI/CD pipelines
-└── scripts/                   # Utility scripts
-```
 
 ## Cost Optimization
 

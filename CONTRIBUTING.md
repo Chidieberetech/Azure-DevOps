@@ -1,13 +1,15 @@
 # Contributing to TRL Hub-Spoke Infrastructure
 
-Thank you for your interest in contributing to the TRL Hub-Spoke Azure infrastructure project! This guide outlines the processes and standards for contributing to our Infrastructure as Code (IaC) implementation.
+Thank you for your interest in contributing to the TRL Hub-Spoke Azure infrastructure project! This guide outlines the processes and standards for contributing to our comprehensive Infrastructure as Code (IaC) implementation that covers **all 15 major Azure service categories**.
 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
+- [Azure Service Categories](#azure-service-categories)
 - [Development Workflow](#development-workflow)
 - [Naming Conventions](#naming-conventions)
+- [Module Development Guidelines](#module-development-guidelines)
 - [Testing Requirements](#testing-requirements)
 - [Pull Request Process](#pull-request-process)
 - [Documentation Standards](#documentation-standards)
@@ -35,8 +37,9 @@ Before contributing, ensure you have the following tools installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/trl/azure-hubspoke-infrastructure.git
-   cd azure-hubspoke-infrastructure
+   git clone https://github.com/Chidieberetech/Azure-DevOps.git
+   cd Azure-DevOps
+   git checkout main   
    ```
 
 2. **Set up Azure authentication**
@@ -51,410 +54,303 @@ Before contributing, ensure you have the following tools installed:
    terraform init
    ```
 
-## Development Workflow
+## Azure Service Categories
 
-### Branch Strategy
+Our infrastructure now supports **all major Azure service categories**. When contributing, please ensure your changes align with the appropriate service category:
 
-We follow the GitFlow branching model:
+### 🤖 AI + Machine Learning (`ai-ml.tf`)
+- Cognitive Services, Machine Learning Workspace, Application Insights
+- **Variables prefix**: `enable_cognitive_services`, `enable_machine_learning`
+- **Naming prefix**: `cog-`, `mlw-`, `appi-`
 
-- **main**: Production-ready code
-- **develop**: Integration branch for features
-- **feature/***: Individual feature development
-- **hotfix/***: Critical fixes for production
-- **release/***: Preparation for new releases
+### 📊 Analytics (`analytics.tf`)
+- Synapse Analytics, Data Factory, Event Hub, Stream Analytics
+- **Variables prefix**: `enable_synapse_analytics`, `enable_data_factory`
+- **Naming prefix**: `synw-`, `adf-`, `evhns-`, `asa-`
 
-### Feature Development Process
+### 🐳 Containers (`containers.tf`)
+- AKS, Container Registry, Container Instances
+- **Variables prefix**: `enable_aks`, `enable_container_registry`
+- **Naming prefix**: `aks-`, `acr`, `ci-`
 
-1. **Create a feature branch**
-   ```bash
-   git checkout develop
-   git pull origin develop
-   git checkout -b feature/your-feature-name
+### 🔧 DevOps (`devops.tf`)
+- DevOps tooling, artifacts storage, configuration management
+- **Variables prefix**: `enable_devops`
+- **Naming prefix**: `acr`, `st`, `kv-`, `appcs-`
+
+### ⚙️ General Services (`general.tf`)
+- Logic Apps, Automation, API Management, Service Bus
+- **Variables prefix**: `enable_logic_apps`, `enable_automation`
+- **Naming prefix**: `logic-`, `aa-`, `apim-`, `sb-`
+
+### 🌐 Hybrid + Multicloud (`hybrid-multicloud.tf`)
+- Azure Arc, Site Recovery, Migration Services, Gateways
+- **Variables prefix**: `enable_arc_kubernetes`, `enable_site_recovery`
+- **Naming prefix**: `arck8s-`, `rsv-`, `dms-`, `vgw-`
+
+### 🔐 Identity (`identity.tf`)
+- Azure AD Domain Services, Managed Identity, B2C
+- **Variables prefix**: `enable_aad_ds`, `enable_managed_identity`
+- **Naming prefix**: `aadds-`, `id-`, `kv-`
+
+### 🔗 Integration (`integration.tf`)
+- Service Bus, Event Grid, Logic Apps, Application Gateway
+- **Variables prefix**: `enable_integration_servicebus`, `enable_event_grid`
+- **Naming prefix**: `sb-`, `evgt-`, `logic-`, `agw-`
+
+### 🌐 IoT (`iot.tf`)
+- IoT Hub, Digital Twins, Time Series Insights, Maps
+- **Variables prefix**: `enable_iot_hub`, `enable_digital_twins`
+- **Naming prefix**: `iot-`, `dt-`, `tsi-`, `map-`
+
+### 📋 Management & Governance (`management-governance.tf`)
+- Policy, Management Groups, Cost Management, Advisor
+- **Variables prefix**: `enable_policy`, `enable_management_group`
+- **Naming prefix**: `policy-`, `mg-`, `bp-`
+
+### 📦 Migration (`migration.tf`)
+- Azure Migrate, Database Migration, Data Box, Site Recovery
+- **Variables prefix**: `enable_migrate_project`, `enable_database_migration_service`
+- **Naming prefix**: `migr-`, `dms-`, `rsv-`
+
+### 🥽 Mixed Reality (`mixed-reality.tf`)
+- Spatial Anchors, Remote Rendering, Object Anchors
+- **Variables prefix**: `enable_spatial_anchors`, `enable_remote_rendering`
+- **Naming prefix**: `spa-`, `rra-`, `oa-`
+
+### 📈 Monitor (`monitor.tf`)
+- Application Insights, Monitor, Action Groups, Workbooks
+- **Variables prefix**: `enable_app_insights`, `enable_action_groups`
+- **Naming prefix**: `appi-`, `ag-`, `wb-`, `ampls-`
+
+### 🌐 Web & Mobile (`web-mobile.tf`)
+- App Service, Function Apps, Static Web Apps, CDN, Front Door
+- **Variables prefix**: `enable_app_service`, `enable_function_app`
+- **Naming prefix**: `asp-`, `app-`, `func-`, `stapp-`, `fd-`
+
+## Module Development Guidelines
+
+### Adding New Azure Services
+
+When adding new Azure services to existing modules:
+
+1. **Follow the existing pattern**:
+   ```hcl
+   # Service Resource
+   resource "azurerm_service_name" "main" {
+     count               = var.enable_service_name ? 1 : 0
+     name                = "prefix-${local.resource_prefix}-${format("%03d", 1)}"
+     location            = azurerm_resource_group.spokes[0].location
+     resource_group_name = azurerm_resource_group.spokes[0].name
+     
+     # Security settings
+     public_network_access_enabled = false
+     
+     tags = local.common_tags
+   }
+
+   # Private Endpoint
+   resource "azurerm_private_endpoint" "service_name" {
+     count               = var.enable_service_name ? 1 : 0
+     name                = "pep-${local.resource_prefix}-service-${format("%03d", 1)}"
+     location            = azurerm_resource_group.spokes[0].location
+     resource_group_name = azurerm_resource_group.spokes[0].name
+     subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
+
+     private_service_connection {
+       name                           = "psc-service-name"
+       private_connection_resource_id = azurerm_service_name.main[0].id
+       subresource_names              = ["subresource"]
+       is_manual_connection           = false
+     }
+
+     tags = local.common_tags
+   }
    ```
 
-2. **Make your changes**
-   - Follow naming conventions
-   - Update documentation
-   - Add tests where applicable
+2. **Add corresponding variables** in `variables.tf`:
+   ```hcl
+   variable "enable_service_name" {
+     description = "Enable Azure Service Name"
+     type        = bool
+     default     = false
+   }
 
-3. **Test your changes**
-   ```bash
-   terraform fmt -recursive
-   terraform validate
-   terraform plan
+   variable "service_name_sku" {
+     description = "SKU for Azure Service Name"
+     type        = string
+     default     = "Standard"
+   }
    ```
 
-4. **Commit your changes**
-   ```bash
-   git add .
-   git commit -m "feat: add new feature description"
+3. **Add outputs** in `outputs.tf`:
+   ```hcl
+   output "service_name_id" {
+     description = "ID of the Azure Service Name"
+     value       = var.enable_service_name ? azurerm_service_name.main[0].id : null
+   }
    ```
 
-5. **Push and create pull request**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+### Security Requirements
 
-## Naming Conventions
+All new services must implement:
 
-### Azure Resource Naming
+1. **Private Connectivity**: Use private endpoints where available
+2. **Network Isolation**: Deploy in appropriate subnets
+3. **Identity Management**: Use managed identities for authentication
+4. **Encryption**: Enable encryption at rest and in transit
+5. **Access Control**: Implement the least privilege access
 
-All resources must follow the standardized naming pattern:
-`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
+### Naming Convention Compliance
 
-#### Examples:
-- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-DEV-WEU-beta-001`
-- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-STG-WEU-alpha-001`
-- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
-- **Storage Accounts**: `stprdweu001`, `stdeveus002`
-- **Key Vaults**: `kv-PRD-WEU-001`, `kv-STG-WEU-001`
-- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
-- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
-- **Azure Firewall**: `afw-PRD-WEU-001`
-- **SQL Server**: `sql-PRD-WEU-001`
-
-#### Environment Abbreviations:
-- **PRD**: Production
-- **STG**: Staging
-- **DEV**: Development
-
-#### Location Abbreviations:
-- **WEU**: West Europe
-- **EUS**: East US
-- **NEU**: North Europe
-- **CUS**: Central US
-
-### Terraform Naming Conventions
-
-#### Resource Names
-```hcl
-# Good
-resource "azurerm_virtual_network" "hub" {
-  name = "vnet-${local.resource_prefix}-hub-${format("%03d", 1)}"
-}
-
-# Bad
-resource "azurerm_virtual_network" "vnet1" {
-  name = "my-vnet"
-}
-```
-
-#### Variable Names
-```hcl
-# Good
-variable "spoke_count" {
-  description = "Number of spoke networks to create"
-  type        = number
-  default     = 2
-}
-
-# Bad
-variable "count" {
-  type = number
-}
-```
-
-#### Local Values
-```hcl
-# Good
-locals {
-  env_abbr = {
-    dev     = "DEV"
-    staging = "STG"
-    prod    = "PRD"
-  }
-  
-  spoke_names = ["alpha", "beta", "gamma"]
-}
-```
+All resources must follow the TRL naming convention:
+- **Pattern**: `{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
+- **Environment**: Use `local.env_abbr[var.environment]`
+- **Location**: Use `local.location_abbr[var.location]`
+- **Instance**: Use `format("%03d", 1)` for consistent numbering
 
 ## Testing Requirements
 
-### Pre-commit Checks
+### Pre-commit Testing
 
-Before committing code, ensure the following passes:
+Before submitting changes:
 
-1. **Terraform Formatting**
+1. **Terraform validation**:
    ```bash
-   terraform fmt -recursive -check
-   ```
-
-2. **Terraform Validation**
-   ```bash
+   terraform fmt -recursive
    terraform validate
    ```
 
-3. **Security Scanning**
+2. **Security scanning**:
    ```bash
-   # Using tfsec (if available)
-   tfsec .
+   # Use checkov or similar tool
+   checkov -f main.tf --framework terraform
    ```
 
-4. **Documentation Generation**
+3. **Cost estimation**:
    ```bash
-   # Using terraform-docs (if available)
-   terraform-docs markdown table --output-file README.md .
+   # Use Infracost or similar tool
+   infracost breakdown --path .
    ```
 
-### Testing Strategy
+### Integration Testing
 
-#### Unit Testing
-- **Module Testing**: Each module should be testable in isolation
-- **Variable Validation**: All variables should have appropriate validation rules
-- **Output Verification**: Outputs should be meaningful and well-documented
-
-#### Integration Testing
-- **Pipeline Testing**: Changes should pass through CI/CD pipelines
-- **Environment Testing**: Test in development environment before production
-- **Security Testing**: Security configurations should be validated
-
-#### Example Test Structure
-```hcl
-# In modules/variables.tf
-variable "environment" {
-  description = "Environment name (dev, staging, prod)"
-  type        = string
-  validation {
-    condition = contains(["dev", "staging", "prod"], var.environment)
-    error_message = "Environment must be dev, staging, or prod."
-  }
-}
-
-variable "vm_size" {
-  description = "Size of the virtual machines"
-  type        = string
-  default     = "Standard_B1s"
-  validation {
-    condition = contains([
-      "Standard_B1s",
-      "Standard_B2s",
-      "Standard_D2s_v3"
-    ], var.vm_size)
-    error_message = "VM size must be from the approved list."
-  }
-}
-```
+1. **Plan verification**: Ensure `terraform plan` succeeds
+2. **Resource validation**: Verify resources are created correctly
+3. **Connectivity testing**: Test private endpoint connectivity
+4. **Security validation**: Confirm security configurations
 
 ## Pull Request Process
 
+### Before Creating a PR
+
+1. **Create feature branch**:
+   ```bash
+   git checkout -b feature/add-azure-service-name
+   ```
+
+2. **Follow conventional commits**:
+   ```bash
+   git commit -m "feat(containers): add Azure Container Apps support"
+   git commit -m "fix(ai-ml): correct Cognitive Services SKU validation"
+   git commit -m "docs(readme): update service category coverage"
+   ```
+
 ### PR Requirements
 
-1. **Descriptive Title**: Use conventional commit format
-   - `feat:` for new features
-   - `fix:` for bug fixes
-   - `docs:` for documentation changes
-   - `refactor:` for code refactoring
-   - `test:` for adding tests
-
-2. **Detailed Description**: Include:
-   - What changes were made
-   - Why the changes were necessary
-   - How to test the changes
-   - Any breaking changes
-
-3. **Checklist**: Ensure all items are completed:
-   - [ ] Code follows naming conventions
-   - [ ] Documentation updated
-   - [ ] Tests added/updated
-   - [ ] Security implications considered
-   - [ ] Terraform fmt and validate pass
-   - [ ] No sensitive data in code
+- [ ] **Service Category**: Clearly identify which service category is affected
+- [ ] **Variable Documentation**: Document all new variables
+- [ ] **Security Review**: Confirm security best practices
+- [ ] **Testing**: Include test results and validation
+- [ ] **Documentation**: Update relevant .md files
+- [ ] **Breaking Changes**: Clearly document any breaking changes
 
 ### PR Template
-```markdown
-## Description
-Brief description of changes
 
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
+Use this template for all pull requests:
+
+```markdown
+## Service Category
+<!-- Check applicable category -->
+- [ ] 🤖 AI + Machine Learning
+- [ ] 📊 Analytics  
+- [ ] 🐳 Containers
+- [ ] 🔧 DevOps
+- [ ] ⚙️ General Services
+- [ ] 🌐 Hybrid + Multicloud
+- [ ] 🔐 Identity
+- [ ] 🔗 Integration
+- [ ] 🌐 IoT
+- [ ] 📋 Management & Governance
+- [ ] 📦 Migration
+- [ ] 🥽 Mixed Reality
+- [ ] 📈 Monitor
+- [ ] 🌐 Web & Mobile
+
+## Description
+<!-- Describe the changes made -->
 
 ## Testing
-- [ ] Terraform validate passes
-- [ ] Terraform plan reviewed
-- [ ] Security scan completed
-- [ ] Manual testing performed
+<!-- Include test results, validation outputs -->
 
-## Checklist
-- [ ] Follows naming conventions
-- [ ] Documentation updated
-- [ ] No sensitive data exposed
-- [ ] Backward compatibility maintained
+## Security Considerations
+<!-- Document security implications -->
+
+## Breaking Changes
+<!-- List any breaking changes -->
 ```
-
-### Review Process
-
-1. **Automated Checks**: PR must pass all automated checks
-2. **Peer Review**: At least one team member must review
-3. **Security Review**: Security-related changes need security team approval
-4. **Documentation Review**: Documentation changes reviewed for accuracy
 
 ## Documentation Standards
 
-### File Documentation
+### Module Documentation
 
-#### README Files
-- Each module should have a comprehensive README.md
-- Include usage examples
-- Document all variables and outputs
-- Provide troubleshooting guidance
+Each service module must include:
+- **Purpose**: What the module does
+- **Services Included**: List of Azure services
+- **Variables**: Documentation of all input variables
+- **Outputs**: Documentation of all outputs
+- **Examples**: Usage examples
 
-#### Inline Documentation
-```hcl
-# Spoke Alpha Virtual Machine
-# Deploys a Windows Server VM in the Alpha spoke network
-# with IIS web server and proper security configuration
-resource "azurerm_windows_virtual_machine" "spoke_alpha_vm" {
-  count               = var.spoke_count >= 1 ? 1 : 0
-  name                = "vm-${local.resource_prefix}-alpha-${format("%03d", 1)}"
-  resource_group_name = azurerm_resource_group.spokes[0].name
-  # ... rest of configuration
-}
-```
+### README Updates
 
-#### Architecture Documentation
-- Network diagrams should be updated for infrastructure changes
-- Security documentation for new security features
-- Operational runbooks for new operational procedures
-
-### Code Comments
-
-#### Resource Comments
-```hcl
-# Azure Firewall for centralized network security
-# Routes all spoke traffic and provides DNAT rules for external access
-resource "azurerm_firewall" "main" {
-  # Configuration here
-}
-```
-
-#### Variable Comments
-```hcl
-variable "spoke_count" {
-  description = "Number of spoke networks to create (max 3 for current design)"
-  type        = number
-  default     = 2
-  
-  validation {
-    condition = var.spoke_count >= 0 && var.spoke_count <= 3
-    error_message = "Spoke count must be between 0 and 3."
-  }
-}
-```
+When adding new services, update:
+- Main `README.md`: Add service to category list
+- `PROJECT-STRUCTURE.md`: Update module structure
+- Service-specific documentation as needed
 
 ## Security Guidelines
 
-### Security Best Practices
+### Mandatory Security Practices
 
-1. **No Hardcoded Secrets**: Never commit passwords, keys, or sensitive data
-2. **Use Key Vault**: Store all secrets in Azure Key Vault
-3. **Principle of Least Privilege**: Assign minimal required permissions
-4. **Network Security**: Implement network segmentation and firewalls
-5. **Encryption**: Ensure data is encrypted at rest and in transit
-
-### Security Code Examples
-
-#### Secure Secret Management
-```hcl
-# Good - Using Key Vault reference
-data "azurerm_key_vault_secret" "vm_password" {
-  name         = "vm-admin-password"
-  key_vault_id = azurerm_key_vault.main.id
-}
-
-# Bad - Hardcoded password
-admin_password = "MyPassword123!"
-```
-
-#### Secure Storage Configuration
-```hcl
-# Good - Secure storage account
-resource "azurerm_storage_account" "main" {
-  # ... other configuration
-  
-  public_network_access_enabled   = false
-  allow_nested_items_to_be_public = false
-  shared_access_key_enabled       = true
-  
-  blob_properties {
-    delete_retention_policy {
-      days = 7
-    }
-  }
-}
-```
+1. **Private Endpoints**: Always use private endpoints for PaaS services
+2. **Network Security**: Deploy services in appropriate subnets
+3. **Identity Management**: Use managed identities over service principals
+4. **Key Management**: Store secrets in Key Vault
+5. **Encryption**: Enable encryption for all data storage
 
 ### Security Review Checklist
 
-- [ ] No sensitive data in code or comments
-- [ ] All secrets stored in Key Vault
-- [ ] Network security properly configured
-- [ ] Storage accounts secured with private endpoints
-- [ ] VM access restricted to authorized users
-- [ ] Monitoring and logging enabled
-- [ ] Backup and recovery configured
+- [ ] Private endpoints configured where available
+- [ ] No hardcoded secrets or credentials
+- [ ] Managed identities used for service authentication
+- [ ] Network security groups properly configured
+- [ ] Encryption enabled for data at rest and in transit
+- [ ] Least privilege access principles applied
 
-## Infrastructure Patterns
+## Code Quality Standards
 
-### Spoke Architecture
+### Terraform Best Practices
 
-When adding new spokes, follow the established pattern:
+- Use consistent formatting (`terraform fmt`)
+- Validate all configurations (`terraform validate`)
+- Use meaningful variable names and descriptions
+- Implement proper resource dependencies
+- Use locals for computed values and naming
 
-```hcl
-# Spoke naming follows: alpha, beta, gamma, delta, etc.
-locals {
-  spoke_names = ["alpha", "beta", "gamma"]
-}
+### Variable Naming
 
-# Network addressing follows sequential pattern
-locals {
-  spoke_alpha_address_space = ["10.1.0.0/16"]
-  spoke_beta_address_space  = ["10.2.0.0/16"]
-  spoke_gamma_address_space = ["10.3.0.0/16"]
-}
-```
+- Use descriptive names: `enable_cognitive_services` not `enable_cs`
+- Group related variables: All IoT variables together
+- Use consistent prefixes: `enable_*`, `*_sku`, `*_capacity`
 
-### Resource Organization
-
-- **Hub Resources**: Shared services in hub resource group
-- **Spoke Resources**: Workload-specific resources in spoke resource groups
-- **Management Resources**: Monitoring and governance in management resource group
-
-## Release Process
-
-### Version Management
-
-We use semantic versioning (SemVer) for releases:
-- **Major**: Breaking changes
-- **Minor**: New features (backward compatible)
-- **Patch**: Bug fixes
-
-### Release Workflow
-
-1. **Feature Freeze**: Complete all features for release
-2. **Testing**: Comprehensive testing in staging environment
-3. **Documentation**: Update all documentation
-4. **Release Notes**: Document all changes
-5. **Deployment**: Deploy to production
-6. **Monitoring**: Monitor post-deployment
-
-## Getting Help
-
-### Documentation Resources
-- [Project Structure](PROJECT-STRUCTURE.md)
-- [Pipeline Setup Guide](PIPELINE-SETUP-GUIDE.md)
-- [Azure Naming Conventions](README.md#azure-resource-naming-conventions)
-
-### Communication Channels
-- **Issues**: GitHub Issues for bug reports and feature requests
-- **Discussions**: GitHub Discussions for general questions
-- **Security**: security@trl.com for security-related issues
-
-### Contact Information
-- **Infrastructure Team**: infrastructure@trl.com
-- **Security Team**: security@trl.com
-- **Project Lead**: project-lead@trl.com
-
-Thank you for contributing to the TRL Hub-Spoke Infrastructure project!
+By following these guidelines, we ensure our infrastructure remains secure, maintainable, and aligned with Azure best practices across all service categories.

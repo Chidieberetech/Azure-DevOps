@@ -110,6 +110,20 @@ variable "enable_private_dns" {
   default     = true
 }
 
+# Private endpoints
+variable "enable_private_endpoints" {
+  description = "Enable private endpoints for services"
+  type        = bool
+  default     = true
+}
+
+# Key Vault
+variable "enable_key_vault" {
+  description = "Enable Azure Key Vault"
+  type        = bool
+  default     = true
+}
+
 #================================================
 # COMPUTE CONFIGURATION
 #================================================

@@ -350,61 +350,51 @@ resource "azurerm_monitor_diagnostic_setting" "resource_group" {
   }
 }
 
-# Network Security Group Diagnostic Settings
-resource "azurerm_monitor_diagnostic_setting" "nsg" {
-  count                      = var.enable_monitoring && length(azurerm_network_security_group.spoke_alpha) > 0 ? 1 : 0
-  name                       = "diag-${local.resource_prefix}-nsg"
-  target_resource_id         = azurerm_network_security_group.spoke_alpha[0].id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
+# Network Security Group Diagnostic Settings - Removed due to missing NSG reference
+# resource "azurerm_monitor_diagnostic_setting" "nsg" {
+#   # This resource is commented out because the referenced NSG doesn't exist
+#   # To enable this, ensure the hub_firewall NSG is created in the security.tf file
+# }
 
-  enabled_log {
-    category = "NetworkSecurityGroupEvent"
-  }
-
-  enabled_log {
-    category = "NetworkSecurityGroupRuleCounter"
-  }
-}
-
-# Virtual Network Diagnostic Settings
+# Virtual Network Diagnostic Settings - Fixed metric block and references
 resource "azurerm_monitor_diagnostic_setting" "vnet" {
   count                      = var.enable_monitoring ? 1 : 0
   name                       = "diag-${local.resource_prefix}-vnet"
-  target_resource_id         = azurerm_virtual_network.spoke_alpha[0].id
+  target_resource_id         = azurerm_virtual_network.spokes[0].id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
 
-  metric {
+  # Fixed: Replace deprecated metric block with enabled_log
+  enabled_log {
     category = "AllMetrics"
-    enabled  = true
   }
 }
 
-# Application Gateway Diagnostic Settings
-resource "azurerm_monitor_diagnostic_setting" "app_gateway" {
-  count                      = var.enable_monitoring && var.enable_application_gateway ? 1 : 0
-  name                       = "diag-${local.resource_prefix}-appgw"
-  target_resource_id         = azurerm_application_gateway.main[0].id
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
+# Application Gateway Diagnostic Settings - Commented out due to missing App Gateway resource
+# resource "azurerm_monitor_diagnostic_setting" "app_gateway" {
+#   count                      = var.enable_monitoring && var.enable_app_gateway ? 1 : 0
+#   name                       = "diag-${local.resource_prefix}-appgw"
+#   target_resource_id         = azurerm_application_gateway.main[0].id
+#   log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
+#
+#   enabled_log {
+#     category = "ApplicationGatewayAccessLog"
+#   }
+#
+#   enabled_log {
+#     category = "ApplicationGatewayPerformanceLog"
+#   }
+#
+#   enabled_log {
+#     category = "ApplicationGatewayFirewallLog"
+#   }
+#
+#   # Fixed: Replace deprecated metric block with enabled_log
+#   enabled_log {
+#     category = "AllMetrics"
+#   }
+# }
 
-  enabled_log {
-    category = "ApplicationGatewayAccessLog"
-  }
-
-  enabled_log {
-    category = "ApplicationGatewayPerformanceLog"
-  }
-
-  enabled_log {
-    category = "ApplicationGatewayFirewallLog"
-  }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
-}
-
-# Key Vault Diagnostic Settings
+# Key Vault Diagnostic Settings - Fixed metric block
 resource "azurerm_monitor_diagnostic_setting" "key_vault" {
   count                      = var.enable_monitoring && var.enable_key_vault ? 1 : 0
   name                       = "diag-${local.resource_prefix}-kv"
@@ -419,9 +409,9 @@ resource "azurerm_monitor_diagnostic_setting" "key_vault" {
     category = "AzurePolicyEvaluationDetails"
   }
 
-  metric {
+  # Fixed: Replace deprecated metric block with enabled_log
+  enabled_log {
     category = "AllMetrics"
-    enabled  = true
   }
 }
 
@@ -541,7 +531,7 @@ resource "azurerm_consumption_budget_resource_group" "main" {
 # PRIVATE ENDPOINTS FOR MONITORING
 #================================================
 
-# Private Endpoint for Log Analytics
+# Private Endpoint for Log Analytics - Fixed references
 resource "azurerm_private_endpoint" "log_analytics" {
   count               = var.enable_monitoring && var.enable_private_endpoints ? 1 : 0
   name                = "pep-${local.resource_prefix}-law-${format("%03d", 1)}"
@@ -573,12 +563,13 @@ resource "azurerm_private_dns_zone" "monitor" {
   tags = local.common_tags
 }
 
+# Fixed: Use spokes VNet instead of non-existent spoke_alpha
 resource "azurerm_private_dns_zone_virtual_network_link" "monitor" {
   count                 = var.enable_monitoring && var.enable_private_endpoints ? 1 : 0
   name                  = "monitor-dns-link"
   resource_group_name   = azurerm_resource_group.spokes[0].name
   private_dns_zone_name = azurerm_private_dns_zone.monitor[0].name
-  virtual_network_id    = azurerm_virtual_network.spoke_alpha[0].id
+  virtual_network_id    = azurerm_virtual_network.spokes[0].id
   registration_enabled  = false
 
   tags = local.common_tags

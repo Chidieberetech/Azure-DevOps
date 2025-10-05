@@ -2,24 +2,24 @@
 # RESOURCE GROUPS AND CORE CONFIGURATION
 #================================================
 
-# Hub Resource Group
+# Hub Resource Group - specific name as requested
 resource "azurerm_resource_group" "hub" {
-  name     = "${local.resource_prefix}-rg-hub"
+  name     = local.hub_resource_group_name
   location = var.location
   tags     = local.common_tags
 }
 
-# Spoke Resource Groups
+# Spoke Resource Groups with proper naming
 resource "azurerm_resource_group" "spokes" {
   count    = var.spoke_count
-  name     = "${local.resource_prefix}-rg-spoke${count.index + 1}"
+  name     = "rg-trl-${local.env_abbr[var.environment]}-${local.spoke_names[count.index]}-${format("%03d", count.index + 1)}"
   location = var.location
   tags     = local.common_tags
 }
 
 # Management Resource Group
 resource "azurerm_resource_group" "management" {
-  name     = "${local.resource_prefix}-rg-mgmt"
+  name     = "rg-trl-${local.env_abbr[var.environment]}-mgmt-${format("%03d", 1)}"
   location = var.location
   tags     = local.common_tags
 }

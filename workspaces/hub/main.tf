@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
+    }
   }
 
   backend "azurerm" {
@@ -45,15 +49,20 @@ module "hub_infrastructure" {
   # Security configuration
   enable_key_vault_soft_delete = true
 
-  # Only deploy hub components (no spokes in this workspace)
-  spoke_count = 0
+  # Deploy 2 spokes with VMs
+  spoke_count = 2
 
-  # Disable compute and database for hub-only deployment
+  # Disable databases for cost optimization in hub deployment
   enable_sql_database = false
   enable_cosmos_db    = false
 
+  # VM configuration
+  vm_size = "Standard_B1s"
+  admin_username = "azureadmin"
+
   additional_tags = {
     Workspace = "Hub"
-    Purpose   = "Shared Services"
+    Purpose   = "Shared Services and Spokes"
+    Environment = "Production"
   }
 }

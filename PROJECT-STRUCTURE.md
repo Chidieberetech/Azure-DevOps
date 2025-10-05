@@ -1,307 +1,207 @@
-# TRL Hub and Spoke Infrastructure - Project Structure
+# TRL Hub-Spoke Infrastructure Project Structure
 
-This document explains the restructured project organization using Option 2: Multiple Files, Single Module approach with comprehensive management capabilities.
+This document outlines the comprehensive structure and organization of the TRL Hub-Spoke Azure infrastructure project, which implements enterprise-grade naming conventions and a secure network topology.
 
-## Project Structure (Updated)
+## Project Organization
 
+### Root Structure
 ```
-Azure DevOps/
-├── modules/                    # Core Terraform module (single module approach)
-│   ├── main.tf                # Resource groups and core configuration
-│   ├── network.tf             # All networking resources (hub, spokes, routing)
-│   ├── security.tf            # Firewall, Bastion, Key Vault
-│   ├── compute.tf             # Virtual machines and compute resources
-│   ├── storage.tf             # Storage accounts and containers
-│   ├── database.tf            # SQL and Cosmos DB resources
-│   ├── variables.tf           # All input variables
-│   ├── outputs.tf             # All output values
-│   ├── locals.tf              # Local values and computed data
-│   └── versions.tf            # Provider requirements
-├── pipelines/                 # Azure DevOps pipeline configurations
-│   ├── azure-pipelines.yml    # Main deployment pipeline
-│   ├── destroy-pipeline.yml   # Infrastructure destruction pipeline
-│   ├── init-pipeline.yml      # Terraform initialization pipeline
-│   ├── plan-pipeline.yml      # Terraform planning pipeline
-│   ├── apply-pipeline.yml     # Terraform apply pipeline
-│   ├── password-rotation.yml  # VM password rotation pipeline
-│   └── templates/             # Reusable pipeline templates (CLEANED UP)
-│       ├── terraform-init.yml      # Terraform initialization template
-│       ├── terraform-plan.yml      # Terraform planning template
-│       ├── terraform-apply.yml     # Terraform apply template
-│       ├── terraform-destroy.yml   # Terraform destroy template
-│       ├── security-scan.yml       # Security scanning template
-│       └── infrastructure-validation.yml # Infrastructure validation template
-├── workspaces/                # Terraform workspaces for different deployments
-│   ├── hub/                   # Hub infrastructure workspace
-│   │   ├── main.tf            # Hub-specific configuration
-│   │   ├── variables.tf       # Hub variables
-│   │   └── outputs.tf         # Hub outputs
-│   ├── management/            # Management infrastructure workspace
-│   │   └── main.tf            # Management configuration
-│   └── spokes/                # Spoke workspaces by environment
-│       ├── dev/               # Development environment
-│       │   └── main.tf        # Dev spoke configuration
-│       ├── staging/           # Staging environment
-│       │   └── main.tf        # Staging spoke configuration
-│       └── prod/              # Production environment
-│           └── main.tf        # Production spoke configuration
-├── scripts/                   # Infrastructure management scripts (ENHANCED)
-│   ├── vm-password-rotation.sh    # Automated VM password rotation
-│   ├── cost-analysis.sh           # Cost analysis and optimization
-│   ├── health-check.sh            # Infrastructure health monitoring
-│   ├── backup-management.sh       # Backup operations and validation
-│   ├── environment-cleanup.sh     # Environment cleanup and optimization
-│   ├── init.sh                    # Terraform initialization
-│   ├── plan.sh                    # Terraform planning
-│   ├── apply.sh                   # Terraform apply
-│   └── destroy.sh                 # Terraform destroy
-├── README.md                  # Main project documentation (UPDATED)
-├── CONTRIBUTING.md            # Contribution guidelines
-├── PIPELINE-SETUP-GUIDE.md    # Complete pipeline implementation guide (UPDATED)
-└── PROJECT-STRUCTURE.md       # This file - project structure documentation
+Azure-DevOps/
+├── modules/                    # Core Terraform modules
+├── workspaces/                # Environment-specific configurations
+├── pipelines/                 # CI/CD pipeline definitions
+├── scripts/                   # Automation and utility scripts
+└── documentation/             # Project documentation
 ```
 
-## Multi-Subscription Architecture
+## Azure Resource Naming Conventions
 
-### Subscription Layout
-This project implements infrastructure across three dedicated Azure subscriptions:
+All resources follow the standardized naming pattern:
+`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
 
-| Environment     | Subscription       | Purpose               | Configuration                           |
-|-----------------|--------------------|-----------------------|-----------------------------------------|
-| **Development** | `Sub-TRL-dev-weu`  | Development workloads | B1s VMs, LRS storage, auto-shutdown     |
-| **Staging**     | `Sub-TRL-int-weu`  | Integration testing   | B1s VMs, LRS storage, extended testing  |
-| **Production**  | `Sub-TRL-prod-weu` | Production workloads  | B2s VMs, GRS storage, high availability |
+### Environment Abbreviations
+- **PRD**: Production
+- **STG**: Staging  
+- **DEV**: Development
 
-### Subscription Security Model
-- **Isolated service principals** per subscription
-- **Environment-specific Key Vaults** for secret management
-- **Subscription-level RBAC** with the least privilege access
-- **Cross-subscription pipeline orchestration** via Azure DevOps
+### Location Abbreviations
+- **WEU**: West Europe
+- **EUS**: East US
+- **NEU**: North Europe
+- **CUS**: Central US
 
-## Template Architecture (Cleaned Up)
+### Resource Examples
+- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-PRD-WEU-beta-001`
+- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-PRD-WEU-alpha-001`
+- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
+- **Storage Accounts**: `stprdweu001`, `stdiagprdweu001`
+- **Key Vaults**: `kv-PRD-WEU-001`
+- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
+- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
+- **Azure Firewall**: `afw-PRD-WEU-001`
+- **SQL Server**: `sql-PRD-WEU-001`
 
-### Removed Duplicates
-- **plan-pipeline.yml**: Removed from templates (kept in pipelines root)
-- **azure-pipelines.yml**: Removed from templates (kept in pipelines root)
-- **destroy-pipeline.yml**: Removed from templates (kept in pipelines root)
-- **password-rotation.yml**: Removed from templates (kept in pipelines root)
+## Infrastructure Architecture
 
-### Reusable Templates (pipelines/templates/)
+### Hub and Spoke Design
+The infrastructure implements a centralized hub with dedicated spoke networks:
 
-#### **1. terraform-init.yml**
-**Purpose**: Standardized Terraform initialization across workspaces
-**Parameters**:
-- `workspacePath`: Path to Terraform workspace
-- `environmentName`: Environment identifier (dev/staging/prod)
-- `serviceConnection`: Azure service connection name
-- `terraformVersion`: Terraform version to use
+#### Hub (RG-TRL-Hub-weu)
+- **Purpose**: Shared services and central security
+- **VNet**: `vnet-PRD-WEU-hub-001` (10.0.0.0/16)
+- **Key Components**:
+  - Azure Firewall: `afw-PRD-WEU-001`
+  - Azure Bastion: `bastion-PRD-WEU-001`
+  - Key Vault: `kv-PRD-WEU-001`
+  - Diagnostics Storage: `stdiagprdweu001`
 
-**Usage Example**:
-```yaml
-- template: templates/terraform-init.yml
-  parameters:
-    workspacePath: 'workspaces/hub'
-    environmentName: 'hub'
-    serviceConnection: 'trl-hubspoke-prod-connection'
+#### Spoke Alpha
+- **Purpose**: Primary workload environment
+- **VNet**: `vnet-PRD-WEU-alpha-001` (10.1.0.0/16)
+- **VM**: `vm-PRD-WEU-alpha-001` (10.1.4.10)
+- **Storage**: `stprdweu001`
+
+#### Spoke Beta
+- **Purpose**: Secondary workload environment
+- **VNet**: `vnet-PRD-WEU-beta-001` (10.2.0.0/16)
+- **VM**: `vm-PRD-WEU-beta-001` (10.2.4.10)
+
+## Module Structure
+
+### `/modules/` Directory
+Contains the core Terraform infrastructure modules:
+
+#### Core Configuration Files
+- **main.tf**: Resource groups and fundamental infrastructure
+- **locals.tf**: Local values, naming conventions, and computed data
+- **variables.tf**: Input variable definitions with validation
+- **outputs.tf**: Output values for resource information
+- **versions.tf**: Provider version constraints
+
+#### Infrastructure Modules
+- **network.tf**: Virtual networks, subnets, and peering
+- **security.tf**: Firewall, Bastion, and network security groups
+- **compute.tf**: Virtual machines, extensions, and routing
+- **storage.tf**: Storage accounts, containers, and private endpoints
+- **keyvault.tf**: Key Vault, secrets, and private DNS zones
+- **database.tf**: SQL Server, SQL Database, and Cosmos DB
+
+### Module Features
+- **Consistent Naming**: Automated resource naming using local values
+- **Environment Awareness**: Dynamic configuration based on environment
+- **Security First**: Private endpoints and zero-trust networking
+- **Scalable Design**: Support for multiple spokes and environments
+
+## Network Design
+
+### IP Address Allocation
+```
+Hub VNet (10.0.0.0/16) - vnet-PRD-WEU-hub-001
+├── AzureFirewallSubnet (10.0.1.0/26)
+├── AzureBastionSubnet (10.0.2.0/27)
+├── Shared Services (10.0.3.0/24) - snet-PRD-WEU-shared-001
+├── Private Endpoints (10.0.4.0/24) - snet-PRD-WEU-pe-hub-001
+└── Gateway Subnet (10.0.5.0/27)
+
+Spoke Alpha VNet (10.1.0.0/16) - vnet-PRD-WEU-alpha-001
+├── Workload Subnet (10.1.1.0/24) - snet-PRD-WEU-alpha-workload-001
+├── Database Subnet (10.1.2.0/24) - snet-PRD-WEU-alpha-db-001
+├── Private Endpoints (10.1.3.0/24) - snet-PRD-WEU-alpha-pe-001
+└── VM Subnet (10.1.4.0/24) - snet-PRD-WEU-alpha-vm-001
+
+Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
+├── Workload Subnet (10.2.1.0/24) - snet-PRD-WEU-beta-workload-001
+├── Database Subnet (10.2.2.0/24) - snet-PRD-WEU-beta-db-001
+├── Private Endpoints (10.2.3.0/24) - snet-PRD-WEU-beta-pe-001
+└── VM Subnet (10.2.4.0/24) - snet-PRD-WEU-beta-vm-001
 ```
 
-#### **2. terraform-plan.yml**
-**Purpose**: Infrastructure planning with detailed analysis
-**Features**:
-- Plan file generation with timestamps
-- Resource change counting and analysis
-- Human-readable and JSON output formats
-- Artifact publishing for later use
+### Connectivity Model
+- **Hub-to-Spoke Peering**: Centralized connectivity
+- **Spoke-to-Hub Routing**: All traffic via Azure Firewall
+- **Private Endpoints**: Secure PaaS service access
+- **Azure Bastion**: Secure VM management access
 
-#### **3. terraform-apply.yml**
-**Purpose**: Safe infrastructure deployment with validation
-**Features**:
-- Plan validation before apply
-- Output generation and artifact publishing
-- Cleanup and summary reporting
-- Error handling and rollback support
+## Security Architecture
 
-#### **4. terraform-destroy.yml** (NEW)
-**Purpose**: Controlled infrastructure destruction
-**Features**:
-- Multi-confirmation safety checks
-- Destroy plan generation and review
-- Resource cleanup verification
-- Post-destruction validation
+### Defense in Depth
+1. **Network Level**: Azure Firewall with comprehensive rules
+2. **Subnet Level**: Network Security Groups (NSGs)
+3. **Application Level**: Private endpoints and secure protocols
+4. **Identity Level**: Key Vault and managed identities
+5. **Management Level**: Azure Bastion and just-in-time access
 
-#### **5. security-scan.yml**
-**Purpose**: Comprehensive security scanning
-**Tools Integrated**:
-- **tfsec**: Terraform security scanner
-- **checkov**: Infrastructure compliance scanner
-- **terrascan**: Policy compliance scanner
-**Output**: JUnit test results and detailed security reports
+### Key Security Features
+- **Zero Trust Networking**: No implicit trust, verify everything
+- **Private Connectivity**: No public IPs on workload VMs
+- **Centralized Logging**: All network traffic logged and monitored
+- **Credential Management**: Automated password rotation via Key Vault
+- **Encrypted Storage**: All data encrypted at rest and in transit
 
-#### **6. infrastructure-validation.yml** (NEW)
-**Purpose**: Post-deployment infrastructure validation
-**Validation Areas**:
-- Network infrastructure (VNets, peering, routing)
-- Security infrastructure (Firewall, Bastion, Key Vault)
-- Compute infrastructure (VMs, extensions, health)
-- Storage and database infrastructure
+## Deployment Patterns
 
-## Management Scripts Enhancement
+### Single Deployment (Hub Workspace)
+- Deploys complete hub infrastructure
+- Includes Spoke Alpha and Beta
+- Suitable for development and testing
 
-### Security Scripts
+### Multi-Workspace Deployment
+- Hub deployed separately
+- Spokes deployed per environment
+- Suitable for production with strict separation
 
-#### **VM Password Rotation** (`scripts/vm-password-rotation.sh`)
-**Multi-Subscription Support**: Works across Sub-TRL-dev-weu, Sub-TRL-int-weu, Sub-TRL-prod-weu
-**Key Features**:
-- Automatic VM discovery across subscriptions
-- Secure password generation (16-character OpenSSL)
-- Key Vault integration with timestamped secrets
-- Backup password storage for rollback capability
-- Comprehensive error handling and reporting
+### Environment Progression
+1. **Development**: Single workspace deployment
+2. **Staging**: Multi-workspace with production-like setup
+3. **Production**: Full multi-workspace with governance
 
-### Operations Scripts
+## Monitoring and Observability
 
-#### **Health Check** (`scripts/health-check.sh`)
-**Comprehensive Monitoring**:
-- **VM Health**: Power state, agent status, boot diagnostics
-- **Network Health**: VNet peering, routing tables, connectivity
-- **Security Health**: Key Vault access, private endpoints, policies
-- **Performance Metrics**: Resource utilization and availability
+### Built-in Monitoring
+- **Azure Monitor**: Centralized logging and metrics
+- **Network Watcher**: Network topology and diagnostics
+- **Azure Security Center**: Security posture monitoring
+- **Cost Management**: Spend tracking and optimization
 
-#### **Cost Analysis** (`scripts/cost-analysis.sh`)
-**Cost Optimization Features**:
-- **Multi-subscription analysis**: Aggregated cost reporting
-- **Free tier monitoring**: Usage against Azure free limits
-- **Optimization recommendations**: Right-sizing, reserved instances
-- **Budget setup guidance**: Automated alert configuration
+### Custom Monitoring
+- **Health Check Scripts**: Automated infrastructure validation
+- **Cost Analysis**: Regular cost optimization reports
+- **Backup Validation**: Automated backup testing
+- **Performance Monitoring**: Application and infrastructure metrics
 
-#### **Backup Management** (`scripts/backup-management.sh`)
-**Backup Operations**:
-- **VM Backups**: Recovery Services Vault automation
-- **Database Backups**: Azure SQL automatic backup validation
-- **Compliance Reporting**: Backup status across environments
-- **Restore Testing**: Backup integrity verification
+## Best Practices Implementation
 
-#### **Environment Cleanup** (`scripts/environment-cleanup.sh`)
-**Resource Optimization**:
-- **Storage Cleanup**: Old blob removal, container optimization
-- **Snapshot Management**: Retention policy enforcement
-- **Unused Resources**: Orphaned NIC and disk detection
-- **Log Optimization**: Log Analytics retention tuning
+### Terraform Best Practices
+- **State Management**: Remote state with locking
+- **Module Design**: Reusable, configurable modules
+- **Variable Validation**: Input validation and type checking
+- **Output Organization**: Structured, meaningful outputs
 
-## Deployment Architecture
+### Azure Best Practices
+- **Resource Organization**: Logical resource grouping
+- **Naming Conventions**: Consistent, descriptive naming
+- **Security Configuration**: Least privilege access
+- **Cost Optimization**: Right-sizing and automation
 
-### Workspace Isolation Strategy
+### DevOps Best Practices
+- **Infrastructure as Code**: Version-controlled infrastructure
+- **Automated Testing**: Pipeline validation and testing
+- **Approval Gates**: Manual approvals for production
+- **Rollback Capability**: Safe deployment with rollback options
 
-#### **1. Hub Workspace** (`workspaces/hub/`)
-**Purpose**: Shared infrastructure components
-**Components**:
-- Azure Firewall for centralized security
-- Azure Bastion for secure access
-- Key Vault for secret management
-- Private DNS zones for name resolution
+## Maintenance and Operations
 
-**State File**: `hub.terraform.tfstate`
-**Service Connection**: Environment-specific (dev/staging/prod)
+### Regular Tasks
+- **Password Rotation**: Automated via Key Vault and pipelines
+- **Cost Review**: Monthly cost analysis and optimization
+- **Security Updates**: Automated VM patching and updates
+- **Backup Validation**: Regular restore testing
+- **Performance Monitoring**: Capacity planning and optimization
 
-#### **2. Management Workspace** (`workspaces/management/`)
-**Purpose**: Monitoring and governance infrastructure
-**Components**:
-- Log Analytics workspace
-- Application Insights
-- Azure Monitor dashboards
-- Policy definitions and assignments
+### Emergency Procedures
+- **Incident Response**: Documented response procedures
+- **Disaster Recovery**: Backup and restore procedures
+- **Security Incidents**: Isolation and investigation procedures
+- **Performance Issues**: Troubleshooting and resolution guides
 
-**State File**: `management.terraform.tfstate`
-**Dependencies**: Independent of hub and spoke deployments
-
-#### **3. Spoke Workspaces** (`workspaces/spokes/{env}/`)
-**Purpose**: Environment-specific workload infrastructure
-**Components**:
-- Spoke virtual networks with workload subnets
-- Virtual machines with Key Vault integration
-- Storage accounts with private connectivity
-- SQL databases with private endpoints
-
-**State Files**: 
-- `dev.terraform.tfstate`
-- `staging.terraform.tfstate`
-- `prod.terraform.tfstate`
-
-**Dependencies**: Requires hub infrastructure for routing and DNS
-
-### Pipeline Orchestration
-
-#### **Sequential Deployment Flow**:
-```
-1. Hub Infrastructure (shared services)
-   ↓
-2. Management Infrastructure (monitoring)
-   ↓
-3. Development Spokes (parallel with management)
-   ↓
-4. Staging Spokes (after dev validation)
-   ↓
-5. Production Spokes (manual approval required)
-```
-
-#### **Template Usage in Pipelines**:
-```yaml
-# Example pipeline using templates
-stages:
-- stage: Initialize
-  jobs:
-  - job: InitHub
-    steps:
-    - template: templates/terraform-init.yml
-      parameters:
-        workspacePath: 'workspaces/hub'
-        environmentName: 'hub'
-        serviceConnection: 'trl-hubspoke-prod-connection'
-
-- stage: Plan
-  jobs:
-  - job: PlanHub
-    steps:
-    - template: templates/terraform-plan.yml
-      parameters:
-        workspacePath: 'workspaces/hub'
-        environmentName: 'hub'
-        serviceConnection: 'trl-hubspoke-prod-connection'
-
-- stage: SecurityScan
-  jobs:
-  - job: ScanInfrastructure
-    steps:
-    - template: templates/security-scan.yml
-      parameters:
-        scanPath: 'modules/'
-        environmentName: 'hub'
-```
-
-## Benefits of Updated Structure
-
-### **1. Template Standardization**
-- **Consistency**: All environments use identical deployment patterns
-- **Maintainability**: Update templates once, applies everywhere
-- **Testing**: Templates can be tested independently
-- **Documentation**: Clear parameter definitions and usage examples
-
-### **2. Enhanced Management Scripts**
-- **Automation**: Comprehensive automation for routine operations
-- **Multi-Environment**: Single scripts work across all subscriptions
-- **Security**: No hardcoded credentials, all secrets managed via Key Vault
-- **Reporting**: Detailed reports for compliance and optimization
-
-### **3. Pipeline Efficiency**
-- **Reusable Components**: Templates reduce code duplication
-- **Parallel Execution**: Multiple jobs and environments in parallel
-- **Artifact Management**: Proper artifact flow between pipeline stages
-- **Error Handling**: Comprehensive error handling and rollback capabilities
-
-### **4. Security Enhancement**
-- **No Secrets in Code**: All authentication via service connections
-- **Environment Isolation**: Subscription-level security boundaries
-- **Approval Workflows**: Manual gates for production changes
-- **Audit Trail**: Complete deployment history and change tracking
-
-This structure provides enterprise-grade infrastructure management with proper separation of concerns, security, and operational efficiency while maintaining the simplicity of a single Terraform module approach.
+This structure provides a comprehensive, scalable, and maintainable foundation for enterprise Azure infrastructure deployment using Terraform and Azure DevOps.

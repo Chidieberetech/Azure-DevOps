@@ -1,6 +1,30 @@
 # Outputs for TRL Hub and Spoke Infrastructure
 
 #================================================
+# RESOURCE GROUP OUTPUTS
+#================================================
+
+output "hub_resource_group_name" {
+  description = "Name of the hub resource group"
+  value       = azurerm_resource_group.hub.name
+}
+
+output "hub_resource_group_id" {
+  description = "ID of the hub resource group"
+  value       = azurerm_resource_group.hub.id
+}
+
+output "spoke_resource_group_names" {
+  description = "Names of the spoke resource groups (Alpha, Beta)"
+  value       = azurerm_resource_group.spokes[*].name
+}
+
+output "spoke_resource_group_ids" {
+  description = "IDs of the spoke resource groups"
+  value       = azurerm_resource_group.spokes[*].id
+}
+
+#================================================
 # NETWORK OUTPUTS
 #================================================
 
@@ -49,17 +73,12 @@ output "bastion_public_ip" {
 }
 
 output "key_vault_id" {
-  description = "ID of the Azure Key Vault"
+  description = "ID of the Key Vault"
   value       = azurerm_key_vault.main.id
 }
 
-output "key_vault_name" {
-  description = "Name of the Azure Key Vault"
-  value       = azurerm_key_vault.main.name
-}
-
 output "key_vault_uri" {
-  description = "URI of the Azure Key Vault"
+  description = "URI of the Key Vault"
   value       = azurerm_key_vault.main.vault_uri
 }
 
@@ -67,53 +86,52 @@ output "key_vault_uri" {
 # COMPUTE OUTPUTS
 #================================================
 
-output "spoke1_vm_id" {
-  description = "ID of the VM in spoke 1"
-  value       = var.spoke_count >= 1 ? azurerm_windows_virtual_machine.spoke1_vm[0].id : null
+output "spoke_alpha_vm_private_ip" {
+  description = "Private IP address of the Spoke Alpha VM"
+  value       = var.spoke_count >= 1 ? azurerm_network_interface.spoke_alpha_vm[0].private_ip_address : null
 }
 
-output "spoke1_vm_private_ip" {
-  description = "Private IP address of the VM in spoke 1"
-  value       = var.spoke_count >= 1 ? azurerm_network_interface.spoke1_vm[0].private_ip_address : null
+output "spoke_beta_vm_private_ip" {
+  description = "Private IP address of the Spoke Beta VM"
+  value       = var.spoke_count >= 2 ? azurerm_network_interface.spoke_beta_vm[0].private_ip_address : null
 }
 
-output "spoke2_vm_id" {
-  description = "ID of the VM in spoke 2"
-  value       = var.spoke_count >= 2 ? azurerm_windows_virtual_machine.spoke2_vm[0].id : null
-}
-
-output "spoke2_vm_private_ip" {
-  description = "Private IP address of the VM in spoke 2"
-  value       = var.spoke_count >= 2 ? azurerm_network_interface.spoke2_vm[0].private_ip_address : null
+output "vm_admin_username" {
+  description = "Admin username for VMs"
+  value       = var.admin_username
 }
 
 #================================================
 # STORAGE OUTPUTS
 #================================================
 
-output "storage_account_id" {
-  description = "ID of the storage account"
-  value       = azurerm_storage_account.main.id
-}
-
 output "storage_account_name" {
-  description = "Name of the storage account"
+  description = "Name of the main storage account"
   value       = azurerm_storage_account.main.name
 }
 
-output "storage_account_primary_endpoint" {
-  description = "Primary blob endpoint of the storage account"
-  value       = azurerm_storage_account.main.primary_blob_endpoint
+output "diagnostics_storage_account_name" {
+  description = "Name of the diagnostics storage account"
+  value       = azurerm_storage_account.diagnostics.name
+}
+
+#================================================
+# CONNECTION INFORMATION
+#================================================
+
+output "rdp_connection_via_firewall" {
+  description = "RDP connection string via Azure Firewall"
+  value       = var.enable_firewall && var.spoke_count >= 1 ? "Connect to ${azurerm_public_ip.firewall[0].ip_address}:3389 to reach Spoke Alpha VM" : "Firewall not enabled or no spokes deployed"
+}
+
+output "bastion_connection_url" {
+  description = "Azure Bastion connection URL"
+  value       = var.enable_bastion ? "Use Azure Portal to connect via Bastion to VMs" : "Bastion not enabled"
 }
 
 #================================================
 # DATABASE OUTPUTS
 #================================================
-
-output "sql_server_id" {
-  description = "ID of the SQL Server"
-  value       = var.enable_sql_database ? azurerm_mssql_server.main[0].id : null
-}
 
 output "sql_server_name" {
   description = "Name of the SQL Server"
@@ -121,54 +139,28 @@ output "sql_server_name" {
 }
 
 output "sql_server_fqdn" {
-  description = "FQDN of the SQL Server"
+  description = "Fully qualified domain name of the SQL Server"
   value       = var.enable_sql_database ? azurerm_mssql_server.main[0].fully_qualified_domain_name : null
 }
 
-output "sql_database_id" {
-  description = "ID of the SQL Database"
-  value       = var.enable_sql_database ? azurerm_mssql_database.main[0].id : null
+output "sql_database_name" {
+  description = "Name of the SQL Database"
+  value       = var.enable_sql_database ? azurerm_mssql_database.main[0].name : null
 }
 
-output "cosmos_db_id" {
-  description = "ID of the Cosmos DB account"
-  value       = var.enable_cosmos_db ? azurerm_cosmosdb_account.main[0].id : null
+output "cosmos_db_account_name" {
+  description = "Name of the Cosmos DB Account"
+  value       = var.enable_cosmos_db ? azurerm_cosmosdb_account.main[0].name : null
 }
 
 output "cosmos_db_endpoint" {
-  description = "Endpoint of the Cosmos DB account"
+  description = "Endpoint URL of the Cosmos DB Account"
   value       = var.enable_cosmos_db ? azurerm_cosmosdb_account.main[0].endpoint : null
+  sensitive   = true
 }
 
-#================================================
-# RESOURCE GROUP OUTPUTS
-#================================================
-
-output "hub_resource_group_id" {
-  description = "ID of the hub resource group"
-  value       = azurerm_resource_group.hub.id
-}
-
-output "spoke_resource_group_ids" {
-  description = "IDs of the spoke resource groups"
-  value       = azurerm_resource_group.spokes[*].id
-}
-
-output "management_resource_group_id" {
-  description = "ID of the management resource group"
-  value       = azurerm_resource_group.management.id
-}
-
-#================================================
-# DNS OUTPUTS
-#================================================
-
-output "private_dns_zone_ids" {
-  description = "IDs of the private DNS zones"
-  value = var.enable_private_dns ? {
-    key_vault     = azurerm_private_dns_zone.key_vault[0].id
-    storage_blob  = azurerm_private_dns_zone.storage_blob[0].id
-    storage_file  = azurerm_private_dns_zone.storage_file[0].id
-    sql_database  = var.enable_sql_database ? azurerm_private_dns_zone.sql_database[0].id : null
-  } : null
+output "cosmos_db_primary_key" {
+  description = "Primary access key for Cosmos DB"
+  value       = var.enable_cosmos_db ? azurerm_cosmosdb_account.main[0].primary_key : null
+  sensitive   = true
 }

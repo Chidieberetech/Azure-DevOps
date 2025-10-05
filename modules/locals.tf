@@ -8,41 +8,24 @@ locals {
     CreatedDate  = formatdate("YYYY-MM-DD", timestamp())
   }
 
-  # Naming convention: trl-hubspoke-{env}-{resource}-{suffix}
-  resource_prefix = "trl-hubspoke-${var.environment}"
-
-  # Network configuration
-  hub_address_space    = ["10.0.0.0/16"]
-  spoke1_address_space = ["10.1.0.0/16"]
-  spoke2_address_space = ["10.2.0.0/16"]
-
-  # Subnet configurations
-  hub_subnets = {
-    firewall_subnet     = "10.0.1.0/26"
-    bastion_subnet      = "10.0.2.0/27"
-    shared_services     = "10.0.3.0/24"
-    private_endpoint    = "10.0.4.0/24"
+  # Environment abbreviations
+  env_abbr = {
+    dev     = "DEV"
+    staging = "STG"
+    prod    = "PRD"
   }
 
-  spoke1_subnets = {
-    workload_subnet     = "10.1.1.0/24"
-    database_subnet     = "10.1.2.0/24"
-    private_endpoint    = "10.1.3.0/24"
+  # Location abbreviations
+  location_abbr = {
+    "West Europe"     = "WEU"
+    "East US"         = "EUS"
+    "North Europe"    = "NEU"
+    "Central US"      = "CUS"
   }
 
-  spoke2_subnets = {
-    workload_subnet     = "10.2.1.0/24"
-    app_service_subnet  = "10.2.2.0/24"
-    private_endpoint    = "10.2.3.0/24"
-  }
-}
+  # Hub resource group name as specified
+  hub_resource_group_name = "RG-TRL-Hub-weu"
 
-# Data sources
-data "azurerm_client_config" "current" {}
+  # Resource naming convention: {resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}
+  resource_prefix = "${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}"
 
-# Random suffix for globally unique resources
-resource "random_string" "suffix" {
-  length  = 8
-  special = false
-  upper   = false
-}

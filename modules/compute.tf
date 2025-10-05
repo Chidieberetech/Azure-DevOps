@@ -1,5 +1,5 @@
 #================================================
-# VIRTUAL MACHINES
+# VIRTUAL MACHINES IN SPOKES
 #================================================
 
 # Data source to get Key Vault secret for VM password
@@ -9,25 +9,30 @@ data "azurerm_key_vault_secret" "vm_password" {
   depends_on   = [azurerm_key_vault_secret.vm_admin_password]
 }
 
-# Network Interface for Spoke 1 VM
-resource "azurerm_network_interface" "spoke1_vm" {
+#================================================
+# SPOKE ALPHA VIRTUAL MACHINE
+#================================================
+
+# Network Interface for Spoke Alpha VM
+resource "azurerm_network_interface" "spoke_alpha_vm" {
   count               = var.spoke_count >= 1 ? 1 : 0
-  name                = "${local.resource_prefix}-nic-vm-spoke1"
+  name                = "nic-${local.resource_prefix}-alpha-vm-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
   tags                = local.common_tags
 
   ip_configuration {
     name                          = "internal"
-    subnet_id                     = azurerm_subnet.spoke1_workload[0].id
-    private_ip_address_allocation = "Dynamic"
+    subnet_id                     = azurerm_subnet.spoke_alpha_vm[0].id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.1.4.10"
   }
 }
 
-# Virtual Machine in Spoke 1
-resource "azurerm_windows_virtual_machine" "spoke1_vm" {
+# Virtual Machine in Spoke Alpha
+resource "azurerm_windows_virtual_machine" "spoke_alpha_vm" {
   count               = var.spoke_count >= 1 ? 1 : 0
-  name                = "${local.resource_prefix}-vm-spoke1"
+  name                = "vm-${local.resource_prefix}-alpha-${format("%03d", 1)}"
   resource_group_name = azurerm_resource_group.spokes[0].name
   location            = azurerm_resource_group.spokes[0].location
   size                = var.vm_size
@@ -38,7 +43,7 @@ resource "azurerm_windows_virtual_machine" "spoke1_vm" {
   disable_password_authentication = false
 
   network_interface_ids = [
-    azurerm_network_interface.spoke1_vm[0].id,
+    azurerm_network_interface.spoke_alpha_vm[0].id,
   ]
 
   os_disk {
@@ -53,132 +58,131 @@ resource "azurerm_windows_virtual_machine" "spoke1_vm" {
     version   = "latest"
   }
 
-  identity {
-    type = "SystemAssigned"
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.diagnostics.primary_blob_endpoint
   }
 }
 
-# Network Interface for Spoke 2 VM
-resource "azurerm_network_interface" "spoke2_vm" {
-  count               = var.spoke_count >= 2 ? 1 : 0
-  name                = "${local.resource_prefix}-nic-vm-spoke2"
-  location            = azurerm_resource_group.spokes[1].location
-  resource_group_name = azurerm_resource_group.spokes[1].name
-  tags                = local.common_tags
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.spoke2_workload[0].id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-# Virtual Machine in Spoke 2
-resource "azurerm_windows_virtual_machine" "spoke2_vm" {
-  count               = var.spoke_count >= 2 ? 1 : 0
-  name                = "${local.resource_prefix}-vm-spoke2"
-  resource_group_name = azurerm_resource_group.spokes[1].name
-  location            = azurerm_resource_group.spokes[1].location
-  size                = var.vm_size
-  admin_username      = var.admin_username
-  admin_password      = data.azurerm_key_vault_secret.vm_password.value
-  tags                = local.common_tags
-
-  disable_password_authentication = false
-
-  network_interface_ids = [
-    azurerm_network_interface.spoke2_vm[0].id,
-  ]
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "MicrosoftWindowsServer"
-    offer     = "WindowsServer"
-    sku       = "2022-Datacenter"
-    version   = "latest"
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-}
-
-# VM Extension for Azure Key Vault integration - Spoke 1
-resource "azurerm_virtual_machine_extension" "spoke1_keyvault" {
+# VM Extension for IIS (Web Server)
+resource "azurerm_virtual_machine_extension" "spoke_alpha_vm_iis" {
   count                = var.spoke_count >= 1 ? 1 : 0
-  name                 = "KeyVaultExtension"
-  virtual_machine_id   = azurerm_windows_virtual_machine.spoke1_vm[0].id
-  publisher            = "Microsoft.Azure.KeyVault"
-  type                 = "KeyVaultForWindows"
-  type_handler_version = "1.0"
-  tags                 = local.common_tags
+  name                 = "install-iis"
+  virtual_machine_id   = azurerm_windows_virtual_machine.spoke_alpha_vm[0].id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
 
-  settings = jsonencode({
-    secretsManagementSettings = {
-      observedCertificates     = []
-      certificateStoreLocation = "LocalMachine"
-      certificateStoreName     = "MY"
-      pollingIntervalInS       = "3600"
-      requireInitialSync       = true
+  settings = <<SETTINGS
+    {
+        "commandToExecute": "powershell.exe Install-WindowsFeature -name Web-Server -IncludeManagementTools && powershell.exe Add-Content -Path \"C:\\inetpub\\wwwroot\\Default.htm\" -Value \"<html><body><h1>TRL Hub-Spoke Architecture - Spoke Alpha VM</h1><p>Server: ${azurerm_windows_virtual_machine.spoke_alpha_vm[0].name}</p></body></html>\""
     }
-  })
+SETTINGS
+
+  tags = local.common_tags
 }
 
-# VM Extension for Azure Key Vault integration - Spoke 2
-resource "azurerm_virtual_machine_extension" "spoke2_keyvault" {
+#================================================
+# SPOKE BETA VIRTUAL MACHINE
+#================================================
+
+# Network Interface for Spoke Beta VM
+resource "azurerm_network_interface" "spoke_beta_vm" {
+  count               = var.spoke_count >= 2 ? 1 : 0
+  name                = "nic-${local.resource_prefix}-beta-vm-${format("%03d", 1)}"
+  location            = azurerm_resource_group.spokes[1].location
+  resource_group_name = azurerm_resource_group.spokes[1].name
+  tags                = local.common_tags
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.spoke_beta_vm[0].id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.2.4.10"
+  }
+}
+
+# Virtual Machine in Spoke Beta
+resource "azurerm_windows_virtual_machine" "spoke_beta_vm" {
+  count               = var.spoke_count >= 2 ? 1 : 0
+  name                = "vm-${local.resource_prefix}-beta-${format("%03d", 1)}"
+  resource_group_name = azurerm_resource_group.spokes[1].name
+  location            = azurerm_resource_group.spokes[1].location
+  size                = var.vm_size
+  admin_username      = var.admin_username
+  admin_password      = data.azurerm_key_vault_secret.vm_password.value
+  tags                = local.common_tags
+
+  disable_password_authentication = false
+
+  network_interface_ids = [
+    azurerm_network_interface.spoke_beta_vm[0].id,
+  ]
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "MicrosoftWindowsServer"
+    offer     = "WindowsServer"
+    sku       = "2022-Datacenter"
+    version   = "latest"
+  }
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.diagnostics.primary_blob_endpoint
+  }
+}
+
+# VM Extension for IIS (Web Server)
+resource "azurerm_virtual_machine_extension" "spoke_beta_vm_iis" {
   count                = var.spoke_count >= 2 ? 1 : 0
-  name                 = "KeyVaultExtension"
-  virtual_machine_id   = azurerm_windows_virtual_machine.spoke2_vm[0].id
-  publisher            = "Microsoft.Azure.KeyVault"
-  type                 = "KeyVaultForWindows"
-  type_handler_version = "1.0"
-  tags                 = local.common_tags
+  name                 = "install-iis"
+  virtual_machine_id   = azurerm_windows_virtual_machine.spoke_beta_vm[0].id
+  publisher            = "Microsoft.Compute"
+  type                 = "CustomScriptExtension"
+  type_handler_version = "1.10"
 
-  settings = jsonencode({
-    secretsManagementSettings = {
-      observedCertificates     = []
-      certificateStoreLocation = "LocalMachine"
-      certificateStoreName     = "MY"
-      pollingIntervalInS       = "3600"
-      requireInitialSync       = true
+  settings = <<SETTINGS
+    {
+        "commandToExecute": "powershell.exe Install-WindowsFeature -name Web-Server -IncludeManagementTools && powershell.exe Add-Content -Path \"C:\\inetpub\\wwwroot\\Default.htm\" -Value \"<html><body><h1>TRL Hub-Spoke Architecture - Spoke Beta VM</h1><p>Server: ${azurerm_windows_virtual_machine.spoke_beta_vm[0].name}</p></body></html>\""
     }
-  })
-}
-
-# Auto-shutdown schedule for Spoke 1 VM
-resource "azurerm_dev_test_global_vm_shutdown_schedule" "spoke1_vm" {
-  count              = var.spoke_count >= 1 && var.enable_vm_auto_shutdown ? 1 : 0
-  virtual_machine_id = azurerm_windows_virtual_machine.spoke1_vm[0].id
-  location           = azurerm_resource_group.spokes[0].location
-  enabled            = true
-
-  daily_recurrence_time = var.vm_shutdown_time
-  timezone              = "UTC"
-
-  notification_settings {
-    enabled = false
-  }
+SETTINGS
 
   tags = local.common_tags
 }
 
-# Auto-shutdown schedule for Spoke 2 VM
-resource "azurerm_dev_test_global_vm_shutdown_schedule" "spoke2_vm" {
-  count              = var.spoke_count >= 2 && var.enable_vm_auto_shutdown ? 1 : 0
-  virtual_machine_id = azurerm_windows_virtual_machine.spoke2_vm[0].id
-  location           = azurerm_resource_group.spokes[1].location
-  enabled            = true
+#================================================
+# ROUTE TABLES
+#================================================
 
-  daily_recurrence_time = var.vm_shutdown_time
-  timezone              = "UTC"
+# Route Table for Spoke Subnets to route traffic through firewall
+resource "azurerm_route_table" "spoke_to_firewall" {
+  count                         = var.spoke_count
+  name                          = "rt-${local.resource_prefix}-${local.spoke_names[count.index]}-${format("%03d", 1)}"
+  location                      = azurerm_resource_group.spokes[count.index].location
+  resource_group_name           = azurerm_resource_group.spokes[count.index].name
+  disable_bgp_route_propagation = false
+  tags                          = local.common_tags
 
-  notification_settings {
-    enabled = false
+  route {
+    name           = "ToFirewall"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
   }
+}
 
-  tags = local.common_tags
+# Associate Route Table with VM Subnets
+resource "azurerm_subnet_route_table_association" "spoke_alpha_vm" {
+  count          = var.spoke_count >= 1 ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_vm[0].id
+  route_table_id = azurerm_route_table.spoke_to_firewall[0].id
+}
+
+resource "azurerm_subnet_route_table_association" "spoke_beta_vm" {
+  count          = var.spoke_count >= 2 ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_beta_vm[0].id
+  route_table_id = azurerm_route_table.spoke_to_firewall[1].id
 }

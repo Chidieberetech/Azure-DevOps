@@ -5,7 +5,7 @@
 # Public IP for Azure Firewall
 resource "azurerm_public_ip" "firewall" {
   count               = var.enable_firewall ? 1 : 0
-  name                = "${local.resource_prefix}-pip-afw"
+  name                = "pip-${local.resource_prefix}-afw-${format("%03d", 1)}"
   location            = azurerm_resource_group.hub.location
   resource_group_name = azurerm_resource_group.hub.name
   allocation_method   = "Static"
@@ -16,7 +16,7 @@ resource "azurerm_public_ip" "firewall" {
 # Azure Firewall Policy
 resource "azurerm_firewall_policy" "main" {
   count               = var.enable_firewall ? 1 : 0
-  name                = "${local.resource_prefix}-afwp"
+  name                = "afwp-${local.resource_prefix}-${format("%03d", 1)}"
   resource_group_name = azurerm_resource_group.hub.name
   location            = azurerm_resource_group.hub.location
   tags                = local.common_tags
@@ -35,6 +35,7 @@ resource "azurerm_firewall_policy_rule_collection_group" "main" {
   firewall_policy_id = azurerm_firewall_policy.main[0].id
   priority           = 500
 
+  # Application Rules
   application_rule_collection {
     name     = "AllowWebTraffic"
     priority = 500
@@ -50,22 +51,81 @@ resource "azurerm_firewall_policy_rule_collection_group" "main" {
         type = "Http"
         port = 80
       }
-      source_addresses  = ["10.1.0.0/16", "10.2.0.0/16"]
-      destination_fqdns = ["*"]
+      source_addresses = ["10.0.0.0/8"]
+      destination_fqdns = [
+        "*.microsoft.com",
+        "*.azure.com",
+        "*.windows.net",
+        "*.ubuntu.com",
+        "security.ubuntu.com"
+      ]
+    }
+
+    rule {
+      name = "AllowWindowsUpdate"
+      protocols {
+        type = "Https"
+        port = 443
+      }
+      protocols {
+        type = "Http"
+        port = 80
+      }
+      source_addresses = ["10.0.0.0/8"]
+      destination_fqdns = [
+        "*.windowsupdate.microsoft.com",
+        "*.update.microsoft.com",
+        "*.windowsupdate.com",
+        "download.microsoft.com"
+      ]
     }
   }
 
+  # Network Rules
   network_rule_collection {
-    name     = "AllowNetworkTraffic"
+    name     = "AllowInternalTraffic"
     priority = 400
     action   = "Allow"
 
     rule {
+      name                  = "AllowSpokeToSpoke"
+      protocols             = ["TCP", "UDP"]
+      source_addresses      = ["10.1.0.0/16", "10.2.0.0/16", "10.3.0.0/16"]
+      destination_addresses = ["10.1.0.0/16", "10.2.0.0/16", "10.3.0.0/16"]
+      destination_ports     = ["*"]
+    }
+
+    rule {
+      name                  = "AllowSpokeToHub"
+      protocols             = ["TCP", "UDP"]
+      source_addresses      = ["10.1.0.0/16", "10.2.0.0/16", "10.3.0.0/16"]
+      destination_addresses = ["10.0.0.0/16"]
+      destination_ports     = ["53", "80", "443", "3389", "22"]
+    }
+
+    rule {
       name                  = "AllowDNS"
-      protocols             = ["UDP"]
-      source_addresses      = ["10.1.0.0/16", "10.2.0.0/16"]
-      destination_addresses = ["168.63.129.16", "8.8.8.8"]
+      protocols             = ["TCP", "UDP"]
+      source_addresses      = ["10.0.0.0/8"]
+      destination_addresses = ["168.63.129.16"]
       destination_ports     = ["53"]
+    }
+  }
+
+  # DNAT Rules for inbound access
+  nat_rule_collection {
+    name     = "InboundNATRules"
+    priority = 300
+    action   = "Dnat"
+
+    rule {
+      name                = "RDPToSpoke1VM"
+      protocols           = ["TCP"]
+      source_addresses    = ["*"]
+      destination_address = azurerm_public_ip.firewall[0].ip_address
+      destination_ports   = ["3389"]
+      translated_address  = "10.1.4.10"
+      translated_port     = "3389"
     }
   }
 }
@@ -73,7 +133,7 @@ resource "azurerm_firewall_policy_rule_collection_group" "main" {
 # Azure Firewall
 resource "azurerm_firewall" "main" {
   count               = var.enable_firewall ? 1 : 0
-  name                = "${local.resource_prefix}-afw"
+  name                = "afw-${local.resource_prefix}-${format("%03d", 1)}"
   location            = azurerm_resource_group.hub.location
   resource_group_name = azurerm_resource_group.hub.name
   sku_name            = "AZFW_VNet"
@@ -95,7 +155,7 @@ resource "azurerm_firewall" "main" {
 # Public IP for Azure Bastion
 resource "azurerm_public_ip" "bastion" {
   count               = var.enable_bastion ? 1 : 0
-  name                = "${local.resource_prefix}-pip-bas"
+  name                = "pip-${local.resource_prefix}-bastion-${format("%03d", 1)}"
   location            = azurerm_resource_group.hub.location
   resource_group_name = azurerm_resource_group.hub.name
   allocation_method   = "Static"
@@ -106,13 +166,9 @@ resource "azurerm_public_ip" "bastion" {
 # Azure Bastion Host
 resource "azurerm_bastion_host" "main" {
   count               = var.enable_bastion ? 1 : 0
-  name                = "${local.resource_prefix}-bas"
+  name                = "bastion-${local.resource_prefix}-${format("%03d", 1)}"
   location            = azurerm_resource_group.hub.location
   resource_group_name = azurerm_resource_group.hub.name
-  sku                 = "Standard"
-  copy_paste_enabled  = true
-  file_copy_enabled   = true
-  tunneling_enabled   = true
   tags                = local.common_tags
 
   ip_configuration {
@@ -123,103 +179,71 @@ resource "azurerm_bastion_host" "main" {
 }
 
 #================================================
-# AZURE KEY VAULT
+# NETWORK SECURITY GROUPS
 #================================================
 
-# Azure Key Vault
-resource "azurerm_key_vault" "main" {
-  name                        = "${local.resource_prefix}-kv-${random_string.suffix.result}"
-  location                    = azurerm_resource_group.hub.location
-  resource_group_name         = azurerm_resource_group.hub.name
-  enabled_for_disk_encryption = true
-  enabled_for_deployment      = true
-  tenant_id                   = data.azurerm_client_config.current.tenant_id
-  soft_delete_retention_days  = var.key_vault_soft_delete_retention_days
-  purge_protection_enabled    = false
-  sku_name                    = "standard"
-
-  public_network_access_enabled = false
-
-  tags = local.common_tags
-
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    key_permissions = [
-      "Get", "List", "Update", "Create", "Import", "Delete", "Recover", "Backup", "Restore"
-    ]
-
-    secret_permissions = [
-      "Get", "List", "Set", "Delete", "Recover", "Backup", "Restore"
-    ]
-
-    certificate_permissions = [
-      "Get", "List", "Update", "Create", "Import", "Delete", "Recover", "Backup", "Restore"
-    ]
-  }
-}
-
-# Private Endpoint for Key Vault
-resource "azurerm_private_endpoint" "key_vault" {
-  name                = "${local.resource_prefix}-pep-kv"
+# Hub NSG
+resource "azurerm_network_security_group" "hub" {
+  name                = "nsg-${local.resource_prefix}-hub-${format("%03d", 1)}"
   location            = azurerm_resource_group.hub.location
   resource_group_name = azurerm_resource_group.hub.name
-  subnet_id           = azurerm_subnet.hub_private_endpoint.id
   tags                = local.common_tags
 
-  private_service_connection {
-    name                           = "psc-keyvault"
-    private_connection_resource_id = azurerm_key_vault.main.id
-    subresource_names              = ["vault"]
-    is_manual_connection           = false
-  }
-
-  dynamic "private_dns_zone_group" {
-    for_each = var.enable_private_dns ? [1] : []
-    content {
-      name                 = "keyvault-dns-zone-group"
-      private_dns_zone_ids = [azurerm_private_dns_zone.key_vault[0].id]
-    }
+  security_rule {
+    name                       = "AllowBastionInbound"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_ranges    = ["22", "3389"]
+    source_address_prefix      = local.hub_subnets.bastion_subnet
+    destination_address_prefix = "*"
   }
 }
 
-# Generate VM admin password
-resource "random_password" "vm_admin_password" {
-  length  = 16
-  special = true
-  upper   = true
-  lower   = true
-  numeric = true
+# Spoke NSGs
+resource "azurerm_network_security_group" "spokes" {
+  count               = var.spoke_count
+  name                = "nsg-${local.resource_prefix}-${local.spoke_names[count.index]}-${format("%03d", 1)}"
+  location            = azurerm_resource_group.spokes[count.index].location
+  resource_group_name = azurerm_resource_group.spokes[count.index].name
+  tags                = local.common_tags
+
+  security_rule {
+    name                       = "AllowInternalInbound"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "10.0.0.0/8"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "DenyInternetInbound"
+    priority                   = 200
+    direction                  = "Inbound"
+    access                     = "Deny"
+    protocol                   = "*"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "Internet"
+    destination_address_prefix = "*"
+  }
 }
 
-# Store VM admin password in Key Vault
-resource "azurerm_key_vault_secret" "vm_admin_password" {
-  name         = "vm-admin-password"
-  value        = random_password.vm_admin_password.result
-  key_vault_id = azurerm_key_vault.main.id
-  tags         = local.common_tags
-
-  depends_on = [azurerm_key_vault.main]
+# NSG Associations
+resource "azurerm_subnet_network_security_group_association" "spoke_alpha_vm" {
+  count                     = var.spoke_count >= 1 ? 1 : 0
+  subnet_id                 = azurerm_subnet.spoke_alpha_vm[0].id
+  network_security_group_id = azurerm_network_security_group.spokes[0].id
 }
 
-# Generate SQL admin password
-resource "random_password" "sql_admin_password" {
-  count   = var.enable_sql_database ? 1 : 0
-  length  = 16
-  special = true
-  upper   = true
-  lower   = true
-  numeric = true
-}
-
-# Store SQL admin password in Key Vault
-resource "azurerm_key_vault_secret" "sql_admin_password" {
-  count        = var.enable_sql_database ? 1 : 0
-  name         = "sql-admin-password"
-  value        = random_password.sql_admin_password[0].result
-  key_vault_id = azurerm_key_vault.main.id
-  tags         = local.common_tags
-
-  depends_on = [azurerm_key_vault.main]
+resource "azurerm_subnet_network_security_group_association" "spoke_beta_vm" {
+  count                     = var.spoke_count >= 2 ? 1 : 0
+  subnet_id                 = azurerm_subnet.spoke_beta_vm[0].id
+  network_security_group_id = azurerm_network_security_group.spokes[1].id
 }

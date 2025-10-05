@@ -21,6 +21,17 @@ variable "subscription_id" {
   type        = string
 }
 
+# Hub and Spoke Configuration
+variable "spoke_count" {
+  description = "Number of spoke networks to create"
+  type        = number
+  default     = 2
+  validation {
+    condition = var.spoke_count >= 0 && var.spoke_count <= 3
+    error_message = "Spoke count must be between 0 and 3."
+  }
+}
+
 # Network Configuration
 variable "enable_firewall" {
   description = "Enable Azure Firewall deployment"
@@ -104,7 +115,7 @@ variable "sql_database_sku" {
 variable "enable_sql_database" {
   description = "Enable SQL Database deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "enable_cosmos_db" {
@@ -120,33 +131,19 @@ variable "enable_key_vault_soft_delete" {
   default     = true
 }
 
-variable "key_vault_soft_delete_retention_days" {
-  description = "Number of days to retain soft deleted Key Vault"
-  type        = number
-  default     = 7
+variable "key_vault_sku" {
+  description = "Key Vault SKU"
+  type        = string
+  default     = "standard"
+  validation {
+    condition = contains(["standard", "premium"], var.key_vault_sku)
+    error_message = "Key Vault SKU must be standard or premium."
+  }
 }
 
-# Monitoring Configuration
-variable "enable_monitoring" {
-  description = "Enable monitoring and log analytics"
-  type        = bool
-  default     = true
-}
-
-# Tags
+# Tagging
 variable "additional_tags" {
   description = "Additional tags to apply to resources"
   type        = map(string)
   default     = {}
-}
-
-# Spoke Configuration
-variable "spoke_count" {
-  description = "Number of spoke networks to create"
-  type        = number
-  default     = 2
-  validation {
-    condition = var.spoke_count >= 1 && var.spoke_count <= 5
-    error_message = "Spoke count must be between 1 and 5."
-  }
 }

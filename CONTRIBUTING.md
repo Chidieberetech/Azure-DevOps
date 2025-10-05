@@ -1,29 +1,21 @@
-# Contributing to TRL Hub and Spoke Azure Infrastructure
+# Contributing to TRL Hub-Spoke Infrastructure
 
-Thank you for your interest in contributing to the TRL Hub and Spoke Azure Infrastructure project! This document provides guidelines and instructions for contributing to this Terraform-based Azure infrastructure project.
+Thank you for your interest in contributing to the TRL Hub-Spoke Azure infrastructure project! This guide outlines the processes and standards for contributing to our Infrastructure as Code (IaC) implementation.
 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
-- [Development Environment Setup](#development-environment-setup)
-- [Contribution Guidelines](#contribution-guidelines)
+- [Development Workflow](#development-workflow)
 - [Naming Conventions](#naming-conventions)
-- [Terraform Standards](#terraform-standards)
 - [Testing Requirements](#testing-requirements)
 - [Pull Request Process](#pull-request-process)
-- [Issue Reporting](#issue-reporting)
-- [Security Considerations](#security-considerations)
+- [Documentation Standards](#documentation-standards)
+- [Security Guidelines](#security-guidelines)
 
 ## Code of Conduct
 
-This project adheres to a code of conduct that we expect all contributors to follow:
-
-- **Be respectful**: Treat all community members with respect and kindness
-- **Be inclusive**: Welcome newcomers and help them get started
-- **Be collaborative**: Work together to solve problems and improve the project
-- **Be constructive**: Provide helpful feedback and suggestions
-- **Be professional**: Maintain professional communication in all interactions
+We are committed to providing a welcoming and inclusive environment for all contributors. Please read and follow our Code of Conduct in all interactions.
 
 ## Getting Started
 
@@ -31,390 +23,148 @@ This project adheres to a code of conduct that we expect all contributors to fol
 
 Before contributing, ensure you have the following tools installed:
 
-- **Terraform**: Version 1.5.7 or later
-- **Azure CLI**: Latest version
-- **Git**: For version control
-- **Code Editor**: VS Code with Terraform extension recommended
-- **Azure Subscription**: With appropriate permissions
+- **Terraform** (>= 1.5.0)
+- **Azure CLI** (>= 2.50.0)
+- **Git** (>= 2.30.0)
+- **Visual Studio Code** (recommended) with extensions:
+  - HashiCorp Terraform
+  - Azure Tools
+  - GitLens
 
-### Required Knowledge
+### Development Environment Setup
 
-Contributors should have familiarity with:
-
-- Azure cloud services and networking concepts
-- Terraform Infrastructure as Code (IaC)
-- Hub and Spoke network topology
-- Azure security best practices
-- Git version control workflows
-
-## Development Environment Setup
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/Chidieberetech/Azure-DevOps.git
-cd azure-hubspoke-infrastructure
-```
-
-### 2. Set Up Azure Authentication
-
-```bash
-# Login to Azure
-az login
-
-# Set your subscription
-az account set --subscription "your-subscription-id"
-
-# Create service principal for Terraform
-az ad sp create-for-rbac --name "terraform-sp" --role="Contributor" --scopes="/subscriptions/your-subscription-id"
-```
-
-### 3. Configure Authentication for Azure DevOps
-
-Since this project uses Azure DevOps connected to Azure, you have several authentication options:
-
-#### Option A: Azure DevOps Service Connection (Recommended for Pipelines)
-
-When working with Azure DevOps pipelines, authentication is handled automatically through service connections:
-
-```yaml
-# In your Azure DevOps pipeline
-variables:
-  - group: trl-hubspoke-variables  # Variable group containing secrets
-  - name: azureSubscription
-    value: 'trl-hubspoke-service-connection'  # Service connection name
-
-steps:
-- task: AzureCLI@2
-  displayName: 'Terraform Operations'
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      cd terraform/environments/dev
-      terraform init
-      terraform plan
-```
-
-#### Option B: Azure CLI Authentication (Local Development)
-
-For local development, use Azure CLI with your Azure DevOps organization:
-
-```bash
-# Login to Azure using your Azure DevOps account
-az login
-
-# Set your subscription
-az account set --subscription "your-subscription-id"
-
-# Verify authentication
-az account show
-```
-
-#### Option C: Managed Identity (Azure DevOps Hosted Agents)
-
-If using Azure DevOps hosted agents with managed identity:
-
-```yaml
-# No additional authentication needed - handled by Azure DevOps
-steps:
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      # Authentication is automatic
-      terraform init
-```
-
-#### Option D: Azure DevOps Variable Groups
-
-Store sensitive values in Azure DevOps Library > Variable Groups:
-
-1. **Create Variable Group**:
-   - Navigate to Azure DevOps > Library > Variable Groups
-   - Create group: `trl-hubspoke-variables`
-   - Add variables:
-     - `AZURE_SUBSCRIPTION_ID` (linked to Azure Key Vault)
-     - `AZURE_TENANT_ID` (linked to Azure Key Vault)
-
-2. **Reference in Pipeline**:
-```yaml
-variables:
-  - group: trl-hubspoke-variables
-
-steps:
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: 'trl-hubspoke-service-connection'
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      # Variables are automatically available
-      echo "Subscription: $(AZURE_SUBSCRIPTION_ID)"
-      terraform init
-```
-
-#### Option E: Azure Key Vault Integration
-
-Link your variable group to Azure Key Vault for enhanced security:
-
-1. **Enable Key Vault Integration**:
-   - In Variable Groups, toggle "Link secrets from an Azure key vault"
-   - Select your Key Vault service connection
-   - Choose secrets to import
-
-2. **Pipeline Usage**:
-```yaml
-variables:
-  - group: trl-hubspoke-keyvault-secrets
-
-steps:
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: $(azureSubscription)
-    scriptType: 'bash'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      # Secrets automatically available from Key Vault
-      terraform init -backend-config="client_secret=$(terraform-sp-secret)"
-```
-
-### Setting Up Azure DevOps Service Connection
-
-1. **Navigate to Project Settings**:
-   - Go to your Azure DevOps project
-   - Select "Project settings" > "Service connections"
-
-2. **Create Azure Resource Manager Connection**:
-   ```
-   Connection name: trl-hubspoke-service-connection
-   Scope level: Subscription
-   Subscription: your-azure-subscription
-   Resource group: (leave empty for subscription-level)
-   Service principal: (automatically created)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/trl/azure-hubspoke-infrastructure.git
+   cd azure-hubspoke-infrastructure
    ```
 
-3. **Grant Permissions**:
-   - Ensure the service principal has "Contributor" role
-   - Add "Key Vault Administrator" for Key Vault operations
-   - Grant access to specific resource groups as needed
+2. **Set up Azure authentication**
+   ```bash
+   az login
+   az account set --subscription "your-subscription-id"
+   ```
 
-### Local Development Without Environment Variables
+3. **Initialize Terraform**
+   ```bash
+   cd workspaces/hub
+   terraform init
+   ```
 
-For local development, you can avoid manual environment variable setup:
+## Development Workflow
 
-```bash
-# Method 1: Use Azure CLI default credentials
-az login
-cd terraform/environments/dev
-terraform init  # Uses az cli credentials automatically
+### Branch Strategy
 
-# Method 2: Use Azure DevOps Personal Access Token
-az devops configure --defaults organization=https://dev.azure.com/YourOrg
-az devops login
-```
+We follow the GitFlow branching model:
 
-### Terraform Backend Configuration for Azure DevOps
+- **main**: Production-ready code
+- **develop**: Integration branch for features
+- **feature/***: Individual feature development
+- **hotfix/***: Critical fixes for production
+- **release/***: Preparation for new releases
 
-Update your backend configuration to work with Azure DevOps:
+### Feature Development Process
 
-```hcl
-# terraform/environments/prod/main.tf
-terraform {
-  backend "azurerm" {
-    # These can be set via pipeline variables instead of environment variables
-    resource_group_name  = "trl-hubspoke-tfstate-rg"
-    storage_account_name = "trlhubspoketfstate"
-    container_name      = "tfstate"
-    key                 = "prod.terraform.tfstate"
-    
-    # Authentication handled by Azure DevOps service connection
-    # No need for client_id, client_secret, etc.
-  }
-}
-```
+1. **Create a feature branch**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/your-feature-name
+   ```
 
-## Contribution Guidelines
+2. **Make your changes**
+   - Follow naming conventions
+   - Update documentation
+   - Add tests where applicable
 
-### Types of Contributions
+3. **Test your changes**
+   ```bash
+   terraform fmt -recursive
+   terraform validate
+   terraform plan
+   ```
 
-We welcome the following types of contributions:
+4. **Commit your changes**
+   ```bash
+   git add .
+   git commit -m "feat: add new feature description"
+   ```
 
-1. **Bug fixes**: Fixing issues in existing Terraform configurations
-2. **Feature additions**: Adding new Azure resources or capabilities
-3. **Documentation improvements**: Enhancing README, comments, or guides
-4. **Security enhancements**: Improving security posture and compliance
-5. **Performance optimizations**: Improving resource efficiency and cost
-6. **Testing improvements**: Adding or enhancing validation tests
-
-### Before You Start
-
-1. **Check existing issues**: Review open issues to avoid duplication
-2. **Create an issue**: For new features or major changes, create an issue first
-3. **Discuss your approach**: Get feedback on your proposed solution
-4. **Follow conventions**: Adhere to our naming and coding standards
+5. **Push and create pull request**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
 
 ## Naming Conventions
 
-### TRL Standard Naming Convention
+### Azure Resource Naming
 
-All Azure resources must follow the TRL naming convention:
+All resources must follow the standardized naming pattern:
+`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
 
-```
-<org>-<project>-<env>-<resourceType>[-<suffix>]
-```
+#### Examples:
+- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-DEV-WEU-beta-001`
+- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-STG-WEU-alpha-001`
+- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
+- **Storage Accounts**: `stprdweu001`, `stdeveus002`
+- **Key Vaults**: `kv-PRD-WEU-001`, `kv-STG-WEU-001`
+- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
+- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
+- **Azure Firewall**: `afw-PRD-WEU-001`
+- **SQL Server**: `sql-PRD-WEU-001`
 
-**Example**: `trl-hubspoke-prod-vm-web01`
+#### Environment Abbreviations:
+- **PRD**: Production
+- **STG**: Staging
+- **DEV**: Development
 
-### Components:
-- **Organization**: Always `trl`
-- **Project**: `Azure.IAC.hubspoke`
-- **Environment**: `dev`, `staging`, `prod`
-- **Resource Type**: Use approved abbreviations (see README.md)
-- **Suffix**: Optional descriptive suffix
+#### Location Abbreviations:
+- **WEU**: West Europe
+- **EUS**: East US
+- **NEU**: North Europe
+- **CUS**: Central US
 
-### Variable Naming
+### Terraform Naming Conventions
 
-```hcl
-# Good
-variable "hub_vnet_name" {
-  description = "Name of the hub virtual network"
-  type        = string
-}
-
-# Bad
-variable "vnet" {
-  type = string
-}
-```
-
-### Resource Naming in Terraform
-
+#### Resource Names
 ```hcl
 # Good
 resource "azurerm_virtual_network" "hub" {
-  name = var.hub_vnet_name
-  # ...
+  name = "vnet-${local.resource_prefix}-hub-${format("%03d", 1)}"
 }
 
 # Bad
 resource "azurerm_virtual_network" "vnet1" {
   name = "my-vnet"
-  # ...
 }
 ```
 
-## Terraform Standards
-
-### File Organization
-
-```
-terraform/
-├── environments/
-│   ├── dev/
-│   ├── staging/
-│   └── prod/
-├── modules/
-│   ├── network/
-│   ├── security/
-│   ├── compute/
-│   └── storage/
-```
-
-### Module Structure
-
-Each module must include:
-
-```
-module_name/
-├── main.tf          # Primary resources
-├── variables.tf     # Input variables
-├── outputs.tf       # Output values
-├── versions.tf      # Provider requirements
-└── README.md        # Module documentation
-```
-
-### Code Style Guidelines
-
-#### 1. Formatting
-
-```bash
-# Always format your code
-terraform fmt -recursive
-```
-
-#### 2. Variable Definitions
-
-```hcl
-variable "resource_group_name" {
-  description = "Name of the resource group"
-  type        = string
-  validation {
-    condition     = length(var.resource_group_name) > 0
-    error_message = "Resource group name cannot be empty."
-  }
-}
-```
-
-#### 3. Resource Blocks
-
-```hcl
-resource "azurerm_virtual_network" "hub" {
-  name                = var.hub_vnet_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  address_space       = var.hub_address_space
-  
-  tags = merge(var.tags, {
-    Purpose = "Hub Network"
-  })
-}
-```
-
-#### 4. Comments
-
-```hcl
-# Hub Virtual Network for shared services
-resource "azurerm_virtual_network" "hub" {
-  # Configuration details...
-}
-```
-
-### Security Requirements
-
-#### 1. No Hardcoded Values
-
+#### Variable Names
 ```hcl
 # Good
-admin_password = data.azurerm_key_vault_secret.vm_password.value
+variable "spoke_count" {
+  description = "Number of spoke networks to create"
+  type        = number
+  default     = 2
+}
 
 # Bad
-admin_password = "Password123!"
-```
-
-#### 2. Use Data Sources for Sensitive Information
-
-```hcl
-data "azurerm_key_vault_secret" "vm_password" {
-  name         = "vm-admin-password"
-  key_vault_id = var.key_vault_id
+variable "count" {
+  type = number
 }
 ```
 
-#### 3. Implement Least Privilege
-
+#### Local Values
 ```hcl
-# Minimal required permissions only
-access_policy {
-  tenant_id = var.tenant_id
-  object_id = var.object_id
+# Good
+locals {
+  env_abbr = {
+    dev     = "DEV"
+    staging = "STG"
+    prod    = "PRD"
+  }
   
-  secret_permissions = [
-    "Get"
-  ]
+  spoke_names = ["alpha", "beta", "gamma"]
 }
 ```
 
@@ -422,32 +172,58 @@ access_policy {
 
 ### Pre-commit Checks
 
-Before submitting, run:
+Before committing code, ensure the following passes:
 
-```bash
-# Format code
-terraform fmt -recursive
+1. **Terraform Formatting**
+   ```bash
+   terraform fmt -recursive -check
+   ```
 
-# Validate configuration
-terraform validate
+2. **Terraform Validation**
+   ```bash
+   terraform validate
+   ```
 
-# Security scan
-tfsec .
+3. **Security Scanning**
+   ```bash
+   # Using tfsec (if available)
+   tfsec .
+   ```
 
-# Plan without applying
-terraform plan
-```
+4. **Documentation Generation**
+   ```bash
+   # Using terraform-docs (if available)
+   terraform-docs markdown table --output-file README.md .
+   ```
 
-### Validation Tests
+### Testing Strategy
 
-Include validation blocks where appropriate:
+#### Unit Testing
+- **Module Testing**: Each module should be testable in isolation
+- **Variable Validation**: All variables should have appropriate validation rules
+- **Output Verification**: Outputs should be meaningful and well-documented
 
+#### Integration Testing
+- **Pipeline Testing**: Changes should pass through CI/CD pipelines
+- **Environment Testing**: Test in development environment before production
+- **Security Testing**: Security configurations should be validated
+
+#### Example Test Structure
 ```hcl
+# In modules/variables.tf
+variable "environment" {
+  description = "Environment name (dev, staging, prod)"
+  type        = string
+  validation {
+    condition = contains(["dev", "staging", "prod"], var.environment)
+    error_message = "Environment must be dev, staging, or prod."
+  }
+}
+
 variable "vm_size" {
-  description = "Size of the virtual machine"
+  description = "Size of the virtual machines"
   type        = string
   default     = "Standard_B1s"
-  
   validation {
     condition = contains([
       "Standard_B1s",
@@ -459,46 +235,32 @@ variable "vm_size" {
 }
 ```
 
-### Environment Testing
-
-Test your changes in the development environment:
-
-```bash
-cd terraform/environments/dev
-terraform plan
-terraform apply
-# Verify functionality
-terraform destroy
-```
-
 ## Pull Request Process
 
-### 1. Branch Naming
+### PR Requirements
 
-Use descriptive branch names:
+1. **Descriptive Title**: Use conventional commit format
+   - `feat:` for new features
+   - `fix:` for bug fixes
+   - `docs:` for documentation changes
+   - `refactor:` for code refactoring
+   - `test:` for adding tests
 
-```
-feature/add-cosmos-db-module
-bugfix/firewall-rule-typo
-docs/update-readme-examples
-security/implement-private-endpoints
-```
+2. **Detailed Description**: Include:
+   - What changes were made
+   - Why the changes were necessary
+   - How to test the changes
+   - Any breaking changes
 
-### 2. Commit Messages
+3. **Checklist**: Ensure all items are completed:
+   - [ ] Code follows naming conventions
+   - [ ] Documentation updated
+   - [ ] Tests added/updated
+   - [ ] Security implications considered
+   - [ ] Terraform fmt and validate pass
+   - [ ] No sensitive data in code
 
-Follow conventional commit format:
-
-```
-feat: add Azure Cosmos DB module with private endpoint
-fix: correct firewall policy rule priority
-docs: update naming convention examples
-security: implement Key Vault private endpoint
-```
-
-### 3. Pull Request Template
-
-Include the following in your PR description:
-
+### PR Template
 ```markdown
 ## Description
 Brief description of changes
@@ -510,188 +272,189 @@ Brief description of changes
 - [ ] Documentation update
 
 ## Testing
-- [ ] Code formatted with terraform fmt
-- [ ] Configuration validated
-- [ ] Security scan passed
-- [ ] Tested in dev environment
+- [ ] Terraform validate passes
+- [ ] Terraform plan reviewed
+- [ ] Security scan completed
+- [ ] Manual testing performed
 
 ## Checklist
-- [ ] Follows TRL naming conventions
-- [ ] Includes appropriate documentation
-- [ ] No hardcoded secrets or credentials
-- [ ] Backward compatible (or breaking change noted)
+- [ ] Follows naming conventions
+- [ ] Documentation updated
+- [ ] No sensitive data exposed
+- [ ] Backward compatibility maintained
 ```
 
-### 4. Review Process
+### Review Process
 
-1. **Automated checks**: CI/CD pipeline runs validation
-2. **Security review**: Security team reviews for compliance
-3. **Code review**: Maintainers review code quality and standards
-4. **Approval**: Two approvals required for merge to main
-
-## Issue Reporting
-
-### Bug Reports
-
-Include the following information:
-
-```markdown
-**Environment**: dev/staging/prod
-**Terraform Version**: x.x.x
-**Azure CLI Version**: x.x.x
-**Module**: network/security/compute/etc.
-
-**Description**
-Clear description of the issue
-
-**Steps to Reproduce**
-1. Step one
-2. Step two
-3. Step three
-
-**Expected Behavior**
-What should happen
-
-**Actual Behavior**
-What actually happens
-
-**Error Messages**
-```
-terraform error output here
-```
-
-**Additional Context**
-Any other relevant information
-```
-
-### Feature Requests
-
-```markdown
-**Feature Description**
-Clear description of the proposed feature
-
-**Use Case**
-Why is this feature needed?
-
-**Proposed Solution**
-How should this be implemented?
-
-**Alternatives Considered**
-Other approaches considered
-
-**Additional Context**
-Any other relevant information
-```
-
-## Security Considerations
-
-### Sensitive Information
-
-- **Never commit**: Passwords, keys, secrets, or credentials
-- **Use Key Vault**: Store all sensitive data in Azure Key Vault
-- **Use data sources**: Reference secrets through data sources
-- **Environment variables**: Use for authentication during development
-
-### Network Security
-
-- **No public IPs**: VMs should not have public IP addresses
-- **Private endpoints**: Use private endpoints for all PaaS services
-- **Firewall rules**: All traffic must flow through Azure Firewall
-- **No NSGs**: Network Security Groups are not used in this architecture
-
-### Access Control
-
-- **Managed identities**: Use system-assigned managed identities where possible
-- **RBAC**: Implement role-based access control
-- **Least privilege**: Grant minimum required permissions
-- **Regular reviews**: Review and audit access permissions
+1. **Automated Checks**: PR must pass all automated checks
+2. **Peer Review**: At least one team member must review
+3. **Security Review**: Security-related changes need security team approval
+4. **Documentation Review**: Documentation changes reviewed for accuracy
 
 ## Documentation Standards
 
-### Module Documentation
+### File Documentation
 
-Each module must include:
+#### README Files
+- Each module should have a comprehensive README.md
+- Include usage examples
+- Document all variables and outputs
+- Provide troubleshooting guidance
 
-```markdown
-# Module Name
-
-## Description
-Brief description of the module purpose
-
-## Usage
+#### Inline Documentation
 ```hcl
-module "example" {
-  source = "./modules/module-name"
-  
-  # Required variables
-  variable1 = "value1"
-  variable2 = "value2"
+# Spoke Alpha Virtual Machine
+# Deploys a Windows Server VM in the Alpha spoke network
+# with IIS web server and proper security configuration
+resource "azurerm_windows_virtual_machine" "spoke_alpha_vm" {
+  count               = var.spoke_count >= 1 ? 1 : 0
+  name                = "vm-${local.resource_prefix}-alpha-${format("%03d", 1)}"
+  resource_group_name = azurerm_resource_group.spokes[0].name
+  # ... rest of configuration
 }
 ```
 
-## Requirements
-| Name | Version |
-|------|---------|
-| terraform | >= 1.5 |
-| azurerm | ~> 3.0 |
-
-## Providers
-| Name | Version |
-|------|---------|
-| azurerm | ~> 3.0 |
-
-## Resources
-| Name | Type |
-|------|------|
-| resource_name | azurerm_resource_type |
-
-## Inputs
-| Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
-| input1 | Description | `string` | n/a | yes |
-
-## Outputs
-| Name | Description |
-|------|-------------|
-| output1 | Description |
-```
+#### Architecture Documentation
+- Network diagrams should be updated for infrastructure changes
+- Security documentation for new security features
+- Operational runbooks for new operational procedures
 
 ### Code Comments
 
+#### Resource Comments
 ```hcl
-# Create hub virtual network for shared services
-# This network hosts Azure Firewall, Bastion, and Key Vault
-resource "azurerm_virtual_network" "hub" {
-  name                = var.hub_vnet_name
-  location            = var.location
-  resource_group_name = var.resource_group_name
-  address_space       = var.hub_address_space
-  tags                = var.tags
+# Azure Firewall for centralized network security
+# Routes all spoke traffic and provides DNAT rules for external access
+resource "azurerm_firewall" "main" {
+  # Configuration here
 }
 ```
 
+#### Variable Comments
+```hcl
+variable "spoke_count" {
+  description = "Number of spoke networks to create (max 3 for current design)"
+  type        = number
+  default     = 2
+  
+  validation {
+    condition = var.spoke_count >= 0 && var.spoke_count <= 3
+    error_message = "Spoke count must be between 0 and 3."
+  }
+}
+```
+
+## Security Guidelines
+
+### Security Best Practices
+
+1. **No Hardcoded Secrets**: Never commit passwords, keys, or sensitive data
+2. **Use Key Vault**: Store all secrets in Azure Key Vault
+3. **Principle of Least Privilege**: Assign minimal required permissions
+4. **Network Security**: Implement network segmentation and firewalls
+5. **Encryption**: Ensure data is encrypted at rest and in transit
+
+### Security Code Examples
+
+#### Secure Secret Management
+```hcl
+# Good - Using Key Vault reference
+data "azurerm_key_vault_secret" "vm_password" {
+  name         = "vm-admin-password"
+  key_vault_id = azurerm_key_vault.main.id
+}
+
+# Bad - Hardcoded password
+admin_password = "MyPassword123!"
+```
+
+#### Secure Storage Configuration
+```hcl
+# Good - Secure storage account
+resource "azurerm_storage_account" "main" {
+  # ... other configuration
+  
+  public_network_access_enabled   = false
+  allow_nested_items_to_be_public = false
+  shared_access_key_enabled       = true
+  
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
+  }
+}
+```
+
+### Security Review Checklist
+
+- [ ] No sensitive data in code or comments
+- [ ] All secrets stored in Key Vault
+- [ ] Network security properly configured
+- [ ] Storage accounts secured with private endpoints
+- [ ] VM access restricted to authorized users
+- [ ] Monitoring and logging enabled
+- [ ] Backup and recovery configured
+
+## Infrastructure Patterns
+
+### Spoke Architecture
+
+When adding new spokes, follow the established pattern:
+
+```hcl
+# Spoke naming follows: alpha, beta, gamma, delta, etc.
+locals {
+  spoke_names = ["alpha", "beta", "gamma"]
+}
+
+# Network addressing follows sequential pattern
+locals {
+  spoke_alpha_address_space = ["10.1.0.0/16"]
+  spoke_beta_address_space  = ["10.2.0.0/16"]
+  spoke_gamma_address_space = ["10.3.0.0/16"]
+}
+```
+
+### Resource Organization
+
+- **Hub Resources**: Shared services in hub resource group
+- **Spoke Resources**: Workload-specific resources in spoke resource groups
+- **Management Resources**: Monitoring and governance in management resource group
+
+## Release Process
+
+### Version Management
+
+We use semantic versioning (SemVer) for releases:
+- **Major**: Breaking changes
+- **Minor**: New features (backward compatible)
+- **Patch**: Bug fixes
+
+### Release Workflow
+
+1. **Feature Freeze**: Complete all features for release
+2. **Testing**: Comprehensive testing in staging environment
+3. **Documentation**: Update all documentation
+4. **Release Notes**: Document all changes
+5. **Deployment**: Deploy to production
+6. **Monitoring**: Monitor post-deployment
+
 ## Getting Help
 
+### Documentation Resources
+- [Project Structure](PROJECT-STRUCTURE.md)
+- [Pipeline Setup Guide](PIPELINE-SETUP-GUIDE.md)
+- [Azure Naming Conventions](README.md#azure-resource-naming-conventions)
+
 ### Communication Channels
+- **Issues**: GitHub Issues for bug reports and feature requests
+- **Discussions**: GitHub Discussions for general questions
+- **Security**: security@trl.com for security-related issues
 
-- **Issues**: GitHub issues for bugs and feature requests
-- **Discussions**: GitHub discussions for questions and ideas
-- **Wiki**: Project wiki for detailed documentation
+### Contact Information
+- **Infrastructure Team**: infrastructure@trl.com
+- **Security Team**: security@trl.com
+- **Project Lead**: project-lead@trl.com
 
-### Resources
-
-- [Azure Documentation](https://docs.microsoft.com/en-us/azure/)
-- [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
-- [Azure Well-Architected Framework](https://docs.microsoft.com/en-us/azure/architecture/framework/)
-
-## License
-
-By contributing to this project, you agree that your contributions will be licensed under the same license as the project.
-
-## Recognition
-
-Contributors will be recognized in the project documentation and release notes. Significant contributions may be highlighted in team communications and performance reviews.
-
----
-
-Thank you for contributing to the TRL Hub and Spoke Azure Infrastructure project! Your contributions help improve our infrastructure capabilities and support other people's cloud journey.
+Thank you for contributing to the TRL Hub-Spoke Infrastructure project!

@@ -290,7 +290,7 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 4. Configure hub subnet routing
 ```
 
-#### Step 8: Network Security Groups
+#### Step 8: Network Security Groups (But this implementation - NSGs are not used)
 ```
 1. Create NSGs for each subnet type
 2. Configure inbound/outbound rules
@@ -505,52 +505,144 @@ Azure DevOps/
 └── PROJECT-STRUCTURE.md       # Detailed project structure documentation
 ```
 
-## Management Scripts Overview
+# TRL Hub-Spoke Azure Infrastructure
 
-This project includes comprehensive management scripts for infrastructure operations:
+This repository contains Terraform Infrastructure as Code (IaC) for deploying a secure hub-and-spoke network architecture on Microsoft Azure. The infrastructure follows Azure naming conventions and best practices for enterprise-grade deployments.
 
-### Security Management Scripts
+## Architecture Overview
 
-#### **VM Password Rotation** (`scripts/vm-password-rotation.sh`)
-- **Purpose**: Automated rotation of VM passwords across all environments
-- **Features**: Multi-environment support, Key Vault integration, backup system
-- **Usage**: `./vm-password-rotation.sh -k vault-name -r resource-group -s subscription-id -e environment`
-- **Schedule**: Quarterly automatic rotation via Azure DevOps pipeline
+The solution deploys a centralized hub with multiple spoke networks:
 
-### Cost Management Scripts
+- **Hub**: Centralized services including Azure Firewall, Bastion, and shared resources
+- **Spoke Alpha**: First spoke network with Windows Server VM and workloads
+- **Spoke Beta**: Second spoke network with Windows Server VM and workloads
 
-#### **Cost Analysis** (`scripts/cost-analysis.sh`)
-- **Purpose**: Analyzes Azure costs and provides optimization recommendations
-- **Features**: Multi-subscription analysis, free tier monitoring, cost alerts setup
-- **Usage**: `./cost-analysis.sh -d 30 -f table` (analyze last 30 days in table format)
-- **Output**: Cost data files and optimization recommendations
+## Azure Resource Naming Conventions
 
-### Operations Scripts
+All resources follow standardized Azure naming conventions:
 
-#### **Health Check** (`scripts/health-check.sh`)
-- **Purpose**: Comprehensive infrastructure health monitoring
-- **Features**: VM status, network connectivity, security component validation
-- **Usage**: `./health-check.sh` (checks all environments)
-- **Output**: Detailed health report with recommendations
+### Naming Pattern
+`{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}`
 
-#### **Backup Management** (`scripts/backup-management.sh`)
-- **Purpose**: Manages backups across all environments
-- **Features**: VM backups, database validation, backup compliance reporting
-- **Usage**: `./backup-management.sh -a validate -e all` (validate all backups)
-- **Actions**: backup, restore, validate, list
+### Examples
+- **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-DEV-WEU-beta-001`
+- **Virtual Networks**: `vnet-PRD-WEU-hub-001`, `vnet-PRD-WEU-alpha-001`
+- **Resource Groups**: `rg-trl-PRD-alpha-001`, `RG-TRL-Hub-weu`
+- **Storage Accounts**: `stprdweu001`, `stdiagprdweu001`
+- **Network Security Groups**: `nsg-PRD-WEU-hub-001`
+- **Subnets**: `snet-PRD-WEU-alpha-vm-001`
+- **Azure Firewall**: `afw-PRD-WEU-001`
+- **Key Vault**: `kv-PRD-WEU-001`
+- **SQL Server**: `sql-PRD-WEU-001`
+- **Cosmos DB**: `cosmos-PRD-WEU-001`
 
-#### **Environment Cleanup** (`scripts/environment-cleanup.sh`)
-- **Purpose**: Cleans up temporary resources and optimizes environments
-- **Features**: Storage cleanup, snapshot removal, unused resource detection
-- **Usage**: `./environment-cleanup.sh -e dev -t all -d` (dry run cleanup for dev)
-- **Safety**: Includes dry-run mode and confirmation prompts
+### Abbreviations Used
+- **Environments**: PRD (Production), STG (Staging), DEV (Development)
+- **Locations**: WEU (West Europe), EUS (East US), NEU (North Europe)
+- **Resource Types**: vm (Virtual Machine), vnet (Virtual Network), rg (Resource Group), st (Storage Account), etc.
 
-### Pipeline Templates
+## Infrastructure Components
 
-#### **Reusable Templates** (`pipelines/templates/`)
-- **terraform-init.yml**: Standardized Terraform initialization
-- **terraform-plan.yml**: Infrastructure planning with validation
-- **terraform-apply.yml**: Safe infrastructure deployment
-- **terraform-destroy.yml**: Controlled infrastructure destruction
-- **security-scan.yml**: Comprehensive security scanning (tfsec, checkov, terrascan)
-- **infrastructure-validation.yml**: Post-deployment validation
+### Hub Resources (RG-TRL-Hub-weu)
+- **Azure Firewall**: `afw-PRD-WEU-001` - Centralized network security and routing
+- **Azure Bastion**: `bastion-PRD-WEU-001` - Secure RDP/SSH access to VMs
+- **Key Vault**: `kv-PRD-WEU-001` - Secure storage for VM passwords and certificates
+- **Diagnostics Storage**: `stdiagprdweu001` - Boot diagnostics for all VMs
+- **Private DNS Zones**: Internal name resolution
+
+### Spoke Alpha Resources
+- **Windows Server VM**: `vm-PRD-WEU-alpha-001` (10.1.4.10)
+- **Virtual Network**: `vnet-PRD-WEU-alpha-001` (10.1.0.0/16)
+- **Subnets**: VM, workload, database, and private endpoint subnets
+- **Storage Account**: `stprdweu001` - Private storage with blob and file shares
+
+### Spoke Beta Resources
+- **Windows Server VM**: `vm-PRD-WEU-beta-001` (10.2.4.10)
+- **Virtual Network**: `vnet-PRD-WEU-beta-001` (10.2.0.0/16)
+- **Subnets**: VM, workload, database, and private endpoint subnets
+
+## Network Architecture
+
+```
+Hub VNet (10.0.0.0/16) - vnet-PRD-WEU-hub-001
+├── Azure Firewall (10.0.1.0/26) - afw-PRD-WEU-001
+├── Azure Bastion (10.0.2.0/27) - bastion-PRD-WEU-001
+├── Shared Services (10.0.3.0/24) - snet-PRD-WEU-shared-001
+└── Private Endpoints (10.0.4.0/24) - snet-PRD-WEU-pe-hub-001
+
+Spoke Alpha VNet (10.1.0.0/16) - vnet-PRD-WEU-alpha-001
+├── VM Subnet (10.1.4.0/24) - snet-PRD-WEU-alpha-vm-001
+├── Workload Subnet (10.1.1.0/24) - snet-PRD-WEU-alpha-workload-001
+├── Database Subnet (10.1.2.0/24) - snet-PRD-WEU-alpha-db-001
+└── Private Endpoints (10.1.3.0/24) - snet-PRD-WEU-alpha-pe-001
+
+Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
+├── VM Subnet (10.2.4.0/24) - snet-PRD-WEU-beta-vm-001
+├── Workload Subnet (10.2.1.0/24) - snet-PRD-WEU-beta-workload-001
+├── Database Subnet (10.2.2.0/24) - snet-PRD-WEU-beta-db-001
+└── Private Endpoints (10.2.3.0/24) - snet-PRD-WEU-beta-pe-001
+```
+
+## Security Features
+
+- **Zero Trust Network**: All traffic routed through Azure Firewall
+- **Network Segmentation**: Separate subnets for different workload types
+- **Private Endpoints**: Secure connectivity to Azure PaaS services
+- **Azure Bastion**: Secure management access without public IPs on VMs
+- **Network Security Groups**: Granular traffic control at subnet level
+- **Key Vault Integration**: Secure credential management
+
+## Quick Start
+
+1. **Prerequisites**
+   - Azure subscription with Contributor access
+   - Terraform 1.5+
+   - Azure CLI installed and authenticated
+
+2. **Deploy Infrastructure**
+   ```bash
+   cd workspaces/hub
+   terraform init
+   terraform plan
+   terraform apply
+   ```
+
+3. **Access VMs**
+   - Via Azure Bastion: Use Azure Portal
+   - Via Firewall: RDP to firewall public IP on port 3389
+
+## Project Structure
+
+```
+.
+├── modules/                    # Reusable Terraform modules
+│   ├── main.tf                # Resource groups and core config
+│   ├── network.tf             # VNets, subnets, and peering
+│   ├── security.tf            # Firewall, Bastion, NSGs
+│   ├── compute.tf             # Virtual machines and extensions
+│   ├── storage.tf             # Storage accounts and containers
+│   ├── keyvault.tf            # Key Vault and secrets
+│   ├── database.tf            # SQL Server and Cosmos DB
+│   ├── locals.tf              # Local values and naming
+│   ├── variables.tf           # Input variables
+│   └── outputs.tf             # Output values
+├── workspaces/                # Environment-specific deployments
+│   └── hub/                   # Hub workspace (includes spokes)
+├── pipelines/                 # Azure DevOps CI/CD pipelines
+└── scripts/                   # Utility scripts
+```
+
+## Cost Optimization
+
+- Uses Standard_B1s VMs (Azure Free Tier eligible)
+- LRS storage replication for cost efficiency
+- Auto-shutdown enabled for VMs
+- Minimal firewall rules for reduced processing costs
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on contributing to this project.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

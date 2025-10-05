@@ -27,9 +27,9 @@ resource "azurerm_container_registry" "main" {
     content {
       default_action = "Deny"
 
-      virtual_network {
-        action    = "Allow"
-        subnet_id = azurerm_subnet.spoke_alpha_private_endpoint[0].id
+      ip_rule {
+        action   = "Allow"
+        ip_range = "10.0.0.0/8"  # Allow internal network traffic
       }
     }
   }

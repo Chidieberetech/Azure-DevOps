@@ -770,3 +770,88 @@ variable "enable_container_apps" {
   default     = false
 }
 
+#================================================
+# BACKUP CONFIGURATION
+#================================================
+
+variable "enable_backup" {
+  description = "Enable Azure Backup services"
+  type        = bool
+  default     = false
+}
+
+variable "backup_retention_days" {
+  description = "Number of days to retain backup data"
+  type        = number
+  default     = 30
+  validation {
+    condition = var.backup_retention_days >= 7 && var.backup_retention_days <= 9999
+    error_message = "Backup retention must be between 7 and 9999 days."
+  }
+}
+
+#================================================
+# SECURITY CENTER CONFIGURATION
+#================================================
+
+variable "enable_security_center" {
+  description = "Enable Azure Security Center"
+  type        = bool
+  default     = true
+}
+
+variable "security_contact_email" {
+  description = "Email address for security contact notifications"
+  type        = string
+  default     = ""
+}
+
+variable "enable_app_service" {
+  description = "Enable App Service deployment"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MONITORING CONFIGURATION
+#================================================
+
+variable "enable_security_monitoring" {
+  description = "Enable security monitoring features"
+  type        = bool
+  default     = true
+}
+
+variable "enable_update_management" {
+  description = "Enable Update Management solution"
+  type        = bool
+  default     = true
+}
+
+variable "enable_change_tracking" {
+  description = "Enable Change Tracking and Inventory solution"
+  type        = bool
+  default     = true
+}
+
+variable "enable_cost_monitoring" {
+  description = "Enable cost monitoring and budgets"
+  type        = bool
+  default     = true
+}
+
+variable "monthly_budget_amount" {
+  description = "Monthly budget amount for cost alerts"
+  type        = number
+  default     = 1000
+  validation {
+    condition = var.monthly_budget_amount > 0
+    error_message = "Monthly budget amount must be greater than 0."
+  }
+}
+
+variable "budget_alert_emails" {
+  description = "List of email addresses for budget alerts"
+  type        = list(string)
+  default     = []
+}

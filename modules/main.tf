@@ -232,13 +232,43 @@ resource "azurerm_network_watcher" "main" {
   tags                = local.common_tags
 }
 
-# Flow logs for network security groups
+# Flow logs for network monitoring (without NSG dependency)
 resource "azurerm_network_watcher_flow_log" "main" {
-  count                     = var.enable_monitoring ? 1 : 0
-  network_watcher_name      = azurerm_network_watcher.main.name
-  resource_group_name       = azurerm_resource_group.management.name
-  name                      = "flowlog-${local.resource_prefix}"
-  network_security_group_id = azurerm_network_security_group.hub_shared[0].id
+  count                = var.enable_monitoring ? 1 : 0
+  network_watcher_name = azurerm_network_watcher.main.name
+  resource_group_name  = azurerm_resource_group.management.name
+  name                 = "flowlog-${local.resource_prefix}"
+  # Removed NSG dependency - all traffic flows via Azure Firewall
+  storage_account_id   = azurerm_storage_account.main.id
+  enabled              = true
+  version              = 2
+
+  retention_policy {
+    enabled = true
+    days    = var.log_retention_days
+  }
+
+  traffic_analytics {
+    enabled               = var.enable_monitoring
+    workspace_id          = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].workspace_id : null
+    workspace_region      = var.location
+    workspace_resource_id = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].id : null
+    interval_in_minutes   = 10
+  }
+
+  tags = local.common_tags
+
+  depends_on = [azurerm_log_analytics_workspace.main]
+}
+
+# Network flow logs for Azure Firewall monitoring (Hub and Spoke topology)
+resource "azurerm_network_watcher_flow_log" "firewall" {
+  count                = var.enable_monitoring && var.enable_firewall ? 1 : 0
+  network_watcher_name = azurerm_network_watcher.main.name
+  resource_group_name  = azurerm_resource_group.management.name
+  name                 = "flowlog-firewall-${local.resource_prefix}"
+  # Monitor Azure Firewall subnet for traffic analysis
+  target_resource_id   = azurerm_subnet.firewall.id
   storage_account_id        = azurerm_storage_account.main.id
   enabled                   = true
   version                   = 2
@@ -258,7 +288,7 @@ resource "azurerm_network_watcher_flow_log" "main" {
 
   tags = local.common_tags
 
-  depends_on = [azurerm_network_security_group.hub_shared, azurerm_log_analytics_workspace.main]
+  depends_on = [azurerm_log_analytics_workspace.main, azurerm_subnet.firewall]
 }
 
 #================================================
@@ -268,8 +298,9 @@ resource "azurerm_network_watcher_flow_log" "main" {
 # Azure Defender for Cloud Contact
 resource "azurerm_security_center_contact" "main" {
   count               = var.enable_security_center && var.security_contact_email != "" ? 1 : 0
-  email               = var.security_contact_email
-  phone               = ""
+  name                 = "default1"
+  email                = var.security_contact_email
+  phone                = "+1-555-555-5555"
   alert_notifications = true
   alerts_to_admins    = true
 }
@@ -318,46 +349,6 @@ resource "azurerm_security_center_subscription_pricing" "kubernetes" {
 }
 
 #================================================
-# SHARED NETWORK SECURITY GROUPS
-#================================================
-
-# Shared NSG for hub resources
-resource "azurerm_network_security_group" "hub_shared" {
-  count               = var.enable_monitoring ? 1 : 0
-  name                = "nsg-${local.resource_prefix}-hub-shared"
-  location            = azurerm_resource_group.hub.location
-  resource_group_name = azurerm_resource_group.hub.name
-
-  # Allow management traffic
-  security_rule {
-    name                       = "AllowManagementInbound"
-    priority                   = 1000
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_ranges    = ["22", "3389", "5985", "5986"]
-    source_address_prefix      = "VirtualNetwork"
-    destination_address_prefix = "*"
-  }
-
-  # Deny all other inbound traffic
-  security_rule {
-    name                       = "DenyAllInbound"
-    priority                   = 4096
-    direction                  = "Inbound"
-    access                     = "Deny"
-    protocol                   = "*"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
-  }
-
-  tags = local.common_tags
-}
-
-#================================================
 # AZURE POLICY ASSIGNMENTS
 #================================================
 
@@ -382,6 +373,8 @@ resource "azurerm_subscription_policy_assignment" "security_baseline" {
 
   location = var.location
 }
+
+# NOTE: NSG resources removed - all traffic flows via Azure Firewall in Hub and Spoke topology
 
 #================================================
 # DIAGNOSTICS AND MONITORING CONFIGURATION

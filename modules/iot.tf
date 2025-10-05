@@ -32,9 +32,6 @@ resource "azurerm_iothub_dps" "main" {
     capacity = "1"
   }
 
-  # Security settings
-  public_network_access_enabled = false
-
   linked_hub {
     connection_string       = azurerm_iothub.main[0].shared_access_policy[0].primary_connection_string
     location                = azurerm_resource_group.spokes[0].location
@@ -58,36 +55,6 @@ resource "azurerm_digital_twins_instance" "main" {
   tags = local.common_tags
 }
 
-# Time Series Insights Environment
-resource "azurerm_time_series_insights_standard_environment" "main" {
-  count                        = var.enable_time_series_insights ? 1 : 0
-  name                         = "tsi-${local.resource_prefix}-${format("%03d", 1)}"
-  location                     = azurerm_resource_group.spokes[0].location
-  resource_group_name          = azurerm_resource_group.spokes[0].name
-  sku_name                     = "S1_1"
-  data_retention_time          = "P30D"
-  partition_key                = "deviceId"
-  storage_limit_exceeded_behavior = "PauseIngress"
-
-  tags = local.common_tags
-}
-
-# Time Series Insights Event Source
-resource "azurerm_time_series_insights_event_source_eventhub" "main" {
-  count                    = var.enable_time_series_insights && var.enable_event_hub ? 1 : 0
-  name                     = "tsi-es-${local.resource_prefix}"
-  location                 = azurerm_resource_group.spokes[0].location
-  environment_id           = azurerm_time_series_insights_standard_environment.main[0].id
-  eventhub_name           = azurerm_eventhub.main[0].name
-  namespace_name          = azurerm_eventhub_namespace.main[0].name
-  shared_access_key       = azurerm_eventhub_namespace.main[0].default_primary_key
-  shared_access_key_name  = "RootManageSharedAccessKey"
-  consumer_group_name     = "$Default"
-  timestamp_property_name = "timestamp"
-
-  tags = local.common_tags
-}
-
 # IoT Central Application
 resource "azurerm_iotcentral_application" "main" {
   count               = var.enable_iot_central ? 1 : 0
@@ -107,6 +74,7 @@ resource "azurerm_maps_account" "main" {
   count               = var.enable_maps ? 1 : 0
   name                = "map-${local.resource_prefix}-${format("%03d", 1)}"
   resource_group_name = azurerm_resource_group.spokes[0].name
+  location            = azurerm_resource_group.spokes[0].location
   sku_name            = var.maps_sku_name
 
   tags = local.common_tags

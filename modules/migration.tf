@@ -2,28 +2,6 @@
 # MIGRATION SERVICES
 #================================================
 
-# Azure Migrate Project
-resource "azurerm_migrate_project" "main" {
-  count               = var.enable_migrate_project ? 1 : 0
-  name                = "migr-${local.resource_prefix}-${format("%03d", 1)}"
-  resource_group_name = azurerm_resource_group.management.name
-  location            = azurerm_resource_group.management.location
-
-  tags = local.common_tags
-}
-
-# Database Migration Service
-resource "azurerm_database_migration_service" "main" {
-  count               = var.enable_database_migration_service ? 1 : 0
-  name                = "dms-${local.resource_prefix}-${format("%03d", 1)}"
-  location            = azurerm_resource_group.management.location
-  resource_group_name = azurerm_resource_group.management.name
-  subnet_id           = azurerm_subnet.shared_services.id
-  sku_name            = "Standard_1vCores"
-
-  tags = local.common_tags
-}
-
 # Storage Account for migration data
 resource "azurerm_storage_account" "migration" {
   count                    = var.enable_migration_storage ? 1 : 0
@@ -49,57 +27,19 @@ resource "azurerm_storage_account" "migration" {
   tags = local.common_tags
 }
 
-# Data Box for offline data transfer
-# Note: Data Box orders are typically created through Azure portal or APIs
-resource "azurerm_resource_group_template_deployment" "databox_order" {
-  count               = var.enable_databox ? 1 : 0
-  name                = "databox-${local.resource_prefix}"
+# Database Migration Service
+resource "azurerm_database_migration_service" "main" {
+  count               = var.enable_database_migration_service ? 1 : 0
+  name                = "dms-${local.resource_prefix}-${format("%03d", 1)}"
+  location            = azurerm_resource_group.management.location
   resource_group_name = azurerm_resource_group.management.name
-  deployment_mode     = "Incremental"
+  subnet_id           = azurerm_subnet.shared_services.id
+  sku_name            = "Standard_1vCores"
 
-  template_content = jsonencode({
-    "$schema"      = "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#"
-    "contentVersion" = "1.0.0.0"
-    "resources" = [
-      {
-        "type"       = "Microsoft.DataBox/jobs"
-        "apiVersion" = "2022-12-01"
-        "name"       = "databox-${local.resource_prefix}"
-        "location"   = var.location
-        "sku" = {
-          "name" = "DataBox"
-        }
-        "properties" = {
-          "transferType" = "ImportToAzure"
-          "details" = {
-            "jobDetailsType" = "DataBox"
-            "contactDetails" = {
-              "contactName" = var.migration_contact_name
-              "phone"       = var.migration_contact_phone
-              "emailList"   = [var.migration_contact_email]
-            }
-            "shippingAddress" = {
-              "streetAddress1" = var.migration_shipping_address
-              "city"          = var.migration_shipping_city
-              "stateOrProvince" = var.migration_shipping_state
-              "country"       = var.migration_shipping_country
-              "postalCode"    = var.migration_shipping_postal_code
-            }
-            "destinationAccountDetails" = [
-              {
-                "accountId" = azurerm_storage_account.migration[0].id
-                "dataDestinationType" = "StorageAccount"
-              }
-            ]
-          }
-        }
-        "tags" = local.common_tags
-      }
-    ]
-  })
+  tags = local.common_tags
 }
 
-# Site Recovery Vault for VM migration
+# Site Recovery Vault for migration
 resource "azurerm_recovery_services_vault" "migration" {
   count                        = var.enable_site_recovery_migration ? 1 : 0
   name                         = "rsv-${local.resource_prefix}-migr-${format("%03d", 1)}"
@@ -148,19 +88,14 @@ resource "azurerm_backup_policy_vm" "migration" {
   }
 }
 
-# App Service Migration Assistant (placeholder)
-resource "azurerm_app_service_plan" "migration_staging" {
+# App Service Migration staging environment
+resource "azurerm_service_plan" "migration_staging" {
   count               = var.enable_app_migration ? 1 : 0
   name                = "asp-${local.resource_prefix}-migr-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
-  kind                = "Linux"
-  reserved            = true
-
-  sku {
-    tier = "Standard"
-    size = "S1"
-  }
+  os_type             = "Linux"
+  sku_name            = "S1"
 
   tags = local.common_tags
 }
@@ -183,7 +118,6 @@ resource "azurerm_private_endpoint" "migration_storage" {
   tags = local.common_tags
 }
 
-# Azure Import/Export Service (managed through portal/CLI typically)
 # Storage containers for import/export jobs
 resource "azurerm_storage_container" "import_export" {
   count                 = var.enable_import_export ? 1 : 0

@@ -12,26 +12,6 @@ resource "azurerm_spatial_anchors_account" "main" {
   tags = local.common_tags
 }
 
-# Remote Rendering Account
-resource "azurerm_remote_rendering_account" "main" {
-  count               = var.enable_remote_rendering ? 1 : 0
-  name                = "rra-${local.resource_prefix}-${format("%03d", 1)}"
-  location            = azurerm_resource_group.spokes[0].location
-  resource_group_name = azurerm_resource_group.spokes[0].name
-
-  tags = local.common_tags
-}
-
-# Object Anchors Account
-resource "azurerm_object_anchors_account" "main" {
-  count               = var.enable_object_anchors ? 1 : 0
-  name                = "oa-${local.resource_prefix}-${format("%03d", 1)}"
-  location            = azurerm_resource_group.spokes[0].location
-  resource_group_name = azurerm_resource_group.spokes[0].name
-
-  tags = local.common_tags
-}
-
 # Storage Account for Mixed Reality content
 resource "azurerm_storage_account" "mixed_reality" {
   count                    = var.enable_mixed_reality_storage ? 1 : 0
@@ -76,21 +56,6 @@ resource "azurerm_cdn_endpoint" "mixed_reality" {
   origin {
     name      = "mr-storage"
     host_name = azurerm_storage_account.mixed_reality[0].primary_blob_host
-  }
-
-  tags = local.common_tags
-}
-
-# Media Services Account for Mixed Reality streaming
-resource "azurerm_media_services_account" "mixed_reality" {
-  count               = var.enable_mixed_reality_media ? 1 : 0
-  name                = "ams-${local.resource_prefix}-mr-${format("%03d", 1)}"
-  location            = azurerm_resource_group.spokes[0].location
-  resource_group_name = azurerm_resource_group.spokes[0].name
-
-  storage_account {
-    id         = azurerm_storage_account.mixed_reality[0].id
-    is_primary = true
   }
 
   tags = local.common_tags

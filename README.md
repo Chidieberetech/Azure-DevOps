@@ -21,162 +21,162 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 
 | Resource Type           | Abbreviation | Max Length | Allowed Characters                                    | Example                           |
 |-------------------------|--------------|------------|-------------------------------------------------------|-----------------------------------|
-| Resource Group          | `rg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-rg-hub`        |
-| Virtual Network         | `vnet`       | 64         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vnet-hub`      |
-| Subnet                  | `snet`       | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-snet-workload` |
-| Network Interface       | `nic`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-nic-vm01`      |
-| Public IP               | `pip`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-pip-afw`       |
-| Load Balancer           | `lb`         | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-lb-web`        |
-| Application Gateway     | `agw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-agw-web`       |
-| Traffic Manager         | `tm`         | 63         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-tm`            |
-| Front Door              | `fd`         | 64         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-fd`            |
-| CDN Profile             | `cdnp`       | 260        | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-cdnp`          |
-| CDN Endpoint            | `cdne`       | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-cdne`          |
-| Express Route           | `er`         | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-er`            |
-| VPN Gateway             | `vpng`       | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vpng`          |
-| Local Network Gateway   | `lgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-lgw`           |
-| Virtual Network Gateway | `vgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vgw`           |
+| Resource Group          | `rg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `rg-trl-PRD-alpha-001`            |
+| Virtual Network         | `vnet`       | 64         | Alphanumeric, underscore, hyphen, period              | `vnet-PRD-WEU-hub-001`            |
+| Subnet                  | `snet`       | 80         | Alphanumeric, underscore, hyphen, period              | `snet-PRD-WEU-alpha-vm-001`       |
+| Network Interface       | `nic`        | 80         | Alphanumeric, underscore, hyphen, period              | `nic-PRD-WEU-alpha-vm-001`        |
+| Public IP               | `pip`        | 80         | Alphanumeric, underscore, hyphen, period              | `pip-PRD-WEU-afw-001`             |
+| Load Balancer           | `lb`         | 80         | Alphanumeric, underscore, hyphen, period              | `lb-PRD-WEU-web-001`              |
+| Application Gateway     | `agw`        | 80         | Alphanumeric, underscore, hyphen, period              | `agw-PRD-WEU-web-001`             |
+| Traffic Manager         | `tm`         | 63         | Alphanumeric, hyphen                                  | `tm-PRD-WEU-001`                  |
+| Front Door              | `fd`         | 64         | Alphanumeric, hyphen                                  | `fd-PRD-WEU-001`                  |
+| CDN Profile             | `cdnp`       | 260        | Alphanumeric, hyphen                                  | `cdnp-PRD-WEU-001`                |
+| CDN Endpoint            | `cdne`       | 50         | Alphanumeric, hyphen                                  | `cdne-PRD-WEU-001`                |
+| Express Route           | `er`         | 80         | Alphanumeric, underscore, hyphen, period              | `er-PRD-WEU-001`                  |
+| VPN Gateway             | `vpng`       | 80         | Alphanumeric, underscore, hyphen, period              | `vpng-PRD-WEU-001`                |
+| Local Network Gateway   | `lgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `lgw-PRD-WEU-001`                 |
+| Virtual Network Gateway | `vgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `vgw-PRD-WEU-001`                 |
 
 ### Security & Identity
 
 | Resource Type            | Abbreviation | Max Length | Allowed Characters                       | Example                            |
 |--------------------------|--------------|------------|------------------------------------------|------------------------------------|
-| Network Security Group   | `nsg`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nsg-web`        |
-| Route Table              | `rt`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-rt-spoke1`      |
-| Azure Firewall           | `afw`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afw`            |
-| Firewall Policy          | `afwp`       | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afwp`           |
-| Bastion                  | `bas`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bas`            |
-| Key Vault                | `kv`         | 24         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-kv`             |
-| Private Endpoint         | `pep`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pep-sql`        |
+| Network Security Group   | `nsg`        | 80         | Alphanumeric, underscore, hyphen, period | `nsg-PRD-WEU-hub-001`              |
+| Route Table              | `rt`         | 80         | Alphanumeric, underscore, hyphen, period | `rt-PRD-WEU-alpha-001`             |
+| Azure Firewall           | `afw`        | 80         | Alphanumeric, underscore, hyphen, period | `afw-PRD-WEU-001`                  |
+| Firewall Policy          | `afwp`       | 80         | Alphanumeric, underscore, hyphen, period | `afwp-PRD-WEU-001`                 |
+| Bastion                  | `bas`        | 80         | Alphanumeric, underscore, hyphen, period | `bastion-PRD-WEU-001`              |
+| Key Vault                | `kv`         | 24         | Alphanumeric, hyphen                     | `kv-PRD-WEU-001`                   |
+| Private Endpoint         | `pep`        | 80         | Alphanumeric, underscore, hyphen, period | `pep-PRD-WEU-sql-001`              |
 | Private DNS Zone         | `pdns`       | 63         | Alphanumeric, hyphen, period             | `privatelink.database.windows.net` |
-| User Assigned Identity   | `id`         | 128        | Alphanumeric, underscore, hyphen         | `trl-hubspoke-prod-id-vm`          |
-| Network Watcher          | `nw`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nw`             |
-| DDoS Protection Plan     | `ddos`       | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ddos`           |
-| Web Application Firewall | `waf`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-waf`            |
+| User Assigned Identity   | `id`         | 128        | Alphanumeric, underscore, hyphen         | `id-PRD-WEU-vm-001`                |
+| Network Watcher          | `nw`         | 80         | Alphanumeric, underscore, hyphen, period | `nw-PRD-WEU-001`                   |
+| DDoS Protection Plan     | `ddos`       | 80         | Alphanumeric, underscore, hyphen, period | `ddos-PRD-WEU-001`                 |
+| Web Application Firewall | `waf`        | 80         | Alphanumeric, underscore, hyphen, period | `waf-PRD-WEU-001`                  |
 
 ### Compute & Web
 
 | Resource Type    | Abbreviation | Max Length           | Allowed Characters                       | Example                          |
 |------------------|--------------|----------------------|------------------------------------------|----------------------------------|
-| Virtual Machine  | `vm`         | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `trl-hubspoke-prod-vm-web01`     |
-| VM Scale Set     | `vmss`       | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `trl-hubspoke-prod-vmss-web`     |
-| Availability Set | `avail`      | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-avail-web`    |
-| Managed Disk     | `disk`       | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-disk-vm01-os` |
-| Snapshot         | `snap`       | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-snap-vm01`    |
-| Image            | `img`        | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-img-web`      |
-| App Service Plan | `plan`       | 40                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-plan-web`     |
-| App Service      | `app`        | 60                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-app-web`      |
-| Function App     | `func`       | 60                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-func-api`     |
-| Static Web App   | `stapp`      | 40                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-stapp`        |
-| Logic App        | `logic`      | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic`        |
-| Batch Account    | `ba`         | 24                   | Lowercase alphanumeric                   | `trlhubspokeprodba`              |
+| Virtual Machine  | `vm`         | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `vm-PRD-WEU-alpha-001`           |
+| VM Scale Set     | `vmss`       | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `vmss-PRD-WEU-web-001`           |
+| Availability Set | `avail`      | 80                   | Alphanumeric, underscore, hyphen, period | `avail-PRD-WEU-web-001`          |
+| Managed Disk     | `disk`       | 80                   | Alphanumeric, underscore, hyphen, period | `disk-PRD-WEU-vm01-os-001`       |
+| Snapshot         | `snap`       | 80                   | Alphanumeric, underscore, hyphen, period | `snap-PRD-WEU-vm01-001`          |
+| Image            | `img`        | 80                   | Alphanumeric, underscore, hyphen, period | `img-PRD-WEU-web-001`            |
+| App Service Plan | `plan`       | 40                   | Alphanumeric, hyphen                     | `plan-PRD-WEU-web-001`           |
+| App Service      | `app`        | 60                   | Alphanumeric, hyphen                     | `app-PRD-WEU-web-001`            |
+| Function App     | `func`       | 60                   | Alphanumeric, hyphen                     | `func-PRD-WEU-api-001`           |
+| Static Web App   | `stapp`      | 40                   | Alphanumeric, hyphen                     | `stapp-PRD-WEU-001`              |
+| Logic App        | `logic`      | 80                   | Alphanumeric, underscore, hyphen, period | `logic-PRD-WEU-001`              |
+| Batch Account    | `ba`         | 24                   | Lowercase alphanumeric                   | `baprdweu001`                    |
 
 ### Data & Storage
 
 | Resource Type        | Abbreviation | Max Length | Allowed Characters                       | Example                        |
 |----------------------|--------------|------------|------------------------------------------|--------------------------------|
-| Storage Account      | `st`         | 24         | Lowercase alphanumeric                   | `trlhubspokeprodst`            |
-| Storage Container    | `stct`       | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-stct`       |
-| File Share           | `fs`         | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-fs`         |
-| Queue                | `stq`        | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-stq`        |
-| Table                | `stt`        | 63         | Alphanumeric                             | `trlhubspokeprodtable`         |
-| SQL Server           | `sql`        | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-sql`        |
-| SQL Database         | `sqldb`      | 128        | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqldb-main` |
-| SQL Elastic Pool     | `sqlep`      | 128        | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqlep`      |
-| SQL Managed Instance | `sqlmi`      | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-sqlmi`      |
-| Cosmos DB            | `cosmos`     | 44         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-cosmos`     |
-| Redis Cache          | `redis`      | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-redis`      |
-| MySQL Database       | `mysql`      | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-mysql`      |
-| PostgreSQL Database  | `psql`       | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-psql`       |
-| MariaDB Database     | `mariadb`    | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-mariadb`    |
-| Data Factory         | `adf`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-adf`        |
-| Synapse Workspace    | `syn`        | 45         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-syn`        |
-| Analysis Services    | `as`         | 63         | Lowercase alphanumeric                   | `trlhubspokeprods`             |
-| Data Lake Store      | `dls`        | 24         | Lowercase alphanumeric                   | `trlhubspokeprodls`            |
-| Data Lake Analytics  | `dla`        | 24         | Lowercase alphanumeric                   | `trlhubspokeprodla`            |
-| HDInsight Cluster    | `hdi`        | 59         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-hdi`        |
-| Power BI Embedded    | `pbi`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-pbi`        |
+| Storage Account      | `st`         | 24         | Lowercase alphanumeric                   | `stprdweu001`                  |
+| Storage Container    | `stct`       | 63         | Lowercase alphanumeric, hyphen           | `stct-prd-weu-001`             |
+| File Share           | `fs`         | 63         | Lowercase alphanumeric, hyphen           | `fs-prd-weu-001`               |
+| Queue                | `stq`        | 63         | Lowercase alphanumeric, hyphen           | `stq-prd-weu-001`              |
+| Table                | `stt`        | 63         | Alphanumeric                             | `sttprdweu001`                 |
+| SQL Server           | `sql`        | 63         | Lowercase alphanumeric, hyphen           | `sql-PRD-WEU-001`              |
+| SQL Database         | `sqldb`      | 128        | Alphanumeric, underscore, hyphen, period | `sqldb-PRD-WEU-main-001`       |
+| SQL Elastic Pool     | `sqlep`      | 128        | Alphanumeric, underscore, hyphen, period | `sqlep-PRD-WEU-001`            |
+| SQL Managed Instance | `sqlmi`      | 63         | Lowercase alphanumeric, hyphen           | `sqlmi-PRD-WEU-001`            |
+| Cosmos DB            | `cosmos`     | 44         | Lowercase alphanumeric, hyphen           | `cosmos-PRD-WEU-001`           |
+| Redis Cache          | `redis`      | 63         | Alphanumeric, hyphen                     | `redis-PRD-WEU-001`            |
+| MySQL Database       | `mysql`      | 63         | Lowercase alphanumeric, hyphen           | `mysql-PRD-WEU-001`            |
+| PostgreSQL Database  | `psql`       | 63         | Lowercase alphanumeric, hyphen           | `psql-PRD-WEU-001`             |
+| MariaDB Database     | `mariadb`    | 63         | Lowercase alphanumeric, hyphen           | `mariadb-PRD-WEU-001`          |
+| Data Factory         | `adf`        | 63         | Alphanumeric, hyphen                     | `adf-PRD-WEU-001`              |
+| Synapse Workspace    | `syn`        | 45         | Alphanumeric, hyphen                     | `syn-PRD-WEU-001`              |
+| Analysis Services    | `as`         | 63         | Lowercase alphanumeric                   | `asprdweu001`                  |
+| Data Lake Store      | `dls`        | 24         | Lowercase alphanumeric                   | `dlsprdweu001`                 |
+| Data Lake Analytics  | `dla`        | 24         | Lowercase alphanumeric                   | `dlaprdweu001`                 |
+| HDInsight Cluster    | `hdi`        | 59         | Alphanumeric, hyphen                     | `hdi-PRD-WEU-001`              |
+| Power BI Embedded    | `pbi`        | 63         | Alphanumeric, hyphen                     | `pbi-PRD-WEU-001`              |
 
 ### Containers & DevOps
 
 | Resource Type          | Abbreviation | Max Length | Allowed Characters                       | Example                        |
 |------------------------|--------------|------------|------------------------------------------|--------------------------------|
-| Container Registry     | `cr`         | 50         | Alphanumeric                             | `trlhubspokeprodcr`            |
-| Kubernetes Service     | `aks`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-aks`        |
-| Container Instance     | `ci`         | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-ci-web`     |
-| Container App          | `ca`         | 32         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-ca`         |
-| Service Fabric Cluster | `sf`         | 23         | Lowercase alphanumeric                   | `trlhubspokeprodcluster`       |
-| Service Bus Namespace  | `sb`         | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-sb`         |
-| Service Bus Queue      | `sbq`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbq-orders` |
-| Service Bus Topic      | `sbt`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbt-events` |
-| Event Hub Namespace    | `evhns`      | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-evhns`      |
-| Event Hub              | `evh`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-evh-logs`   |
-| Event Grid Domain      | `egd`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-egd`        |
-| Event Grid Topic       | `egt`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-egt`        |
-| IoT Hub                | `iot`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-iot`        |
-| Notification Hub       | `ntf`        | 260        | Alphanumeric, hyphen                     | `trl-hubspoke-prod-ntf`        |
-| DevTest Lab            | `dtl`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-dtl`        |
+| Container Registry     | `cr`         | 50         | Alphanumeric                             | `crprdweu001`                  |
+| Kubernetes Service     | `aks`        | 63         | Alphanumeric, hyphen                     | `aks-PRD-WEU-001`              |
+| Container Instance     | `ci`         | 63         | Lowercase alphanumeric, hyphen           | `ci-PRD-WEU-web-001`           |
+| Container App          | `ca`         | 32         | Lowercase alphanumeric, hyphen           | `ca-PRD-WEU-001`               |
+| Service Fabric Cluster | `sf`         | 23         | Lowercase alphanumeric                   | `sfprdweu001`                  |
+| Service Bus Namespace  | `sb`         | 50         | Alphanumeric, hyphen                     | `sb-PRD-WEU-001`               |
+| Service Bus Queue      | `sbq`        | 50         | Alphanumeric, hyphen, underscore, period | `sbq-PRD-WEU-orders-001`       |
+| Service Bus Topic      | `sbt`        | 50         | Alphanumeric, hyphen, underscore, period | `sbt-PRD-WEU-events-001`       |
+| Event Hub Namespace    | `evhns`      | 50         | Alphanumeric, hyphen                     | `evhns-PRD-WEU-001`            |
+| Event Hub              | `evh`        | 50         | Alphanumeric, hyphen, underscore, period | `evh-PRD-WEU-logs-001`         |
+| Event Grid Domain      | `egd`        | 50         | Alphanumeric, hyphen                     | `egd-PRD-WEU-001`              |
+| Event Grid Topic       | `egt`        | 50         | Alphanumeric, hyphen                     | `egt-PRD-WEU-001`              |
+| IoT Hub                | `iot`        | 50         | Alphanumeric, hyphen                     | `iot-PRD-WEU-001`              |
+| Notification Hub       | `ntf`        | 260        | Alphanumeric, hyphen                     | `ntf-PRD-WEU-001`              |
+| DevTest Lab            | `dtl`        | 50         | Alphanumeric, hyphen                     | `dtl-PRD-WEU-001`              |
 
 ### Monitoring & Management
 
 | Resource Type           | Abbreviation | Max Length | Allowed Characters                                    | Example                             |
 |-------------------------|--------------|------------|-------------------------------------------------------|-------------------------------------|
-| Log Analytics Workspace | `log`        | 63         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-log`             |
-| Application Insights    | `appi`       | 260        | Unicode characters                                    | `trl-hubspoke-prod-appi-web`        |
-| Action Group            | `ag`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-ag`              |
-| Alert Rule              | `ar`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-ar`              |
-| Recovery Services Vault | `rsv`        | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-rsv`             |
-| Backup Vault            | `bv`         | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-bv`              |
-| Site Recovery Vault     | `srv`        | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-srv`             |
-| Automation Account      | `aa`         | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-aa`              |
-| Managed Grafana         | `amg`        | 23         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-amg`             |
-| Dashboard               | `dash`       | 160        | Unicode characters                                    | `trl-hubspoke-prod-dash`            |
-| Workbook                | `wb`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-wb`              |
-| Policy Definition       | `policy`     | 128        | Unicode characters                                    | `trl-hubspoke-prod-policy-deny-pip` |
-| Policy Assignment       | `assign`     | 128        | Unicode characters                                    | `trl-hubspoke-prod-assign-deny-pip` |
-| Blueprint               | `bp`         | 48         | Alphanumeric, hyphen, underscore, period              | `trl-hubspoke-prod-bp`              |
-| Management Group        | `mg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-mg`              |
+| Log Analytics Workspace | `log`        | 63         | Alphanumeric, hyphen                                  | `log-PRD-WEU-001`                   |
+| Application Insights    | `appi`       | 260        | Unicode characters                                    | `appi-PRD-WEU-web-001`              |
+| Action Group            | `ag`         | 260        | Unicode characters                                    | `ag-PRD-WEU-001`                    |
+| Alert Rule              | `ar`         | 260        | Unicode characters                                    | `ar-PRD-WEU-001`                    |
+| Recovery Services Vault | `rsv`        | 50         | Alphanumeric, hyphen                                  | `rsv-PRD-WEU-001`                   |
+| Backup Vault            | `bv`         | 50         | Alphanumeric, hyphen                                  | `bv-PRD-WEU-001`                    |
+| Site Recovery Vault     | `srv`        | 50         | Alphanumeric, hyphen                                  | `srv-PRD-WEU-001`                   |
+| Automation Account      | `aa`         | 50         | Alphanumeric, hyphen                                  | `aa-PRD-WEU-001`                    |
+| Managed Grafana         | `amg`        | 23         | Alphanumeric, hyphen                                  | `amg-PRD-WEU-001`                   |
+| Dashboard               | `dash`       | 160        | Unicode characters                                    | `dash-PRD-WEU-001`                  |
+| Workbook                | `wb`         | 260        | Unicode characters                                    | `wb-PRD-WEU-001`                    |
+| Policy Definition       | `policy`     | 128        | Unicode characters                                    | `policy-PRD-WEU-deny-pip-001`       |
+| Policy Assignment       | `assign`     | 128        | Unicode characters                                    | `assign-PRD-WEU-deny-pip-001`       |
+| Blueprint               | `bp`         | 48         | Alphanumeric, hyphen, underscore, period              | `bp-PRD-WEU-001`                    |
+| Management Group        | `mg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `mg-PRD-WEU-001`                    |
 
 ### AI & Cognitive Services
 
 | Resource Type              | Abbreviation | Max Length | Allowed Characters                       | Example                        |
 |----------------------------|--------------|------------|------------------------------------------|--------------------------------|
-| Cognitive Services         | `cog`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cog-vision` |
-| Computer Vision            | `cv`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cv`         |
-| Custom Vision              | `cusv`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cusv`       |
-| Face API                   | `face`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-face`       |
-| Form Recognizer            | `fr`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-fr`         |
-| Language Understanding     | `luis`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-luis`       |
-| QnA Maker                  | `qna`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-qna`        |
-| Speech Service             | `speech`     | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-speech`     |
-| Text Analytics             | `ta`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ta`         |
-| Translator                 | `trans`      | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-trans`      |
-| Bot Service                | `bot`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bot`        |
-| Machine Learning Workspace | `mlw`        | 260        | Unicode characters                       | `trl-hubspoke-prod-mlw`        |
-| Machine Learning Compute   | `mlc`        | 24         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-mlc`        |
-| Search Service             | `srch`       | 60         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-srch`       |
-| Maps Account               | `map`        | 98         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-map`        |
+| Cognitive Services         | `cog`        | 64         | Alphanumeric, underscore, hyphen, period | `cog-PRD-WEU-vision-001`       |
+| Computer Vision            | `cv`         | 64         | Alphanumeric, underscore, hyphen, period | `cv-PRD-WEU-001`               |
+| Custom Vision              | `cusv`       | 64         | Alphanumeric, underscore, hyphen, period | `cusv-PRD-WEU-001`             |
+| Face API                   | `face`       | 64         | Alphanumeric, underscore, hyphen, period | `face-PRD-WEU-001`             |
+| Form Recognizer            | `fr`         | 64         | Alphanumeric, underscore, hyphen, period | `fr-PRD-WEU-001`               |
+| Language Understanding     | `luis`       | 64         | Alphanumeric, underscore, hyphen, period | `luis-PRD-WEU-001`             |
+| QnA Maker                  | `qna`        | 64         | Alphanumeric, underscore, hyphen, period | `qna-PRD-WEU-001`              |
+| Speech Service             | `speech`     | 64         | Alphanumeric, underscore, hyphen, period | `speech-PRD-WEU-001`           |
+| Text Analytics             | `ta`         | 64         | Alphanumeric, underscore, hyphen, period | `ta-PRD-WEU-001`               |
+| Translator                 | `trans`      | 64         | Alphanumeric, underscore, hyphen, period | `trans-PRD-WEU-001`            |
+| Bot Service                | `bot`        | 64         | Alphanumeric, underscore, hyphen, period | `bot-PRD-WEU-001`              |
+| Machine Learning Workspace | `mlw`        | 260        | Unicode characters                       | `mlw-PRD-WEU-001`              |
+| Machine Learning Compute   | `mlc`        | 24         | Alphanumeric, hyphen                     | `mlc-PRD-WEU-001`              |
+| Search Service             | `srch`       | 60         | Lowercase alphanumeric, hyphen           | `srch-PRD-WEU-001`             |
+| Maps Account               | `map`        | 98         | Alphanumeric, underscore, hyphen, period | `map-PRD-WEU-001`              |
 
 ### Integration & API
 
 | Resource Type         | Abbreviation | Max Length | Allowed Characters                       | Example                   |
 |-----------------------|--------------|------------|------------------------------------------|---------------------------|
-| API Management        | `apim`       | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-apim`  |
-| Logic App             | `logic`      | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic` |
-| Integration Account   | `ia`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ia`    |
-| Data Factory          | `df`         | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-df`    |
-| Data Factory Pipeline | `dfp`        | 260        | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-dfp`   |
-| Stream Analytics      | `asa`        | 63         | Alphanumeric, hyphen, underscore         | `trl-hubspoke-prod-asa`   |
-| Power Automate        | `flow`       | 260        | Unicode characters                       | `trl-hubspoke-prod-flow`  |
+| API Management        | `apim`       | 50         | Alphanumeric, hyphen                     | `apim-PRD-WEU-001`        |
+| Logic App             | `logic`      | 80         | Alphanumeric, underscore, hyphen, period | `logic-PRD-WEU-001`       |
+| Integration Account   | `ia`         | 80         | Alphanumeric, underscore, hyphen, period | `ia-PRD-WEU-001`          |
+| Data Factory          | `df`         | 63         | Alphanumeric, hyphen                     | `df-PRD-WEU-001`          |
+| Data Factory Pipeline | `dfp`        | 260        | Alphanumeric, hyphen, underscore, period | `dfp-PRD-WEU-001`         |
+| Stream Analytics      | `asa`        | 63         | Alphanumeric, hyphen, underscore         | `asa-PRD-WEU-001`         |
+| Power Automate        | `flow`       | 260        | Unicode characters                       | `flow-PRD-WEU-001`        |
 
 ### Media & Communication
 
 | Resource Type          | Abbreviation | Max Length | Allowed Characters     | Example                  |
 |------------------------|--------------|------------|------------------------|--------------------------|
-| Media Services         | `ams`        | 24         | Lowercase alphanumeric | `trlhubspokeprodams`     |
-| Communication Services | `acs`        | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-acs`  |
-| SignalR Service        | `sigr`       | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-sigr` |
-| Web PubSub             | `wps`        | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-wps`  |
+| Media Services         | `ams`        | 24         | Lowercase alphanumeric | `amsprdweu001`           |
+| Communication Services | `acs`        | 63         | Alphanumeric, hyphen   | `acs-PRD-WEU-001`        |
+| SignalR Service        | `sigr`       | 63         | Alphanumeric, hyphen   | `sigr-PRD-WEU-001`       |
+| Web PubSub             | `wps`        | 63         | Alphanumeric, hyphen   | `wps-PRD-WEU-001`        |
 
 ## Character Restrictions Summary
 

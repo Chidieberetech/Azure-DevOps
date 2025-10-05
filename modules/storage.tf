@@ -35,9 +35,11 @@ resource "azurerm_storage_account" "diagnostics" {
   location                 = azurerm_resource_group.hub.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+    account_kind             = "StorageV2"
+    access_tier              = "Hot"
 
   # Allow public access for diagnostics
-  public_network_access_enabled   = true
+  public_network_access_enabled   = false
   allow_nested_items_to_be_public = false
   shared_access_key_enabled       = true
 
@@ -51,6 +53,7 @@ resource "azurerm_private_endpoint" "storage_blob" {
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
   subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
+
 
   private_service_connection {
     name                           = "psc-storage-blob"

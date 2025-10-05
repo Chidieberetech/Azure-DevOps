@@ -128,6 +128,348 @@ Our infrastructure now supports **all major Azure service categories**. When con
 - **Variables prefix**: `enable_app_service`, `enable_function_app`
 - **Naming prefix**: `asp-`, `app-`, `func-`, `stapp-`, `fd-`
 
+## Development Workflow
+
+### Branch Strategy
+
+We follow a **GitFlow-inspired** workflow with the following branches:
+
+- **`main`**: Production-ready code
+- **`develop`**: Integration branch for features
+- **`feature/*`**: Individual feature development
+- **`hotfix/*`**: Critical production fixes
+- **`release/*`**: Release preparation
+
+### Workflow Steps
+
+1. **Create Feature Branch**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/service-category-new-feature
+   ```
+
+2. **Development Process**
+   - Make changes in appropriate service category modules
+   - Follow naming conventions and security guidelines
+   - Test changes locally
+   - Commit with conventional commit messages
+
+3. **Testing and Validation**
+   ```bash
+   # Format code
+   terraform fmt -recursive
+   
+   # Validate configuration
+   terraform validate
+   
+   # Plan infrastructure
+   terraform plan
+   
+   # Security scan
+   checkov -d . --framework terraform
+   ```
+
+4. **Create Pull Request**
+   - Push feature branch to remote
+   - Create PR from feature branch to develop
+   - Fill out PR template completely
+   - Request review from maintainers
+
+5. **Code Review Process**
+   - Automated CI/CD checks must pass
+   - At least one maintainer approval required
+   - Security review for new services
+   - Documentation review for changes
+
+6. **Merge and Deploy**
+   - Squash and merge to develop
+   - Delete feature branch
+   - Deploy to development environment for testing
+
+### Release Process
+
+1. **Create Release Branch**
+   ```bash
+   git checkout develop
+   git checkout -b release/v1.x.x
+   ```
+
+2. **Prepare Release**
+   - Update version numbers
+   - Update CHANGELOG.md
+   - Final testing and validation
+   - Update documentation
+
+3. **Release to Production**
+   - Merge release branch to main
+   - Tag release with version number
+   - Deploy to production environment
+   - Merge back to develop
+
+### Hotfix Process
+
+For critical production issues:
+
+1. **Create Hotfix Branch**
+   ```bash
+   git checkout main
+   git checkout -b hotfix/critical-issue-description
+   ```
+
+2. **Fix and Test**
+   - Make minimal necessary changes
+   - Test thoroughly
+   - Update version number
+
+3. **Deploy Hotfix**
+   - Merge to main and develop
+   - Tag new version
+   - Deploy immediately to production
+
+## Naming Conventions
+
+### Git Branch Naming
+
+- **Feature branches**: `feature/service-category-description`
+  - Examples: `feature/containers-add-aks-support`, `feature/ai-ml-cognitive-services`
+- **Hotfix branches**: `hotfix/issue-description`
+  - Examples: `hotfix/storage-private-endpoint-fix`
+- **Release branches**: `release/v1.2.3`
+
+### Commit Message Conventions
+
+Follow **Conventional Commits** specification:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+#### Commit Types
+
+- **feat**: New feature or service addition
+- **fix**: Bug fix or configuration correction
+- **docs**: Documentation changes
+- **style**: Code formatting (no logic changes)
+- **refactor**: Code restructuring (no functionality change)
+- **test**: Adding or modifying tests
+- **chore**: Maintenance tasks, dependency updates
+
+#### Scope Examples
+
+Use service category names as scopes:
+- `ai-ml`: AI and Machine Learning services
+- `containers`: Container services
+- `networking`: Network infrastructure
+- `security`: Security-related changes
+- `storage`: Storage services
+- `database`: Database services
+
+#### Commit Message Examples
+
+```bash
+# Good examples
+git commit -m "feat(containers): add Azure Container Apps support"
+git commit -m "fix(ai-ml): correct Cognitive Services private endpoint configuration"
+git commit -m "docs(readme): update service category coverage"
+git commit -m "refactor(networking): simplify subnet naming logic"
+git commit -m "chore(deps): update azurerm provider to v3.75.0"
+
+# Bad examples
+git commit -m "fixed stuff"
+git commit -m "Update files"
+git commit -m "Added new service"
+```
+
+### Azure Resource Naming
+
+All Azure resources must follow the **TRL standardized naming convention**:
+
+#### Pattern
+```
+{resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}
+```
+
+#### Components
+
+- **Resource Type**: Use standard Azure abbreviations (see README.md tables)
+- **Environment**: `DEV`, `STG`, `PRD`
+- **Location**: `WEU` (West Europe), `EUS` (East US), etc.
+- **Purpose**: Service category or specific function
+- **Instance**: 3-digit number with leading zeros
+
+#### Examples by Service Category
+
+```bash
+# AI + Machine Learning
+"cog-PRD-WEU-vision-001"     # Cognitive Services
+"mlw-PRD-WEU-training-001"   # ML Workspace
+
+# Containers
+"aks-PRD-WEU-workload-001"   # Kubernetes Service
+"acr${env}${location}${random}" # Container Registry (no hyphens)
+
+# Networking
+"vnet-PRD-WEU-hub-001"       # Virtual Network
+"snet-PRD-WEU-alpha-vm-001"  # Subnet
+
+# Storage
+"st${env}${location}${random}" # Storage Account (no hyphens)
+"kv-PRD-WEU-secrets-001"     # Key Vault
+
+# Web & Mobile
+"asp-PRD-WEU-webapp-001"     # App Service Plan
+"func-PRD-WEU-functions-001" # Function App
+
+# Database
+"sql-PRD-WEU-appdb-001"      # SQL Database
+"cosmos-PRD-WEU-nosql-001"   # Cosmos DB
+
+# General Services
+"apim-PRD-WEU-api-001"       # API Management
+"sb-PRD-WEU-messaging-001"   # Service Bus
+
+# Identity
+"aadds-PRD-WEU-domain-001"    # Azure AD Domain Services
+"id-PRD-WEU-identity-001"     # Managed Identity
+
+# IoT
+"iot-PRD-WEU-hub-001"         # IoT Hub
+"dt-PRD-WEU-twins-001"        # Digital Twins
+
+# Monitor
+"appi-PRD-WEU-insights-001"   # Application Insights
+"ag-PRD-WEU-alerts-001"       # Action Group
+
+# Analytics
+"synw-PRD-WEU-analytics-001"  # Synapse Workspace
+"adf-PRD-WEU-datafactory-001" # Data Factory
+"evhns-PRD-WEU-eventhub-001"  # Event Hub Namespace
+"asa-PRD-WEU-stream-001"      # Stream Analytics Job
+
+# Migration
+"migr-PRD-WEU-assessment-001" # Migrate Project
+"dms-PRD-WEU-dbmigration-001"  # Database Migration Service
+
+# Mixed Reality
+"spa-PRD-WEU-anchors-001"     # Spatial Anchors
+"rra-PRD-WEU-rendering-001"   # Remote Rendering
+"oa-PRD-WEU-object-001"       # Object Anchors
+
+# Hybrid + Multicloud
+"arck8s-PRD-WEU-arc-001"      # Azure Arc
+"rsv-PRD-WEU-recovery-001"    # Site Recovery
+"dms-PRD-WEU-migration-001"   # Data Migration Service
+"vgw-PRD-WEU-gateway-001"     # Virtual Gateway
+
+# DevOps
+"acr${env}${location}${random}" # Azure Container Registry (no hyphens)
+"st${env}${location}${random}"  # Storage Account (no hyphens)
+"kv-PRD-WEU-secrets-001"      # Key Vault
+"appcs-PRD-WEU-appconfig-001" # App Configuration
+  
+# Management & Governance
+"policy-PRD-WEU-compliance-001" # Policy Assignment
+"mg-PRD-WEU-management-001"     # Management Group
+"bp-PRD-WEU-budget-001"         # Budget
+  
+# Security
+"nsg-PRD-WEU-web-001"          # Network Security Group
+"fw-PRD-WEU-firewall-001"      # Firewall
+"waf-PRD-WEU-waf-001"          # Web Application Firewall
+"ddos-PRD-WEU-protection-001"  # DDoS Protection Plan
+  
+# Integration
+"sb-PRD-WEU-messaging-001"     # Service Bus
+"evgt-PRD-WEU-events-001"      # Event Grid Topic
+"logic-PRD-WEU-workflow-001"   # Logic App
+"agw-PRD-WEU-gateway-001"      # Application Gateway
+```
+
+### Variable Naming
+
+#### Enabling Services
+```hcl
+# Pattern: enable_{service_category}_{specific_service}
+enable_cognitive_services = true
+enable_machine_learning = false
+enable_aks = true
+enable_container_registry = false
+```
+
+#### Service Configuration
+```hcl
+# Pattern: {service}_{configuration_type}
+cognitive_services_sku = "S0"
+aks_node_count = 3
+container_registry_sku = "Premium"
+app_service_sku = "B1"
+```
+
+#### Service-Specific Settings
+```hcl
+# Pattern: {service}_{specific_setting}
+aks_vm_size = "Standard_D2s_v3"
+api_management_publisher_name = "TRL Organization"
+storage_replication_type = "LRS"
+```
+
+### File Naming
+
+#### Terraform Files
+- Use lowercase with hyphens for multi-word names
+- Group by service category
+- Examples: `ai-ml.tf`, `containers.tf`, `web-mobile.tf`
+
+#### Documentation Files
+- Use UPPERCASE for main documentation
+- Use hyphens for multi-word names
+- Examples: `README.md`, `CONTRIBUTING.md`, `PROJECT-STRUCTURE.md`
+
+#### Script Files
+- Use lowercase with hyphens
+- Include purpose in name
+- Examples: `vm-password-rotation.sh`, `cost-analysis.sh`
+
+### Output Naming
+
+```hcl
+# Pattern: {service_category}_{resource_type}_{property}
+output "containers_aks_cluster_id" {
+  description = "ID of the AKS cluster"
+  value       = var.enable_aks ? azurerm_kubernetes_cluster.main[0].id : null
+}
+
+output "ai_ml_cognitive_services_endpoint" {
+  description = "Endpoint URL for Cognitive Services"
+  value       = var.enable_cognitive_services ? azurerm_cognitive_account.main[0].endpoint : null
+}
+```
+
+### Local Values Naming
+
+```hcl
+# Use descriptive names for computed values
+locals {
+  resource_prefix = "${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}"
+  
+  common_tags = {
+    Environment = var.environment
+    Project     = "Azure.IAC.hubspoke"
+    ManagedBy   = "Terraform"
+    Owner       = "TRL"
+  }
+  
+  # Service-specific locals
+  aks_dns_prefix = "aks-${local.resource_prefix}"
+  storage_account_name = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
+}
+```
+
 ## Module Development Guidelines
 
 ### Adding New Azure Services

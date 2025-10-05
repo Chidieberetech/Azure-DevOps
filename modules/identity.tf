@@ -33,12 +33,13 @@ resource "azurerm_user_assigned_identity" "main" {
 # Azure AD B2C Tenant (requires manual setup)
 # Note: B2C tenant creation via Terraform is limited
 resource "azurerm_aadb2c_directory" "main" {
-  count               = var.enable_aad_b2c ? 1 : 0
-  resource_name       = "b2c-${local.resource_prefix}-${format("%03d", 1)}"
-  domain_name         = "${local.resource_prefix}b2c.onmicrosoft.com"
-  country_code        = var.aad_b2c_country_code
+  count                   = var.enable_aad_b2c ? 1 : 0
+  resource_group_name     = azurerm_resource_group.hub.name
+  resource_name           = "b2c-${local.resource_prefix}-${format("%03d", 1)}"
+  domain_name             = "${local.resource_prefix}b2c.onmicrosoft.com"
+  country_code            = var.aad_b2c_country_code
   data_residency_location = var.location
-  sku_name            = "PremiumP1"
+  sku_name                = "PremiumP1"
 
   tags = local.common_tags
 }

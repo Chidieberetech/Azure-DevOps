@@ -77,9 +77,6 @@ resource "azurerm_servicebus_namespace" "devops" {
   resource_group_name = azurerm_resource_group.spokes[0].name
   sku                 = "Standard"
 
-  # Security settings
-  public_network_access_enabled = false
-
   tags = local.common_tags
 }
 

@@ -220,7 +220,7 @@ resource "azurerm_app_configuration" "main" {
   sku                 = var.app_configuration_sku
 
   # Security settings
-  public_network_access_enabled = false
+    public_network_access_enabled = false
 
   identity {
     type = "SystemAssigned"
@@ -373,24 +373,6 @@ resource "azurerm_search_service" "main" {
 }
 
 # Media Services Account
-resource "azurerm_media_services_account" "main" {
-  count               = var.enable_media_services ? 1 : 0
-  name                = "ams-${local.resource_prefix}-${format("%03d", 1)}"
-  location            = azurerm_resource_group.spokes[0].location
-  resource_group_name = azurerm_resource_group.spokes[0].name
-
-  storage_account {
-    id         = azurerm_storage_account.media[0].id
-    is_primary = true
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  tags = local.common_tags
-}
-
 # Storage Account for Media Services
 resource "azurerm_storage_account" "media" {
   count                    = var.enable_media_services ? 1 : 0

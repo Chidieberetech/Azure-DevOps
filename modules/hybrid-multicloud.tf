@@ -52,18 +52,7 @@ resource "azurerm_database_migration_service" "main" {
   tags = local.common_tags
 }
 
-# Azure Migrate Project
-resource "azurerm_migrate_project" "main" {
-  count               = var.enable_azure_migrate ? 1 : 0
-  name                = "migr-${local.resource_prefix}-${format("%03d", 1)}"
-  resource_group_name = azurerm_resource_group.management.name
-  location            = azurerm_resource_group.management.location
-
-  tags = local.common_tags
-}
-
-# StorSimple Device Manager (for hybrid storage)
-# Note: This is a legacy service, using Storage Sync instead
+# Storage Sync for hybrid storage
 resource "azurerm_storage_sync" "hybrid" {
   count               = var.enable_storage_sync ? 1 : 0
   name                = "ss-${local.resource_prefix}-${format("%03d", 1)}"

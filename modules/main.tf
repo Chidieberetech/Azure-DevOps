@@ -102,7 +102,7 @@ resource "azurerm_network_watcher" "main" {
 # Azure Security Center Contact
 resource "azurerm_security_center_contact" "main" {
   count = var.enable_security_center && var.security_contact_email != "" ? 1 : 0
-
+  name                = "default"
   email               = var.security_contact_email
   phone               = ""
   alert_notifications = true

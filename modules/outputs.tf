@@ -251,3 +251,163 @@ output "common_tags" {
   description = "Common tags applied to all resources"
   value       = local.common_tags
 }
+
+#================================================
+# ANALYTICS OUTPUTS
+#================================================
+
+output "log_analytics_workspace_id" {
+  description = "ID of the Log Analytics workspace"
+  value       = var.enable_analytics ? azurerm_log_analytics_workspace.main[0].id : null
+}
+
+output "log_analytics_workspace_name" {
+  description = "Name of the Log Analytics workspace"
+  value       = var.enable_analytics ? azurerm_log_analytics_workspace.main[0].name : null
+}
+
+output "application_insights_id" {
+  description = "ID of the Application Insights instance"
+  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].id : null
+}
+
+output "application_insights_instrumentation_key" {
+  description = "Instrumentation key for Application Insights"
+  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].instrumentation_key : null
+  sensitive   = true
+}
+
+output "application_insights_connection_string" {
+  description = "Connection string for Application Insights"
+  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].connection_string : null
+  sensitive   = true
+}
+
+output "data_factory_id" {
+  description = "ID of the Data Factory"
+  value       = var.enable_analytics && var.enable_data_factory ? azurerm_data_factory.main[0].id : null
+}
+
+output "data_factory_name" {
+  description = "Name of the Data Factory"
+  value       = var.enable_analytics && var.enable_data_factory ? azurerm_data_factory.main[0].name : null
+}
+
+output "data_lake_storage_account_id" {
+  description = "ID of the Data Lake Storage account"
+  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].id : null
+}
+
+output "data_lake_storage_account_name" {
+  description = "Name of the Data Lake Storage account"
+  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].name : null
+}
+
+output "data_lake_primary_dfs_endpoint" {
+  description = "Primary DFS endpoint of the Data Lake Storage account"
+  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].primary_dfs_endpoint : null
+}
+
+output "synapse_workspace_id" {
+  description = "ID of the Synapse Analytics workspace"
+  value       = var.enable_analytics && var.enable_synapse ? azurerm_synapse_workspace.main[0].id : null
+}
+
+output "synapse_workspace_name" {
+  description = "Name of the Synapse Analytics workspace"
+  value       = var.enable_analytics && var.enable_synapse ? azurerm_synapse_workspace.main[0].name : null
+}
+
+output "synapse_sql_pool_id" {
+  description = "ID of the Synapse SQL Pool"
+  value       = var.enable_analytics && var.enable_synapse && var.enable_synapse_sql_pool ? azurerm_synapse_sql_pool.main[0].id : null
+}
+
+output "synapse_spark_pool_id" {
+  description = "ID of the Synapse Spark Pool"
+  value       = var.enable_analytics && var.enable_synapse && var.enable_synapse_spark_pool ? azurerm_synapse_spark_pool.main[0].id : null
+}
+
+#================================================
+# CONTAINER OUTPUTS
+#================================================
+
+output "container_registry_id" {
+  description = "ID of the Azure Container Registry"
+  value       = var.enable_containers && var.enable_container_registry ? azurerm_container_registry.main[0].id : null
+}
+
+output "container_registry_name" {
+  description = "Name of the Azure Container Registry"
+  value       = var.enable_containers && var.enable_container_registry ? azurerm_container_registry.main[0].name : null
+}
+
+output "container_registry_login_server" {
+  description = "Login server of the Azure Container Registry"
+  value       = var.enable_containers && var.enable_container_registry ? azurerm_container_registry.main[0].login_server : null
+}
+
+output "aks_cluster_id" {
+  description = "ID of the AKS cluster"
+  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].id : null
+}
+
+output "aks_cluster_name" {
+  description = "Name of the AKS cluster"
+  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].name : null
+}
+
+output "aks_cluster_fqdn" {
+  description = "FQDN of the AKS cluster"
+  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].fqdn : null
+}
+
+output "aks_kube_config" {
+  description = "Kubernetes configuration for the AKS cluster"
+  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].kube_config_raw : null
+  sensitive   = true
+}
+
+output "aks_cluster_identity" {
+  description = "Identity of the AKS cluster"
+  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].identity : null
+}
+
+output "container_instances_group_id" {
+  description = "ID of the Container Instances group"
+  value       = var.enable_containers && var.enable_container_instances ? azurerm_container_group.main[0].id : null
+}
+
+output "container_instances_fqdn" {
+  description = "FQDN of the Container Instances group"
+  value       = var.enable_containers && var.enable_container_instances ? azurerm_container_group.main[0].fqdn : null
+}
+
+output "container_app_environment_id" {
+  description = "ID of the Container Apps environment"
+  value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app_environment.main[0].id : null
+}
+
+output "container_app_id" {
+  description = "ID of the Container App"
+  value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app.main[0].id : null
+}
+
+output "container_app_url" {
+  description = "URL of the Container App"
+  value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app.main[0].latest_revision_fqdn : null
+}
+
+#================================================
+# CONTAINER NETWORKING OUTPUTS
+#================================================
+
+output "aks_subnet_id" {
+  description = "ID of the AKS subnet"
+  value       = var.enable_containers && var.enable_aks && var.enable_aks_vnet_integration ? azurerm_subnet.hub_aks[0].id : null
+}
+
+output "containers_subnet_id" {
+  description = "ID of the containers subnet"
+  value       = var.enable_containers && var.enable_container_instances && var.enable_container_instances_vnet_integration ? azurerm_subnet.hub_containers[0].id : null
+}

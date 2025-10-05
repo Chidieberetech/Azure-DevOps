@@ -34,13 +34,15 @@ resource "azurerm_linux_web_app" "main" {
   location            = azurerm_resource_group.spokes[0].location
   service_plan_id     = azurerm_service_plan.main[0].id
 
-  # Security settings
-  public_network_access_enabled = false
-  virtual_network_subnet_id      = azurerm_subnet.spoke_alpha_workload[0].id
+  # Security settings - removed deprecated public_network_access_enabled
+  virtual_network_subnet_id = azurerm_subnet.spoke_alpha_workload[0].id
 
   site_config {
     minimum_tls_version = "1.2"
     ftps_state         = "Disabled"
+
+    # VNet integration provides network security instead of public_network_access_enabled
+    vnet_route_all_enabled = true
 
     application_stack {
       node_version = "18-lts"
@@ -81,8 +83,7 @@ resource "azurerm_linux_function_app" "main" {
   storage_account_name       = azurerm_storage_account.main.name
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
 
-  # Security settings
-  public_network_access_enabled = false
+  # Security settings - removed deprecated public_network_access_enabled
   virtual_network_subnet_id      = azurerm_subnet.spoke_alpha_workload[0].id
 
   site_config {

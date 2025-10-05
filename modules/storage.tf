@@ -93,19 +93,19 @@ resource "azurerm_private_endpoint" "storage_file" {
 # Storage Containers
 resource "azurerm_storage_container" "data" {
   name                  = "data"
-  storage_account_name  = azurerm_storage_account.main.name
+  storage_account_id    = azurerm_storage_account.main.id
   container_access_type = "private"
 }
 
 resource "azurerm_storage_container" "backups" {
   name                  = "backups"
-  storage_account_name  = azurerm_storage_account.main.name
+  storage_account_id    = azurerm_storage_account.main.id
   container_access_type = "private"
 }
 
 # File Share for shared data
 resource "azurerm_storage_share" "shared" {
-  name                 = "shared-data"
-  storage_account_name = azurerm_storage_account.main.name
-  quota                = 50
+  name               = "shared-data"
+  storage_account_id = azurerm_storage_account.main.id
+  quota              = 50
 }

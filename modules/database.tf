@@ -119,9 +119,6 @@ resource "azurerm_cosmosdb_account" "main" {
     failover_priority = 0
   }
 
-  # Enable free tier (25GB + 1000 RU/s)
-  enable_free_tier = true
-
   # Security settings
   public_network_access_enabled     = false
   network_acl_bypass_for_azure_services = false
@@ -144,7 +141,37 @@ resource "azurerm_cosmosdb_sql_container" "main" {
   resource_group_name = azurerm_resource_group.spokes[0].name
   account_name        = azurerm_cosmosdb_account.main[0].name
   database_name       = azurerm_cosmosdb_sql_database.main[0].name
-  partition_key_path  = "/partitionKey"
+  partition_key_paths = ["/partitionKey"]
+}
+
+# Private DNS Zone for Cosmos DB
+resource "azurerm_private_dns_zone" "cosmos_db" {
+  count               = var.enable_cosmos_db ? 1 : 0
+  name                = "privatelink.documents.azure.com"
+  resource_group_name = azurerm_resource_group.hub.name
+  tags                = local.common_tags
+}
+
+# Link Private DNS Zone to Hub VNet
+resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_db_hub" {
+  count                 = var.enable_cosmos_db ? 1 : 0
+  name                  = "pdzvnl-${local.resource_prefix}-cosmos-hub"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.cosmos_db[0].name
+  virtual_network_id    = azurerm_virtual_network.hub.id
+  registration_enabled  = false
+  tags                  = local.common_tags
+}
+
+# Link Private DNS Zone to Spoke VNets
+resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_db_spokes" {
+  count                 = var.enable_cosmos_db ? var.spoke_count : 0
+  name                  = "pdzvnl-${local.resource_prefix}-cosmos-${local.spoke_names[count.index]}"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.cosmos_db[0].name
+  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
+  registration_enabled  = false
+  tags                  = local.common_tags
 }
 
 # Private Endpoint for Cosmos DB
@@ -164,11 +191,8 @@ resource "azurerm_private_endpoint" "cosmos_db" {
     is_manual_connection           = false
   }
 
-  dynamic "private_dns_zone_group" {
-    for_each = var.enable_private_dns ? [1] : []
-    content {
-      name                 = "cosmos-dns-zone-group"
-      private_dns_zone_ids = [azurerm_private_dns_zone.cosmos_db[0].id]
-    }
+  private_dns_zone_group {
+    name                 = "cosmos-dns-zone-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.cosmos_db[0].id]
   }
 }

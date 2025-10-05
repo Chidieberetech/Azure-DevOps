@@ -115,6 +115,14 @@ resource "azurerm_subnet" "spoke_beta_vm" {
   address_prefixes     = [local.spoke_beta_subnets.vm_subnet]
 }
 
+resource "azurerm_subnet" "spoke_beta_private_endpoint" {
+  count                = var.spoke_count >= 2 ? 1 : 0
+  name                 = "snet-${local.resource_prefix}-beta-pe-${format("%03d", 1)}"
+  resource_group_name  = azurerm_resource_group.spokes[1].name
+  virtual_network_name = azurerm_virtual_network.spokes[1].name
+  address_prefixes     = [local.spoke_beta_subnets.private_endpoint]
+}
+
 #================================================
 # VNET PEERING CONFIGURATION
 #================================================

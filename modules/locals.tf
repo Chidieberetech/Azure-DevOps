@@ -42,11 +42,25 @@ locals {
 
   # Common tags
   common_tags = {
-    Environment     = var.environment
-    Project         = "Azure.IAC.hubspoke"
-    ManagedBy      = "Terraform"
-    CreatedDate    = timestamp()
-    CostCenter     = "IT-Infrastructure"
+    Environment       = var.environment
+    Project           = "Azure.IAC.hubspoke"
+    ManagedBy         = "Terraform"
+    CreatedDate       = timestamp()
+    CostCenter        = "IT-Infrastructure"
+    Owner             = "Platform-Team"
+    BusinessUnit      = "Technology"
+    Application       = "Hub-Spoke-Network"
+    BackupRequired    = "Yes"
+    MaintenanceWindow = "Sunday-02:00-06:00-UTC"
+    Compliance        = "Internal"
+    DataClassification = "Internal"
+    SupportLevel      = "L2"
+    AutoShutdown      = var.environment == "dev" ? "Yes" : "No"
+    MonitoringEnabled = "Yes"
+    SecurityLevel     = "Standard"
+    ProvisionedBy     = "Azure-DevOps"
+    TerraformModule   = "hub-spoke-v1.0"
+    ReviewDate        = formatdate("YYYY-MM-DD", timeadd(timestamp(), "8760h")) # 1 year from now
   }
 
   # Network address spaces
@@ -89,4 +103,3 @@ locals {
   #}
 
 }
-

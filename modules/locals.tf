@@ -1,31 +1,90 @@
-# Local Values and Computed Data
-locals {
-  common_tags = {
-    Environment  = var.environment
-    Project      = "TRL-HubSpoke"
-    Organization = "TRL"
-    ManagedBy    = "Terraform"
-    CreatedDate  = formatdate("YYYY-MM-DD", timestamp())
-  }
+#================================================
+# LOCAL VALUES AND COMPUTED VARIABLES
+#================================================
 
+# Data source for current Azure client configuration
+data "azurerm_client_config" "current" {}
+
+# Random string for unique resource naming
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+locals {
   # Environment abbreviations
   env_abbr = {
-    dev     = "DEV"
-    staging = "STG"
-    prod    = "PRD"
+    dev     = "dev"
+    staging = "stg"
+    prod    = "prd"
   }
 
   # Location abbreviations
   location_abbr = {
-    "West Europe"     = "WEU"
-    "East US"         = "EUS"
-    "North Europe"    = "NEU"
-    "Central US"      = "CUS"
+    "West Europe"      = "weu"
+    "East US"          = "eus"
+    "East US 2"        = "eus2"
+    "Central US"       = "cus"
+    "North Europe"     = "neu"
+    "UK South"         = "uks"
+    "Southeast Asia"   = "sea"
   }
 
-  # Hub resource group name as specified
-  hub_resource_group_name = "RG-TRL-Hub-weu"
+  # Resource naming
+  resource_prefix = "trl-${local.env_abbr[var.environment]}"
 
-  # Resource naming convention: {resource-type}-{ENV}-{LOCATION}-{purpose}-{instance}
-  resource_prefix = "${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}"
+  # Hub resource group name
+  hub_resource_group_name = "rg-trl-${local.env_abbr[var.environment]}-hub-001"
 
+  # Spoke names
+  spoke_names = ["alpha", "beta", "gamma"]
+
+  # Common tags
+  common_tags = {
+    Environment     = var.environment
+    Project         = "TRL-Hub-Spoke"
+    ManagedBy      = "Terraform"
+    CreatedDate    = timestamp()
+    CostCenter     = "IT-Infrastructure"
+  }
+
+  # Network address spaces
+  hub_address_space = ["10.0.0.0/16"]
+  spoke_alpha_address_space = ["10.1.0.0/16"]
+  spoke_beta_address_space = ["10.2.0.0/16"]
+  spoke_gamma_address_space = ["10.3.0.0/16"]
+
+  # Hub subnet definitions
+  hub_subnets = {
+    firewall_subnet      = "10.0.1.0/26"
+    bastion_subnet       = "10.0.2.0/27"
+    gateway_subnet       = "10.0.3.0/27"
+    shared_services      = "10.0.4.0/24"
+    private_endpoint     = "10.0.5.0/24"
+  }
+
+  # Spoke Alpha subnet definitions
+  spoke_alpha_subnets = {
+    workload_subnet      = "10.1.1.0/24"
+    vm_subnet           = "10.1.4.0/24"
+    database_subnet     = "10.1.8.0/24"
+    private_endpoint    = "10.1.9.0/24"
+  }
+
+  # Spoke Beta subnet definitions
+  spoke_beta_subnets = {
+    workload_subnet     = "10.2.1.0/24"
+    vm_subnet          = "10.2.4.0/24"
+    database_subnet    = "10.2.8.0/24"
+    private_endpoint   = "10.2.9.0/24"
+  }
+
+  # Spoke Gamma subnet definitions
+  spoke_gamma_subnets = {
+    workload_subnet     = "10.3.1.0/24"
+    vm_subnet          = "10.3.4.0/24"
+    database_subnet    = "10.3.8.0/24"
+    private_endpoint   = "10.3.9.0/24"
+  }
+}

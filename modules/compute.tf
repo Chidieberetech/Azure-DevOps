@@ -40,8 +40,6 @@ resource "azurerm_windows_virtual_machine" "spoke_alpha_vm" {
   admin_password      = data.azurerm_key_vault_secret.vm_password.value
   tags                = local.common_tags
 
-  disable_password_authentication = false
-
   network_interface_ids = [
     azurerm_network_interface.spoke_alpha_vm[0].id,
   ]
@@ -112,8 +110,6 @@ resource "azurerm_windows_virtual_machine" "spoke_beta_vm" {
   admin_password      = data.azurerm_key_vault_secret.vm_password.value
   tags                = local.common_tags
 
-  disable_password_authentication = false
-
   network_interface_ids = [
     azurerm_network_interface.spoke_beta_vm[0].id,
   ]
@@ -163,7 +159,7 @@ resource "azurerm_route_table" "spoke_to_firewall" {
   name                          = "rt-${local.resource_prefix}-${local.spoke_names[count.index]}-${format("%03d", 1)}"
   location                      = azurerm_resource_group.spokes[count.index].location
   resource_group_name           = azurerm_resource_group.spokes[count.index].name
-  disable_bgp_route_propagation = false
+  bgp_route_propagation_enabled = true
   tags                          = local.common_tags
 
   route {

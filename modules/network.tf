@@ -61,9 +61,7 @@ resource "azurerm_virtual_network" "spokes" {
   name                = "vnet-${local.resource_prefix}-${local.spoke_names[count.index]}-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[count.index].location
   resource_group_name = azurerm_resource_group.spokes[count.index].name
-  address_space       = count.index == 0 ? local.spoke_alpha_address_space :
-                       count.index == 1 ? local.spoke_beta_address_space :
-                       local.spoke_gamma_address_space
+  address_space       = count.index == 0 ? local.spoke_alpha_address_space : count.index == 1 ? local.spoke_beta_address_space : local.spoke_gamma_address_space
   tags                = local.common_tags
 }
 

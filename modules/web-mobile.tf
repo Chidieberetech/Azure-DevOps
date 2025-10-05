@@ -219,9 +219,6 @@ resource "azurerm_app_configuration" "main" {
   location            = azurerm_resource_group.spokes[0].location
   sku                 = var.app_configuration_sku
 
-  # Security settings
-    public_network_access_enabled = false
-
   identity {
     type = "SystemAssigned"
   }
@@ -372,7 +369,6 @@ resource "azurerm_search_service" "main" {
   tags = local.common_tags
 }
 
-# Media Services Account
 # Storage Account for Media Services
 resource "azurerm_storage_account" "media" {
   count                    = var.enable_media_services ? 1 : 0
@@ -383,7 +379,6 @@ resource "azurerm_storage_account" "media" {
   account_replication_type = "LRS"
 
   # Security settings
-  public_network_access_enabled   = false
   allow_nested_items_to_be_public = false
 
   tags = local.common_tags
@@ -682,20 +677,20 @@ resource "azurerm_private_endpoint" "app_configuration" {
   tags = local.common_tags
 }
 
-resource "azurerm_private_endpoint" "media_services" {
+# Private endpoint for media storage account (instead of media services)
+resource "azurerm_private_endpoint" "media_storage" {
   count               = var.enable_media_services ? 1 : 0
-  name                = "pep-${local.resource_prefix}-ams-${format("%03d", 1)}"
+  name                = "pep-${local.resource_prefix}-media-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
   subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
 
   private_service_connection {
-    name                           = "psc-media-services"
-    private_connection_resource_id = azurerm_media_services_account.main[0].id
-    subresource_names              = ["streamingEndpoint"]
+    name                           = "psc-media-storage"
+    private_connection_resource_id = azurerm_storage_account.media[0].id
+    subresource_names              = ["blob"]
     is_manual_connection           = false
   }
 
   tags = local.common_tags
 }
-

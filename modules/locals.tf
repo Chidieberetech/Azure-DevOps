@@ -40,7 +40,7 @@ locals {
   # Spoke names
   spoke_names = ["alpha", "beta", "gamma"]
 
-  # Common tags.
+  # Common tags
   common_tags = {
     Environment       = var.environment
     Project           = "Azure.IAC.hubspoke"
@@ -94,12 +94,11 @@ locals {
     private_endpoint   = "10.2.9.0/24"
   }
 
-  ## Spoke Gamma subnet definitions (for future use and scalability more than two spokes)
+  ## Spoke Gamma subnet definitions (for future scalability)
   # spoke_gamma_subnets = {
-  #  workload_subnet     = "10.3.1.0/24"
-  #  vm_subnet          = "10.3.4.0/24"
-  #  database_subnet    = "10.3.8.0/24"
-  #  private_endpoint   = "10.3.9.0/24"
+  # workload_subnet     = "10.3.1.0/24"
+  # vm_subnet          = "10.3.4.0/24"
+  # database_subnet    = "10.3.8.0/24"
+  # private_endpoint   = "10.3.9.0/24"
   #}
-
 }

@@ -94,3 +94,42 @@ resource "azurerm_network_watcher" "main" {
   resource_group_name = azurerm_resource_group.management.name
   tags                = local.common_tags
 }
+
+#================================================
+# AZURE SECURITY CENTER
+#================================================
+
+# Azure Security Center Contact
+resource "azurerm_security_center_contact" "main" {
+  count = var.enable_security_center && var.security_contact_email != "" ? 1 : 0
+
+  email               = var.security_contact_email
+  phone               = ""
+  alert_notifications = true
+  alerts_to_admins    = true
+}
+
+# Azure Security Center Subscription Pricing
+resource "azurerm_security_center_subscription_pricing" "vm" {
+  count         = var.enable_security_center ? 1 : 0
+  tier          = "Standard"
+  resource_type = "VirtualMachines"
+}
+
+resource "azurerm_security_center_subscription_pricing" "storage" {
+  count         = var.enable_security_center ? 1 : 0
+  tier          = "Standard"
+  resource_type = "StorageAccounts"
+}
+
+resource "azurerm_security_center_subscription_pricing" "keyvault" {
+  count         = var.enable_security_center ? 1 : 0
+  tier          = "Standard"
+  resource_type = "KeyVaults"
+}
+
+resource "azurerm_security_center_subscription_pricing" "sql" {
+  count         = var.enable_security_center && var.enable_sql_database ? 1 : 0
+  tier          = "Standard"
+  resource_type = "SqlServers"
+}

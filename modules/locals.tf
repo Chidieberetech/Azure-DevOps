@@ -41,7 +41,7 @@ locals {
   spoke_names = ["alpha", "beta", "gamma"]
 
   # Common tags
-  common_tags = {
+  common_tags = merge({
     Environment       = var.environment
     Project           = "Azure.IAC.hubspoke"
     ManagedBy         = "Terraform"
@@ -61,7 +61,7 @@ locals {
     ProvisionedBy     = "Azure-DevOps"
     TerraformModule   = "hub-spoke-v1.0"
     ReviewDate        = formatdate("YYYY-MM-DD", timeadd(timestamp(), "8760h")) # 1 year from now
-  }
+  }, var.additional_tags)
 
   # Network address spaces
   hub_address_space = ["10.0.0.0/16"]

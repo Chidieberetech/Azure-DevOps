@@ -71,8 +71,8 @@ locals {
 
   # Hub subnet definitions
   hub_subnets = {
-    firewall_subnet      = "10.0.1.0/26"
-    bastion_subnet       = "10.0.2.0/27"
+    firewall_subnet      = "10.0.1.0/26"  # /26 minimum for Azure Firewall
+    bastion_subnet       = "10.0.2.0/26"  # /26 minimum for Azure Bastion
     gateway_subnet       = "10.0.3.0/27"
     shared_services      = "10.0.4.0/24"
     private_endpoint     = "10.0.5.0/24"

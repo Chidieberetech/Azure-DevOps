@@ -49,6 +49,10 @@ resource "azurerm_subnet" "hub_private_endpoint" {
   resource_group_name  = azurerm_resource_group.hub.name
   virtual_network_name = azurerm_virtual_network.hub.name
   address_prefixes     = [local.hub_subnets.private_endpoint]
+
+  # Disable network policies for private endpoints
+  private_endpoint_network_policies             = "Disabled"
+  private_link_service_network_policies_enabled = false
 }
 
 #================================================
@@ -88,6 +92,16 @@ resource "azurerm_subnet" "spoke_alpha_database" {
   resource_group_name  = azurerm_resource_group.spokes[0].name
   virtual_network_name = azurerm_virtual_network.spokes[0].name
   address_prefixes     = [local.spoke_alpha_subnets.database_subnet]
+
+  delegation {
+    name = "fs"
+    service_delegation {
+      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+      ]
+    }
+  }
 }
 
 resource "azurerm_subnet" "spoke_alpha_private_endpoint" {
@@ -96,6 +110,10 @@ resource "azurerm_subnet" "spoke_alpha_private_endpoint" {
   resource_group_name  = azurerm_resource_group.spokes[0].name
   virtual_network_name = azurerm_virtual_network.spokes[0].name
   address_prefixes     = [local.spoke_alpha_subnets.private_endpoint]
+
+  # Disable network policies for private endpoints
+  private_endpoint_network_policies             = "Disabled"
+  private_link_service_network_policies_enabled = false
 }
 
 # Spoke Beta Subnets
@@ -121,6 +139,10 @@ resource "azurerm_subnet" "spoke_beta_private_endpoint" {
   resource_group_name  = azurerm_resource_group.spokes[1].name
   virtual_network_name = azurerm_virtual_network.spokes[1].name
   address_prefixes     = [local.spoke_beta_subnets.private_endpoint]
+
+  # Disable network policies for private endpoints
+  private_endpoint_network_policies             = "Disabled"
+  private_link_service_network_policies_enabled = false
 }
 
 #================================================
@@ -139,7 +161,7 @@ resource "azurerm_virtual_network_peering" "hub_to_spoke" {
   use_remote_gateways       = false
 }
 
-# Spoke to Hub Peering
+# Spoke to Hub Peering - Fixed to remove incorrect use_remote_gateways for Firewall
 resource "azurerm_virtual_network_peering" "spoke_to_hub" {
   count                     = var.spoke_count
   name                      = "peer-${local.spoke_names[count.index]}-to-hub"
@@ -148,5 +170,135 @@ resource "azurerm_virtual_network_peering" "spoke_to_hub" {
   remote_virtual_network_id = azurerm_virtual_network.hub.id
   allow_forwarded_traffic   = true
   allow_gateway_transit     = false
-  use_remote_gateways       = var.enable_firewall ? true : false
+  use_remote_gateways       = false  # Fixed: Don't use for Firewall - only for VPN/ER gateways
+}
+
+#================================================
+# USER DEFINED ROUTES FOR AZURE FIREWALL
+#================================================
+
+# Route Table for Spoke Alpha Workload Subnet
+resource "azurerm_route_table" "spoke_alpha_workload" {
+  count                         = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-alpha-workload"
+  location                      = azurerm_resource_group.spokes[0].location
+  resource_group_name           = azurerm_resource_group.spokes[0].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+# Route Table for Spoke Alpha VM Subnet
+resource "azurerm_route_table" "spoke_alpha_vm" {
+  count                         = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-alpha-vm"
+  location                      = azurerm_resource_group.spokes[0].location
+  resource_group_name           = azurerm_resource_group.spokes[0].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+# Route Table for Spoke Alpha Database Subnet
+resource "azurerm_route_table" "spoke_alpha_database" {
+  count                         = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-alpha-db"
+  location                      = azurerm_resource_group.spokes[0].location
+  resource_group_name           = azurerm_resource_group.spokes[0].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+# Route Table for Spoke Beta Workload Subnet
+resource "azurerm_route_table" "spoke_beta_workload" {
+  count                         = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-beta-workload"
+  location                      = azurerm_resource_group.spokes[1].location
+  resource_group_name           = azurerm_resource_group.spokes[1].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+# Route Table for Spoke Beta VM Subnet
+resource "azurerm_route_table" "spoke_beta_vm" {
+  count                         = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-beta-vm"
+  location                      = azurerm_resource_group.spokes[1].location
+  resource_group_name           = azurerm_resource_group.spokes[1].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+#================================================
+# ROUTE TABLE ASSOCIATIONS
+#================================================
+
+# Associate Route Tables with Spoke Alpha Subnets (excluding Private Endpoint subnet)
+resource "azurerm_subnet_route_table_association" "spoke_alpha_workload" {
+  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_workload[0].id
+  route_table_id = azurerm_route_table.spoke_alpha_workload[0].id
+}
+
+resource "azurerm_subnet_route_table_association" "spoke_alpha_vm" {
+  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_vm[0].id
+  route_table_id = azurerm_route_table.spoke_alpha_vm[0].id
+}
+
+resource "azurerm_subnet_route_table_association" "spoke_alpha_database" {
+  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_database[0].id
+  route_table_id = azurerm_route_table.spoke_alpha_database[0].id
+}
+
+# Associate Route Tables with Spoke Beta Subnets (excluding Private Endpoint subnet)
+resource "azurerm_subnet_route_table_association" "spoke_beta_workload" {
+  count          = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_beta_workload[0].id
+  route_table_id = azurerm_route_table.spoke_beta_workload[0].id
+}
+
+resource "azurerm_subnet_route_table_association" "spoke_beta_vm" {
+  count          = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_beta_vm[0].id
+  route_table_id = azurerm_route_table.spoke_beta_vm[0].id
 }

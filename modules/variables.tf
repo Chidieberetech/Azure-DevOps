@@ -236,6 +236,192 @@ variable "log_retention_days" {
   }
 }
 
+# Log Analytics configuration
+variable "log_analytics_sku" {
+  description = "Log Analytics workspace SKU"
+  type        = string
+  default     = "PerGB2018"
+  validation {
+    condition = contains(["Free", "PerNode", "PerGB2018", "Premium"], var.log_analytics_sku)
+    error_message = "Log Analytics SKU must be Free, PerNode, PerGB2018, or Premium."
+  }
+}
+
+variable "log_analytics_daily_quota_gb" {
+  description = "Daily data ingestion quota in GB for Log Analytics workspace"
+  type        = number
+  default     = -1 # -1 means no limit
+}
+
+# Application Insights configuration
+variable "app_insights_retention_days" {
+  description = "Application Insights data retention in days"
+  type        = number
+  default     = 90
+  validation {
+    condition = var.app_insights_retention_days >= 30 && var.app_insights_retention_days <= 730
+    error_message = "Application Insights retention must be between 30 and 730 days."
+  }
+}
+
+variable "app_insights_sampling_percentage" {
+  description = "Application Insights sampling percentage"
+  type        = number
+  default     = 100
+  validation {
+    condition = var.app_insights_sampling_percentage >= 0 && var.app_insights_sampling_percentage <= 100
+    error_message = "Sampling percentage must be between 0 and 100."
+  }
+}
+
+# VM monitoring
+variable "enable_vm_monitoring" {
+  description = "Enable VM Insights monitoring"
+  type        = bool
+  default     = true
+}
+
+# Alert configuration
+variable "alert_email_addresses" {
+  description = "List of email addresses for alert notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "alert_sms_numbers" {
+  description = "Map of SMS numbers for alert notifications"
+  type = map(object({
+    country_code = string
+    phone_number = string
+  }))
+  default = {}
+}
+
+variable "alert_webhooks" {
+  description = "Map of webhook URLs for alert notifications"
+  type        = map(string)
+  default     = {}
+}
+
+# Infrastructure alert thresholds
+variable "enable_infrastructure_alerts" {
+  description = "Enable infrastructure metric alerts"
+  type        = bool
+  default     = true
+}
+
+variable "cpu_alert_threshold" {
+  description = "CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+  validation {
+    condition = var.cpu_alert_threshold >= 1 && var.cpu_alert_threshold <= 100
+    error_message = "CPU alert threshold must be between 1 and 100."
+  }
+}
+
+variable "memory_alert_threshold_bytes" {
+  description = "Available memory threshold in bytes for alerts"
+  type        = number
+  default     = 1073741824 # 1GB
+}
+
+# Application alert thresholds
+variable "enable_application_alerts" {
+  description = "Enable application performance alerts"
+  type        = bool
+  default     = true
+}
+
+variable "response_time_alert_threshold_seconds" {
+  description = "Application response time threshold in seconds for alerts"
+  type        = number
+  default     = 5
+}
+
+variable "error_rate_alert_threshold" {
+  description = "Application error rate threshold for alerts"
+  type        = number
+  default     = 10
+}
+
+# Database alert thresholds
+variable "enable_database_alerts" {
+  description = "Enable database performance alerts"
+  type        = bool
+  default     = true
+}
+
+variable "database_cpu_alert_threshold" {
+  description = "Database CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+}
+
+variable "database_storage_alert_threshold" {
+  description = "Database storage usage percentage threshold for alerts"
+  type        = number
+  default     = 85
+}
+
+# Security alerts
+variable "enable_security_alerts" {
+  description = "Enable security-related alerts"
+  type        = bool
+  default     = true
+}
+
+# Dashboard and workbook configuration
+variable "enable_monitoring_dashboard" {
+  description = "Enable custom monitoring dashboard"
+  type        = bool
+  default     = true
+}
+
+variable "enable_monitoring_workbooks" {
+  description = "Enable monitoring workbooks"
+  type        = bool
+  default     = true
+}
+
+# Security monitoring
+variable "enable_security_monitoring" {
+  description = "Enable security monitoring solutions"
+  type        = bool
+  default     = true
+}
+
+variable "enable_update_management" {
+  description = "Enable update management solution"
+  type        = bool
+  default     = true
+}
+
+variable "enable_change_tracking" {
+  description = "Enable change tracking solution"
+  type        = bool
+  default     = true
+}
+
+# Cost monitoring
+variable "enable_cost_monitoring" {
+  description = "Enable cost monitoring and budgets"
+  type        = bool
+  default     = true
+}
+
+variable "monthly_budget_amount" {
+  description = "Monthly budget amount for cost monitoring"
+  type        = number
+  default     = 1000
+}
+
+variable "budget_alert_emails" {
+  description = "List of email addresses for budget alerts"
+  type        = list(string)
+  default     = []
+}
+
 #================================================
 # SECURITY CONFIGURATION
 #================================================

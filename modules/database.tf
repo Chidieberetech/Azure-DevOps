@@ -50,22 +50,49 @@ resource "azurerm_private_endpoint" "sql_database" {
   resource_group_name = azurerm_resource_group.spokes[0].name
   subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
 
-  tags = local.common_tags
-
   private_service_connection {
-    name                           = "psc-sql-database"
+    name                           = "psc-${local.resource_prefix}-sql-${format("%03d", 1)}"
     private_connection_resource_id = azurerm_mssql_server.main[0].id
     subresource_names              = ["sqlServer"]
     is_manual_connection           = false
   }
 
-  dynamic "private_dns_zone_group" {
-    for_each = var.enable_private_dns ? [1] : []
-    content {
-      name                 = "sql-dns-zone-group"
-      private_dns_zone_ids = [azurerm_private_dns_zone.sql_database[0].id]
-    }
+  private_dns_zone_group {
+    name                 = "pdzg-${local.resource_prefix}-sql"
+    private_dns_zone_ids = [azurerm_private_dns_zone.sql_database[0].id]
   }
+
+  tags = local.common_tags
+}
+
+# Private DNS Zone for SQL Database
+resource "azurerm_private_dns_zone" "sql_database" {
+  count               = var.enable_sql_database ? 1 : 0
+  name                = "privatelink.database.windows.net"
+  resource_group_name = azurerm_resource_group.hub.name
+  tags                = local.common_tags
+}
+
+# Link Private DNS Zone to Hub VNet
+resource "azurerm_private_dns_zone_virtual_network_link" "sql_database_hub" {
+  count                 = var.enable_sql_database ? 1 : 0
+  name                  = "pdzvnl-${local.resource_prefix}-sql-hub"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.sql_database[0].name
+  virtual_network_id    = azurerm_virtual_network.hub.id
+  registration_enabled  = false
+  tags                  = local.common_tags
+}
+
+# Link Private DNS Zone to Spoke VNets
+resource "azurerm_private_dns_zone_virtual_network_link" "sql_database_spokes" {
+  count                 = var.enable_sql_database ? var.spoke_count : 0
+  name                  = "pdzvnl-${local.resource_prefix}-sql-${local.spoke_names[count.index]}"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.sql_database[0].name
+  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
+  registration_enabled  = false
+  tags                  = local.common_tags
 }
 
 #================================================

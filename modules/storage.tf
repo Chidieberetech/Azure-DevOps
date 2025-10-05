@@ -51,7 +51,6 @@ resource "azurerm_private_endpoint" "storage_blob" {
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
   subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
-  tags                = local.common_tags
 
   private_service_connection {
     name                           = "psc-storage-blob"
@@ -60,22 +59,21 @@ resource "azurerm_private_endpoint" "storage_blob" {
     is_manual_connection           = false
   }
 
-  dynamic "private_dns_zone_group" {
-    for_each = var.enable_private_dns ? [1] : []
-    content {
-      name                 = "storage-blob-dns-zone-group"
-      private_dns_zone_ids = [azurerm_private_dns_zone.storage_blob[0].id]
-    }
+  private_dns_zone_group {
+    name                 = "pdzg-storage-blob"
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage_blob[0].id]
   }
+
+  tags = local.common_tags
 }
 
 # Private Endpoint for File Storage
 resource "azurerm_private_endpoint" "storage_file" {
+  count               = var.spoke_count >= 1 ? 1 : 0
   name                = "pep-${local.resource_prefix}-st-file-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[0].location
   resource_group_name = azurerm_resource_group.spokes[0].name
   subnet_id           = azurerm_subnet.spoke_alpha_private_endpoint[0].id
-  tags                = local.common_tags
 
   private_service_connection {
     name                           = "psc-storage-file"
@@ -84,25 +82,30 @@ resource "azurerm_private_endpoint" "storage_file" {
     is_manual_connection           = false
   }
 
-  dynamic "private_dns_zone_group" {
-    for_each = var.enable_private_dns ? [1] : []
-    content {
-      name                 = "storage-file-dns-zone-group"
-      private_dns_zone_ids = [azurerm_private_dns_zone.storage_file[0].id]
-    }
+  private_dns_zone_group {
+    name                 = "pdzg-storage-file"
+    private_dns_zone_ids = [azurerm_private_dns_zone.storage_file[0].id]
   }
+
+  tags = local.common_tags
 }
 
-# Storage Container for application data
-resource "azurerm_storage_container" "app_data" {
-  name                  = "app-data"
+# Storage Containers
+resource "azurerm_storage_container" "data" {
+  name                  = "data"
   storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
 
-# File Share for shared data (Free tier: 1GB)
-resource "azurerm_storage_share" "shared_data" {
+resource "azurerm_storage_container" "backups" {
+  name                  = "backups"
+  storage_account_name  = azurerm_storage_account.main.name
+  container_access_type = "private"
+}
+
+# File Share for shared data
+resource "azurerm_storage_share" "shared" {
   name                 = "shared-data"
   storage_account_name = azurerm_storage_account.main.name
-  quota                = 1  # 1GB for free tier
+  quota                = 50
 }

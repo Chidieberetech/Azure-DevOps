@@ -56,27 +56,25 @@ resource "azurerm_key_vault_secret" "vm_admin_password" {
   name         = "vm-admin-password"
   value        = random_password.vm_admin_password.result
   key_vault_id = azurerm_key_vault.main.id
-  depends_on   = [azurerm_key_vault_access_policy.current_user]
+  tags         = local.common_tags
 
-  tags = local.common_tags
+  depends_on = [azurerm_key_vault_access_policy.current_user]
 }
 
 # Generate a random password for SQL admin
 resource "random_password" "sql_admin_password" {
-  count   = var.enable_sql_database ? 1 : 0
-  length  = 16
+  length  = 20
   special = true
 }
 
 # Store SQL admin password in Key Vault
 resource "azurerm_key_vault_secret" "sql_admin_password" {
-  count        = var.enable_sql_database ? 1 : 0
   name         = "sql-admin-password"
-  value        = random_password.sql_admin_password[0].result
+  value        = random_password.sql_admin_password.result
   key_vault_id = azurerm_key_vault.main.id
-  depends_on   = [azurerm_key_vault_access_policy.current_user]
+  tags         = local.common_tags
 
-  tags = local.common_tags
+  depends_on = [azurerm_key_vault_access_policy.current_user]
 }
 
 # Private Endpoint for Key Vault

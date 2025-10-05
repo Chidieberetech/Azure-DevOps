@@ -1,6 +1,9 @@
 # Variables for TRL Hub and Spoke Infrastructure
 
-# Environment Configuration
+#================================================
+# ENVIRONMENT CONFIGURATION
+#================================================
+
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
@@ -21,7 +24,10 @@ variable "subscription_id" {
   type        = string
 }
 
-# Hub and Spoke Configuration
+#================================================
+# HUB AND SPOKE CONFIGURATION
+#================================================
+
 variable "spoke_count" {
   description = "Number of spoke networks to create"
   type        = number
@@ -32,7 +38,10 @@ variable "spoke_count" {
   }
 }
 
-# Network Configuration
+#================================================
+# NETWORK CONFIGURATION
+#================================================
+
 variable "enable_firewall" {
   description = "Enable Azure Firewall deployment"
   type        = bool
@@ -51,7 +60,10 @@ variable "enable_private_dns" {
   default     = true
 }
 
-# Compute Configuration
+#================================================
+# COMPUTE CONFIGURATION
+#================================================
+
 variable "vm_size" {
   description = "Size of the virtual machines (Free tier compatible)"
   type        = string
@@ -84,7 +96,10 @@ variable "vm_shutdown_time" {
   default     = "1900"
 }
 
-# Storage Configuration
+#================================================
+# STORAGE CONFIGURATION
+#================================================
+
 variable "storage_account_tier" {
   description = "Storage account tier"
   type        = string
@@ -105,31 +120,9 @@ variable "storage_replication_type" {
   }
 }
 
-# Database Configuration
-variable "sql_database_sku" {
-  description = "SQL Database SKU (Free tier: S0)"
-  type        = string
-  default     = "S0"
-}
-
-variable "enable_sql_database" {
-  description = "Enable SQL Database deployment"
-  type        = bool
-  default     = false
-}
-
-variable "enable_cosmos_db" {
-  description = "Enable Cosmos DB deployment"
-  type        = bool
-  default     = false
-}
-
-# Security Configuration
-variable "enable_key_vault_soft_delete" {
-  description = "Enable soft delete for Key Vault"
-  type        = bool
-  default     = true
-}
+#================================================
+# KEY VAULT CONFIGURATION
+#================================================
 
 variable "key_vault_sku" {
   description = "Key Vault SKU"
@@ -141,7 +134,94 @@ variable "key_vault_sku" {
   }
 }
 
-# Tagging
+variable "enable_key_vault_soft_delete" {
+  description = "Enable Key Vault soft delete"
+  type        = bool
+  default     = true
+}
+
+#================================================
+# DATABASE CONFIGURATION
+#================================================
+
+variable "enable_sql_database" {
+  description = "Enable SQL Database deployment"
+  type        = bool
+  default     = false
+}
+
+variable "sql_database_sku" {
+  description = "SQL Database SKU"
+  type        = string
+  default     = "S0"
+  validation {
+    condition = contains(["Basic", "S0", "S1", "S2"], var.sql_database_sku)
+    error_message = "SQL Database SKU must be Basic, S0, S1, or S2 for free tier compatibility."
+  }
+}
+
+variable "enable_cosmos_db" {
+  description = "Enable Cosmos DB deployment"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MONITORING AND LOGGING
+#================================================
+
+variable "enable_monitoring" {
+  description = "Enable Azure Monitor and Log Analytics"
+  type        = bool
+  default     = true
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain logs"
+  type        = number
+  default     = 30
+  validation {
+    condition = var.log_retention_days >= 30 && var.log_retention_days <= 365
+    error_message = "Log retention must be between 30 and 365 days."
+  }
+}
+
+#================================================
+# SECURITY CONFIGURATION
+#================================================
+
+variable "enable_security_center" {
+  description = "Enable Azure Security Center"
+  type        = bool
+  default     = true
+}
+
+variable "security_contact_email" {
+  description = "Email address for security alerts"
+  type        = string
+  default     = ""
+}
+
+#================================================
+# BACKUP CONFIGURATION
+#================================================
+
+variable "enable_backup" {
+  description = "Enable Azure Backup for VMs"
+  type        = bool
+  default     = true
+}
+
+variable "backup_retention_days" {
+  description = "Number of days to retain backups"
+  type        = number
+  default     = 30
+}
+
+#================================================
+# TAGGING
+#================================================
+
 variable "additional_tags" {
   description = "Additional tags to apply to resources"
   type        = map(string)

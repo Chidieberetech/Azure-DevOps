@@ -1,0 +1,152 @@
+# Security Scan Template
+# Reusable template for security scanning across all Terraform configurations
+
+parameters:
+  - name: scanPath
+    type: string
+    default: 'modules/'
+  - name: environmentName
+    type: string
+  - name: failOnSecurityIssues
+    type: boolean
+    default: false
+
+steps:
+- script: |
+    echo ":) Installing security scanning tools..."
+    
+    # Install tfsec for Terraform security scanning
+    curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+    
+    # Install checkov for compliance scanning
+    pip install checkov
+    
+    # Install terrascan for additional security checks
+    curl -L "$(curl -s https://api.github.com/repos/tenable/terrascan/releases/latest | grep -o -E "https://.+?_Linux_x86_64.tar.gz")" > terrascan.tar.gz
+    tar -xf terrascan.tar.gz terrascan && rm terrascan.tar.gz
+    sudo install terrascan /usr/local/bin && rm terrascan
+    
+    echo ":) Security tools installation completed"
+  displayName: 'Install Security Tools'
+
+- script: |
+    echo ":) Running tfsec security scan on ${{ parameters.environmentName }}..."
+    
+    # Run tfsec scan
+    tfsec ${{ parameters.scanPath }} \
+      --format json \
+      --out tfsec-${{ parameters.environmentName }}-results.json \
+      --format junit \
+      --out tfsec-${{ parameters.environmentName }}-junit.xml \
+      --soft-fail
+    
+    TFSEC_EXIT_CODE=$?
+    
+    if [ $TFSEC_EXIT_CODE -eq 0 ]; then
+      echo ":) tfsec scan completed - no issues found"
+    else
+      echo ":| tfsec scan completed - issues detected"
+    fi
+    
+    echo "|) tfsec scan results saved to tfsec-${{ parameters.environmentName }}-results.json"
+  displayName: 'Run tfsec Security Scan'
+  continueOnError: true
+
+- script: |
+    echo ":) Running checkov compliance scan on ${{ parameters.environmentName }}..."
+    
+    # Run checkov scan
+    checkov -d ${{ parameters.scanPath }} \
+      --framework terraform \
+      --output json \
+      --output-file-path checkov-${{ parameters.environmentName }}-results.json \
+      --output junit \
+      --output-file-path checkov-${{ parameters.environmentName }}-junit.xml \
+      --soft-fail
+    
+    CHECKOV_EXIT_CODE=$?
+    
+    if [ $CHECKOV_EXIT_CODE -eq 0 ]; then
+      echo ":) checkov scan completed - no issues found"
+    else
+      echo ":| checkov scan completed - issues detected"
+    fi
+    
+    echo "|) checkov scan results saved to checkov-${{ parameters.environmentName }}-results.json"
+  displayName: 'Run Checkov Compliance Scan'
+  continueOnError: true
+
+- script: |
+    echo ":) Running terrascan policy scan on ${{ parameters.environmentName }}..."
+    
+    # Run terrascan
+    terrascan scan -t terraform \
+      -d ${{ parameters.scanPath }} \
+      -o json \
+      --output-file terrascan-${{ parameters.environmentName }}-results.json \
+      -o junit-xml \
+      --output-file terrascan-${{ parameters.environmentName }}-junit.xml
+    
+    TERRASCAN_EXIT_CODE=$?
+    
+    if [ $TERRASCAN_EXIT_CODE -eq 0 ]; then
+      echo ":) terrascan completed - no policy violations found"
+    else
+      echo ":| terrascan completed - policy violations detected"
+    fi
+    
+    echo "|) terrascan results saved to terrascan-${{ parameters.environmentName }}-results.json"
+  displayName: 'Run Terrascan Policy Scan'
+  continueOnError: true
+
+- script: |
+    echo ":) Generating security scan summary for ${{ parameters.environmentName }}..."
+    
+    # Create summary report
+    cat > security-summary-${{ parameters.environmentName }}.txt << EOF
+Security Scan Summary for ${{ parameters.environmentName }}
+================================================
+
+Scan Date: $(date -u)
+Scan Path: ${{ parameters.scanPath }}
+
+Tools Used:
+- tfsec: Terraform security scanner
+- checkov: Infrastructure compliance scanner
+- terrascan: Policy compliance scanner
+
+Results Files:
+- tfsec-${{ parameters.environmentName }}-results.json
+- checkov-${{ parameters.environmentName }}-results.json
+- terrascan-${{ parameters.environmentName }}-results.json
+
+Review these files for detailed security findings.
+
+Next Steps:
+1. Review all detected issues
+2. Fix high/critical severity issues
+3. Document accepted risks for remaining issues
+4. Re-run scans after fixes
+
+:) Security scan completed for ${{ parameters.environmentName }}
+EOF
+    
+    cat security-summary-${{ parameters.environmentName }}.txt
+  displayName: 'Generate Security Summary'
+
+- task: PublishTestResults@2
+  displayName: 'Publish Security Test Results'
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**/*-junit.xml'
+    testRunTitle: '${{ parameters.environmentName }} Security Scan Results'
+    failTaskOnFailedTests: ${{ parameters.failOnSecurityIssues }}
+  condition: always()
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish Security Scan Artifacts'
+  inputs:
+    targetPath: '$(System.DefaultWorkingDirectory)'
+    artifact: '${{ parameters.environmentName }}-security-scan-results'
+    publishLocation: 'pipeline'
+  condition: always()

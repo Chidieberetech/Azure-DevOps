@@ -1,0 +1,48 @@
+# Terraform Initialization Template
+# Reusable template for Terraform initialization across workspaces
+
+parameters:
+  - name: workspacePath
+    type: string
+  - name: environmentName
+    type: string
+  - name: serviceConnection
+    type: string
+  - name: terraformVersion
+    type: string
+    default: '1.5.7'
+
+steps:
+- task: TerraformInstaller@0
+  displayName: 'Install Terraform $(terraformVersion)'
+  inputs:
+    terraformVersion: ${{ parameters.terraformVersion }}
+
+- task: AzureCLI@2
+  displayName: 'Initialize ${{ parameters.environmentName }} Terraform'
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo ":) Initializing ${{ parameters.environmentName }} workspace..."
+      cd ${{ parameters.workspacePath }}
+      
+      # Initialize Terraform with backend configuration
+      terraform init \
+        -backend-config="subscription_id=$(subscription-id)" \
+        -backend-config="tenant_id=$(tenant-id)"
+      
+      # Validate configuration
+      terraform validate
+      
+      # Format check
+      terraform fmt -check -recursive
+      
+      echo ":) ${{ parameters.environmentName }} workspace initialization completed"
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish ${{ parameters.environmentName }} Terraform Cache'
+  inputs:
+    targetPath: '${{ parameters.workspacePath }}/.terraform'
+    artifact: '${{ parameters.environmentName }}-terraform-cache'

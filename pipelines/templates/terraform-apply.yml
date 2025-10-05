@@ -1,0 +1,80 @@
+# Terraform Apply Template
+# Reusable template for applying Terraform plans across workspaces
+
+parameters:
+  - name: workspacePath
+    type: string
+  - name: environmentName
+    type: string
+  - name: serviceConnection
+    type: string
+  - name: terraformVersion
+    type: string
+    default: '1.5.7'
+  - name: requireApproval
+    type: boolean
+    default: false
+
+steps:
+- task: TerraformInstaller@0
+  displayName: 'Install Terraform ${{ parameters.terraformVersion }}'
+  inputs:
+    terraformVersion: ${{ parameters.terraformVersion }}
+
+- task: DownloadPipelineArtifact@2
+  displayName: 'Download ${{ parameters.environmentName }} Plan Artifacts'
+  inputs:
+    artifactName: '${{ parameters.environmentName }}-plan-artifacts'
+    targetPath: '${{ parameters.workspacePath }}'
+
+- task: AzureCLI@2
+  displayName: 'Apply ${{ parameters.environmentName }} Infrastructure'
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo ":) Applying ${{ parameters.environmentName }} infrastructure..."
+      cd ${{ parameters.workspacePath }}
+      
+      # Re-initialize Terraform
+      terraform init
+      
+      # Find the most recent plan file
+      PLAN_FILE=$(ls -t *_plan_*.out 2>/dev/null | head -1)
+      
+      if [ -z "$PLAN_FILE" ]; then
+        echo ":| No plan file found, creating fresh plan..."
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+        PLAN_FILE="${{ parameters.environmentName }}_apply_${TIMESTAMP}.out"
+        
+        terraform plan -out="${PLAN_FILE}"
+      else
+        echo "|) Using existing plan file: $PLAN_FILE"
+      fi
+      
+      # Show plan summary before applying
+      echo "|) Plan Summary:"
+      terraform show -no-color "${PLAN_FILE}" | grep -E "Plan:|Changes to Outputs:" || true
+      
+      # Apply the plan
+      echo ":) Applying infrastructure changes..."
+      terraform apply -auto-approve "${PLAN_FILE}"
+      
+      # Generate outputs
+      terraform output -json > "${{ parameters.environmentName }}-outputs.json"
+      
+      # Show apply summary
+      echo ""
+      echo ":) ${{ parameters.environmentName }} infrastructure apply completed!"
+      echo "|) Deployment Summary:"
+      terraform output
+      
+      # Cleanup plan file
+      rm -f "${PLAN_FILE}"
+
+- task: PublishPipelineArtifact@1
+  displayName: 'Publish ${{ parameters.environmentName }} Outputs'
+  inputs:
+    targetPath: '${{ parameters.workspacePath }}/${{ parameters.environmentName }}-outputs.json'
+    artifact: '${{ parameters.environmentName }}-outputs'

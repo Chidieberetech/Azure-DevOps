@@ -19,164 +19,164 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 
 ### Core Infrastructure
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Resource Group | `rg` | 90 | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-rg-hub` |
-| Virtual Network | `vnet` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-vnet-hub` |
-| Subnet | `snet` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-snet-workload` |
-| Network Interface | `nic` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nic-vm01` |
-| Public IP | `pip` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pip-afw` |
-| Load Balancer | `lb` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-lb-web` |
-| Application Gateway | `agw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-agw-web` |
-| Traffic Manager | `tm` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-tm` |
-| Front Door | `fd` | 64 | Alphanumeric, hyphen | `trl-hubspoke-prod-fd` |
-| CDN Profile | `cdnp` | 260 | Alphanumeric, hyphen | `trl-hubspoke-prod-cdnp` |
-| CDN Endpoint | `cdne` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-cdne` |
-| Express Route | `er` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-er` |
-| VPN Gateway | `vpng` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-vpng` |
-| Local Network Gateway | `lgw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-lgw` |
-| Virtual Network Gateway | `vgw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-vgw` |
+| Resource Type           | Abbreviation | Max Length | Allowed Characters                                    | Example                           |
+|-------------------------|--------------|------------|-------------------------------------------------------|-----------------------------------|
+| Resource Group          | `rg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-rg-hub`        |
+| Virtual Network         | `vnet`       | 64         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vnet-hub`      |
+| Subnet                  | `snet`       | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-snet-workload` |
+| Network Interface       | `nic`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-nic-vm01`      |
+| Public IP               | `pip`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-pip-afw`       |
+| Load Balancer           | `lb`         | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-lb-web`        |
+| Application Gateway     | `agw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-agw-web`       |
+| Traffic Manager         | `tm`         | 63         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-tm`            |
+| Front Door              | `fd`         | 64         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-fd`            |
+| CDN Profile             | `cdnp`       | 260        | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-cdnp`          |
+| CDN Endpoint            | `cdne`       | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-cdne`          |
+| Express Route           | `er`         | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-er`            |
+| VPN Gateway             | `vpng`       | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vpng`          |
+| Local Network Gateway   | `lgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-lgw`           |
+| Virtual Network Gateway | `vgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `trl-hubspoke-prod-vgw`           |
 
 ### Security & Identity
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Network Security Group | `nsg` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nsg-web` |
-| Route Table | `rt` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-rt-spoke1` |
-| Azure Firewall | `afw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afw` |
-| Firewall Policy | `afwp` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afwp` |
-| Bastion | `bas` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bas` |
-| Key Vault | `kv` | 24 | Alphanumeric, hyphen | `trl-hubspoke-prod-kv` |
-| Private Endpoint | `pep` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pep-sql` |
-| Private DNS Zone | `pdns` | 63 | Alphanumeric, hyphen, period | `privatelink.database.windows.net` |
-| User Assigned Identity | `id` | 128 | Alphanumeric, underscore, hyphen | `trl-hubspoke-prod-id-vm` |
-| Network Watcher | `nw` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nw` |
-| DDoS Protection Plan | `ddos` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ddos` |
-| Web Application Firewall | `waf` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-waf` |
+| Resource Type            | Abbreviation | Max Length | Allowed Characters                       | Example                            |
+|--------------------------|--------------|------------|------------------------------------------|------------------------------------|
+| Network Security Group   | `nsg`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nsg-web`        |
+| Route Table              | `rt`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-rt-spoke1`      |
+| Azure Firewall           | `afw`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afw`            |
+| Firewall Policy          | `afwp`       | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-afwp`           |
+| Bastion                  | `bas`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bas`            |
+| Key Vault                | `kv`         | 24         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-kv`             |
+| Private Endpoint         | `pep`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-pep-sql`        |
+| Private DNS Zone         | `pdns`       | 63         | Alphanumeric, hyphen, period             | `privatelink.database.windows.net` |
+| User Assigned Identity   | `id`         | 128        | Alphanumeric, underscore, hyphen         | `trl-hubspoke-prod-id-vm`          |
+| Network Watcher          | `nw`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-nw`             |
+| DDoS Protection Plan     | `ddos`       | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ddos`           |
+| Web Application Firewall | `waf`        | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-waf`            |
 
 ### Compute & Web
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Virtual Machine | `vm` | 64 (Win), 15 (Linux) | Alphanumeric, hyphen | `trl-hubspoke-prod-vm-web01` |
-| VM Scale Set | `vmss` | 64 (Win), 15 (Linux) | Alphanumeric, hyphen | `trl-hubspoke-prod-vmss-web` |
-| Availability Set | `avail` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-avail-web` |
-| Managed Disk | `disk` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-disk-vm01-os` |
-| Snapshot | `snap` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-snap-vm01` |
-| Image | `img` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-img-web` |
-| App Service Plan | `plan` | 40 | Alphanumeric, hyphen | `trl-hubspoke-prod-plan-web` |
-| App Service | `app` | 60 | Alphanumeric, hyphen | `trl-hubspoke-prod-app-web` |
-| Function App | `func` | 60 | Alphanumeric, hyphen | `trl-hubspoke-prod-func-api` |
-| Static Web App | `stapp` | 40 | Alphanumeric, hyphen | `trl-hubspoke-prod-stapp` |
-| Logic App | `logic` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic` |
-| Batch Account | `ba` | 24 | Lowercase alphanumeric | `trlhubspokeprodba` |
+| Resource Type    | Abbreviation | Max Length           | Allowed Characters                       | Example                          |
+|------------------|--------------|----------------------|------------------------------------------|----------------------------------|
+| Virtual Machine  | `vm`         | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `trl-hubspoke-prod-vm-web01`     |
+| VM Scale Set     | `vmss`       | 64 (Win), 15 (Linux) | Alphanumeric, hyphen                     | `trl-hubspoke-prod-vmss-web`     |
+| Availability Set | `avail`      | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-avail-web`    |
+| Managed Disk     | `disk`       | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-disk-vm01-os` |
+| Snapshot         | `snap`       | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-snap-vm01`    |
+| Image            | `img`        | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-img-web`      |
+| App Service Plan | `plan`       | 40                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-plan-web`     |
+| App Service      | `app`        | 60                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-app-web`      |
+| Function App     | `func`       | 60                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-func-api`     |
+| Static Web App   | `stapp`      | 40                   | Alphanumeric, hyphen                     | `trl-hubspoke-prod-stapp`        |
+| Logic App        | `logic`      | 80                   | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic`        |
+| Batch Account    | `ba`         | 24                   | Lowercase alphanumeric                   | `trlhubspokeprodba`              |
 
 ### Data & Storage
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Storage Account | `st` | 24 | Lowercase alphanumeric | `trlhubspokeprodst` |
-| Storage Container | `stct` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-stct` |
-| File Share | `fs` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-fs` |
-| Queue | `stq` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-stq` |
-| Table | `stt` | 63 | Alphanumeric | `trlhubspokeprodtable` |
-| SQL Server | `sql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-sql` |
-| SQL Database | `sqldb` | 128 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqldb-main` |
-| SQL Elastic Pool | `sqlep` | 128 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqlep` |
-| SQL Managed Instance | `sqlmi` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-sqlmi` |
-| Cosmos DB | `cosmos` | 44 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-cosmos` |
-| Redis Cache | `redis` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-redis` |
-| MySQL Database | `mysql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-mysql` |
-| PostgreSQL Database | `psql` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-psql` |
-| MariaDB Database | `mariadb` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-mariadb` |
-| Data Factory | `adf` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-adf` |
-| Synapse Workspace | `syn` | 45 | Alphanumeric, hyphen | `trl-hubspoke-prod-syn` |
-| Analysis Services | `as` | 63 | Lowercase alphanumeric | `trlhubspokeprods` |
-| Data Lake Store | `dls` | 24 | Lowercase alphanumeric | `trlhubspokeprodls` |
-| Data Lake Analytics | `dla` | 24 | Lowercase alphanumeric | `trlhubspokeprodla` |
-| HDInsight Cluster | `hdi` | 59 | Alphanumeric, hyphen | `trl-hubspoke-prod-hdi` |
-| Power BI Embedded | `pbi` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-pbi` |
+| Resource Type        | Abbreviation | Max Length | Allowed Characters                       | Example                        |
+|----------------------|--------------|------------|------------------------------------------|--------------------------------|
+| Storage Account      | `st`         | 24         | Lowercase alphanumeric                   | `trlhubspokeprodst`            |
+| Storage Container    | `stct`       | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-stct`       |
+| File Share           | `fs`         | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-fs`         |
+| Queue                | `stq`        | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-stq`        |
+| Table                | `stt`        | 63         | Alphanumeric                             | `trlhubspokeprodtable`         |
+| SQL Server           | `sql`        | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-sql`        |
+| SQL Database         | `sqldb`      | 128        | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqldb-main` |
+| SQL Elastic Pool     | `sqlep`      | 128        | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-sqlep`      |
+| SQL Managed Instance | `sqlmi`      | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-sqlmi`      |
+| Cosmos DB            | `cosmos`     | 44         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-cosmos`     |
+| Redis Cache          | `redis`      | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-redis`      |
+| MySQL Database       | `mysql`      | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-mysql`      |
+| PostgreSQL Database  | `psql`       | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-psql`       |
+| MariaDB Database     | `mariadb`    | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-mariadb`    |
+| Data Factory         | `adf`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-adf`        |
+| Synapse Workspace    | `syn`        | 45         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-syn`        |
+| Analysis Services    | `as`         | 63         | Lowercase alphanumeric                   | `trlhubspokeprods`             |
+| Data Lake Store      | `dls`        | 24         | Lowercase alphanumeric                   | `trlhubspokeprodls`            |
+| Data Lake Analytics  | `dla`        | 24         | Lowercase alphanumeric                   | `trlhubspokeprodla`            |
+| HDInsight Cluster    | `hdi`        | 59         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-hdi`        |
+| Power BI Embedded    | `pbi`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-pbi`        |
 
 ### Containers & DevOps
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Container Registry | `cr` | 50 | Alphanumeric | `trlhubspokeprodcr` |
-| Kubernetes Service | `aks` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-aks` |
-| Container Instance | `ci` | 63 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-ci-web` |
-| Container App | `ca` | 32 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-ca` |
-| Service Fabric Cluster | `sf` | 23 | Lowercase alphanumeric | `trlhubspokeprodcluster` |
-| Service Bus Namespace | `sb` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-sb` |
-| Service Bus Queue | `sbq` | 50 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbq-orders` |
-| Service Bus Topic | `sbt` | 50 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbt-events` |
-| Event Hub Namespace | `evhns` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-evhns` |
-| Event Hub | `evh` | 50 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-evh-logs` |
-| Event Grid Domain | `egd` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-egd` |
-| Event Grid Topic | `egt` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-egt` |
-| IoT Hub | `iot` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-iot` |
-| Notification Hub | `ntf` | 260 | Alphanumeric, hyphen | `trl-hubspoke-prod-ntf` |
-| DevTest Lab | `dtl` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-dtl` |
+| Resource Type          | Abbreviation | Max Length | Allowed Characters                       | Example                        |
+|------------------------|--------------|------------|------------------------------------------|--------------------------------|
+| Container Registry     | `cr`         | 50         | Alphanumeric                             | `trlhubspokeprodcr`            |
+| Kubernetes Service     | `aks`        | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-aks`        |
+| Container Instance     | `ci`         | 63         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-ci-web`     |
+| Container App          | `ca`         | 32         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-ca`         |
+| Service Fabric Cluster | `sf`         | 23         | Lowercase alphanumeric                   | `trlhubspokeprodcluster`       |
+| Service Bus Namespace  | `sb`         | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-sb`         |
+| Service Bus Queue      | `sbq`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbq-orders` |
+| Service Bus Topic      | `sbt`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-sbt-events` |
+| Event Hub Namespace    | `evhns`      | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-evhns`      |
+| Event Hub              | `evh`        | 50         | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-evh-logs`   |
+| Event Grid Domain      | `egd`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-egd`        |
+| Event Grid Topic       | `egt`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-egt`        |
+| IoT Hub                | `iot`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-iot`        |
+| Notification Hub       | `ntf`        | 260        | Alphanumeric, hyphen                     | `trl-hubspoke-prod-ntf`        |
+| DevTest Lab            | `dtl`        | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-dtl`        |
 
 ### Monitoring & Management
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Log Analytics Workspace | `log` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-log` |
-| Application Insights | `appi` | 260 | Unicode characters | `trl-hubspoke-prod-appi-web` |
-| Action Group | `ag` | 260 | Unicode characters | `trl-hubspoke-prod-ag` |
-| Alert Rule | `ar` | 260 | Unicode characters | `trl-hubspoke-prod-ar` |
-| Recovery Services Vault | `rsv` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-rsv` |
-| Backup Vault | `bv` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-bv` |
-| Site Recovery Vault | `srv` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-srv` |
-| Automation Account | `aa` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-aa` |
-| Managed Grafana | `amg` | 23 | Alphanumeric, hyphen | `trl-hubspoke-prod-amg` |
-| Dashboard | `dash` | 160 | Unicode characters | `trl-hubspoke-prod-dash` |
-| Workbook | `wb` | 260 | Unicode characters | `trl-hubspoke-prod-wb` |
-| Policy Definition | `policy` | 128 | Unicode characters | `trl-hubspoke-prod-policy-deny-pip` |
-| Policy Assignment | `assign` | 128 | Unicode characters | `trl-hubspoke-prod-assign-deny-pip` |
-| Blueprint | `bp` | 48 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-bp` |
-| Management Group | `mg` | 90 | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-mg` |
+| Resource Type           | Abbreviation | Max Length | Allowed Characters                                    | Example                             |
+|-------------------------|--------------|------------|-------------------------------------------------------|-------------------------------------|
+| Log Analytics Workspace | `log`        | 63         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-log`             |
+| Application Insights    | `appi`       | 260        | Unicode characters                                    | `trl-hubspoke-prod-appi-web`        |
+| Action Group            | `ag`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-ag`              |
+| Alert Rule              | `ar`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-ar`              |
+| Recovery Services Vault | `rsv`        | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-rsv`             |
+| Backup Vault            | `bv`         | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-bv`              |
+| Site Recovery Vault     | `srv`        | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-srv`             |
+| Automation Account      | `aa`         | 50         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-aa`              |
+| Managed Grafana         | `amg`        | 23         | Alphanumeric, hyphen                                  | `trl-hubspoke-prod-amg`             |
+| Dashboard               | `dash`       | 160        | Unicode characters                                    | `trl-hubspoke-prod-dash`            |
+| Workbook                | `wb`         | 260        | Unicode characters                                    | `trl-hubspoke-prod-wb`              |
+| Policy Definition       | `policy`     | 128        | Unicode characters                                    | `trl-hubspoke-prod-policy-deny-pip` |
+| Policy Assignment       | `assign`     | 128        | Unicode characters                                    | `trl-hubspoke-prod-assign-deny-pip` |
+| Blueprint               | `bp`         | 48         | Alphanumeric, hyphen, underscore, period              | `trl-hubspoke-prod-bp`              |
+| Management Group        | `mg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `trl-hubspoke-prod-mg`              |
 
 ### AI & Cognitive Services
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Cognitive Services | `cog` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cog-vision` |
-| Computer Vision | `cv` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cv` |
-| Custom Vision | `cusv` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cusv` |
-| Face API | `face` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-face` |
-| Form Recognizer | `fr` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-fr` |
-| Language Understanding | `luis` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-luis` |
-| QnA Maker | `qna` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-qna` |
-| Speech Service | `speech` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-speech` |
-| Text Analytics | `ta` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ta` |
-| Translator | `trans` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-trans` |
-| Bot Service | `bot` | 64 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bot` |
-| Machine Learning Workspace | `mlw` | 260 | Unicode characters | `trl-hubspoke-prod-mlw` |
-| Machine Learning Compute | `mlc` | 24 | Alphanumeric, hyphen | `trl-hubspoke-prod-mlc` |
-| Search Service | `srch` | 60 | Lowercase alphanumeric, hyphen | `trl-hubspoke-prod-srch` |
-| Maps Account | `map` | 98 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-map` |
+| Resource Type              | Abbreviation | Max Length | Allowed Characters                       | Example                        |
+|----------------------------|--------------|------------|------------------------------------------|--------------------------------|
+| Cognitive Services         | `cog`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cog-vision` |
+| Computer Vision            | `cv`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cv`         |
+| Custom Vision              | `cusv`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-cusv`       |
+| Face API                   | `face`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-face`       |
+| Form Recognizer            | `fr`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-fr`         |
+| Language Understanding     | `luis`       | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-luis`       |
+| QnA Maker                  | `qna`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-qna`        |
+| Speech Service             | `speech`     | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-speech`     |
+| Text Analytics             | `ta`         | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ta`         |
+| Translator                 | `trans`      | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-trans`      |
+| Bot Service                | `bot`        | 64         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-bot`        |
+| Machine Learning Workspace | `mlw`        | 260        | Unicode characters                       | `trl-hubspoke-prod-mlw`        |
+| Machine Learning Compute   | `mlc`        | 24         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-mlc`        |
+| Search Service             | `srch`       | 60         | Lowercase alphanumeric, hyphen           | `trl-hubspoke-prod-srch`       |
+| Maps Account               | `map`        | 98         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-map`        |
 
 ### Integration & API
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| API Management | `apim` | 50 | Alphanumeric, hyphen | `trl-hubspoke-prod-apim` |
-| Logic App | `logic` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic` |
-| Integration Account | `ia` | 80 | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ia` |
-| Data Factory | `df` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-df` |
-| Data Factory Pipeline | `dfp` | 260 | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-dfp` |
-| Stream Analytics | `asa` | 63 | Alphanumeric, hyphen, underscore | `trl-hubspoke-prod-asa` |
-| Power Automate | `flow` | 260 | Unicode characters | `trl-hubspoke-prod-flow` |
+| Resource Type         | Abbreviation | Max Length | Allowed Characters                       | Example                   |
+|-----------------------|--------------|------------|------------------------------------------|---------------------------|
+| API Management        | `apim`       | 50         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-apim`  |
+| Logic App             | `logic`      | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-logic` |
+| Integration Account   | `ia`         | 80         | Alphanumeric, underscore, hyphen, period | `trl-hubspoke-prod-ia`    |
+| Data Factory          | `df`         | 63         | Alphanumeric, hyphen                     | `trl-hubspoke-prod-df`    |
+| Data Factory Pipeline | `dfp`        | 260        | Alphanumeric, hyphen, underscore, period | `trl-hubspoke-prod-dfp`   |
+| Stream Analytics      | `asa`        | 63         | Alphanumeric, hyphen, underscore         | `trl-hubspoke-prod-asa`   |
+| Power Automate        | `flow`       | 260        | Unicode characters                       | `trl-hubspoke-prod-flow`  |
 
 ### Media & Communication
 
-| Resource Type | Abbreviation | Max Length | Allowed Characters | Example |
-|---------------|--------------|------------|-------------------|---------|
-| Media Services | `ams` | 24 | Lowercase alphanumeric | `trlhubspokeprodams` |
-| Communication Services | `acs` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-acs` |
-| SignalR Service | `sigr` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-sigr` |
-| Web PubSub | `wps` | 63 | Alphanumeric, hyphen | `trl-hubspoke-prod-wps` |
+| Resource Type          | Abbreviation | Max Length | Allowed Characters     | Example                  |
+|------------------------|--------------|------------|------------------------|--------------------------|
+| Media Services         | `ams`        | 24         | Lowercase alphanumeric | `trlhubspokeprodams`     |
+| Communication Services | `acs`        | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-acs`  |
+| SignalR Service        | `sigr`       | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-sigr` |
+| Web PubSub             | `wps`        | 63         | Alphanumeric, hyphen   | `trl-hubspoke-prod-wps`  |
 
 ## Character Restrictions Summary
 
@@ -466,7 +466,15 @@ Azure DevOps/
 │   ├── destroy-pipeline.yml   # Infrastructure destruction pipeline
 │   ├── init-pipeline.yml      # Terraform initialization pipeline
 │   ├── plan-pipeline.yml      # Terraform planning pipeline
-│   └── apply-pipeline.yml     # Terraform apply pipeline
+│   ├── apply-pipeline.yml     # Terraform apply pipeline
+│   ├── password-rotation.yml  # VM password rotation pipeline
+│   └── templates/             # Reusable pipeline templates
+│       ├── terraform-init.yml      # Terraform initialization template
+│       ├── terraform-plan.yml      # Terraform planning template
+│       ├── terraform-apply.yml     # Terraform apply template
+│       ├── terraform-destroy.yml   # Terraform destroy template
+│       ├── security-scan.yml       # Security scanning template
+│       └── infrastructure-validation.yml # Infrastructure validation template
 ├── workspaces/                # Terraform workspaces for different deployments
 │   ├── hub/                   # Hub infrastructure workspace
 │   │   ├── main.tf            # Hub-specific configuration
@@ -481,132 +489,68 @@ Azure DevOps/
 │       │   └── main.tf        # Staging spoke configuration
 │       └── prod/              # Production environment
 │           └── main.tf        # Production spoke configuration
+├── scripts/                   # Infrastructure management scripts
+│   ├── vm-password-rotation.sh    # Automated VM password rotation
+│   ├── cost-analysis.sh           # Cost analysis and optimization
+│   ├── health-check.sh            # Infrastructure health monitoring
+│   ├── backup-management.sh       # Backup operations and validation
+│   ├── environment-cleanup.sh     # Environment cleanup and optimization
+│   ├── init.sh                    # Terraform initialization
+│   ├── plan.sh                    # Terraform planning
+│   ├── apply.sh                   # Terraform apply
+│   └── destroy.sh                 # Terraform destroy
 ├── README.md                  # Main project documentation
 ├── CONTRIBUTING.md            # Contribution guidelines
+├── PIPELINE-SETUP-GUIDE.md    # Complete pipeline implementation guide
 └── PROJECT-STRUCTURE.md       # Detailed project structure documentation
 ```
 
-## Current Architecture Implementation
+## Management Scripts Overview
 
-### Hub and Spoke Topology with Workspace Isolation
+This project includes comprehensive management scripts for infrastructure operations:
 
-This project implements a **Hub and Spoke network topology** using a **single Terraform module** with **workspace-based deployment** pattern:
+### Security Management Scripts
 
-#### **1. Hub Infrastructure (`workspaces/hub/`)**
-- **Azure Firewall**: Centralized security enforcement in West Europe
-- **Azure Bastion**: Secure RDP/SSH access without public IPs
-- **Key Vault**: Centralized secrets and credential management
-- **Private DNS Zones**: Internal name resolution for all Azure services
-- **Hub Virtual Network**: Contains shared services (10.0.0.0/16)
-  - AzureFirewallSubnet (10.0.1.0/26)
-  - AzureBastionSubnet (10.0.2.0/27)
-  - SharedServicesSubnet (10.0.3.0/24)
-  - PrivateEndpointSubnet (10.0.4.0/24)
+#### **VM Password Rotation** (`scripts/vm-password-rotation.sh`)
+- **Purpose**: Automated rotation of VM passwords across all environments
+- **Features**: Multi-environment support, Key Vault integration, backup system
+- **Usage**: `./vm-password-rotation.sh -k vault-name -r resource-group -s subscription-id -e environment`
+- **Schedule**: Quarterly automatic rotation via Azure DevOps pipeline
 
-#### **2. Management Infrastructure (`workspaces/management/`)**
-- **Monitoring and Governance**: Log Analytics, Application Insights
-- **Azure Policies**: Governance and compliance enforcement
-- **Backup and Recovery**: Centralized backup management
+### Cost Management Scripts
 
-#### **3. Spoke Infrastructure (`workspaces/spokes/{env}/`)**
-- **Environment-Specific Workloads**: Isolated by environment
-- **Spoke Virtual Networks**:
-  - Spoke 1 (10.1.0.0/16): WorkloadSubnet, DatabaseSubnet, PrivateEndpointSubnet
-  - Spoke 2 (10.2.0.0/16): WorkloadSubnet, AppServiceSubnet, PrivateEndpointSubnet
-- **Virtual Machines**: Windows VMs with Key Vault integration
-- **Storage Services**: Private storage accounts with LRS/GRS replication
-- **Database Services**: SQL Database and Cosmos DB with private endpoints
+#### **Cost Analysis** (`scripts/cost-analysis.sh`)
+- **Purpose**: Analyzes Azure costs and provides optimization recommendations
+- **Features**: Multi-subscription analysis, free tier monitoring, cost alerts setup
+- **Usage**: `./cost-analysis.sh -d 30 -f table` (analyze last 30 days in table format)
+- **Output**: Cost data files and optimization recommendations
 
-### Security Architecture Features
+### Operations Scripts
 
-- **NO Network Security Groups (NSGs)**: All traffic managed by Azure Firewall
-- **Private Endpoints**: All Azure PaaS services accessed privately
-- **Zero Public IPs**: VMs accessible only through Azure Bastion
-- **Centralized Routing**: All traffic routed through Azure Firewall
-- **Key Vault Integration**: All credentials stored and accessed securely
+#### **Health Check** (`scripts/health-check.sh`)
+- **Purpose**: Comprehensive infrastructure health monitoring
+- **Features**: VM status, network connectivity, security component validation
+- **Usage**: `./health-check.sh` (checks all environments)
+- **Output**: Detailed health report with recommendations
 
-### Deployment Workflow
+#### **Backup Management** (`scripts/backup-management.sh`)
+- **Purpose**: Manages backups across all environments
+- **Features**: VM backups, database validation, backup compliance reporting
+- **Usage**: `./backup-management.sh -a validate -e all` (validate all backups)
+- **Actions**: backup, restore, validate, list
 
-```mermaid
-graph TD
-    A[Terraform Init] --> B[Terraform Plan]
-    B --> C[Manual Approval]
-    C --> D[Deploy Hub Infrastructure]
-    D --> E[Deploy Management Infrastructure]
-    D --> F[Deploy Dev Spokes]
-    E --> G[Deploy Staging Spokes]
-    F --> G
-    G --> H[Manual Approval for Production]
-    H --> I[Deploy Production Spokes]
-    I --> J[Post-Deployment Validation]
-```
+#### **Environment Cleanup** (`scripts/environment-cleanup.sh`)
+- **Purpose**: Cleans up temporary resources and optimizes environments
+- **Features**: Storage cleanup, snapshot removal, unused resource detection
+- **Usage**: `./environment-cleanup.sh -e dev -t all -d` (dry run cleanup for dev)
+- **Safety**: Includes dry-run mode and confirmation prompts
 
-### Environment Configuration
+### Pipeline Templates
 
-| Environment | VM Size | Auto-Shutdown | Storage Replication | SQL Tier | Cosmos DB |
-|-------------|---------|---------------|-------------------|----------|-----------|
-| **Dev** | Standard_B1s | 19:00 UTC | LRS | S0 | Disabled |
-| **Staging** | Standard_B1s | 20:00 UTC | LRS | S0 | Disabled |
-| **Production** | Standard_B2s | Disabled | GRS | S1 | Enabled |
-
-### Pipeline Architecture
-
-#### **1. Main Deployment Pipeline (`azure-pipelines.yml`)**
-- **Multi-stage deployment** with proper dependency management
-- **Environment isolation** with separate Terraform state files
-- **Parallel deployment** where dependencies allow
-- **Manual approval gates** for production deployments
-
-#### **2. Specialized Pipelines**
-- **init-pipeline.yml**: Terraform initialization and backend setup
-- **plan-pipeline.yml**: Infrastructure planning and validation
-- **apply-pipeline.yml**: Controlled infrastructure deployment
-- **destroy-pipeline.yml**: Safe infrastructure destruction
-
-#### **3. Pipeline Features**
-- **Terraform validation** across all configurations
-- **Security scanning** with tfsec and Checkov
-- **Infrastructure validation** post-deployment
-- **Artifact management** for cross-stage dependencies
-- **Automated rollback** capabilities
-
-### Free Tier Optimization
-
-This architecture maximizes Azure free tier usage:
-
-#### **Compute Resources** (750 hours/month each)
-- Virtual Machines BS Series B1s (Linux/Windows)
-- Auto-shutdown schedules for cost optimization
-- Right-sizing based on environment needs
-
-#### **Storage Resources** (Monthly limits)
-- 5GB Hot LRS Blob Storage
-- 1GB File Storage LRS
-- Private endpoints for secure access
-
-#### **Database Resources**
-- SQL Database S0 (31 DTU days free)
-- Cosmos DB (25GB + 1000 RU/s free) - Production only
-
-#### **Networking Resources** (Monthly limits)
-- 15GB Data Transfer Out
-- 1,500 Public IP Address Hours (Firewall + Bastion only)
-- Private connectivity for all services
-
-### Workspace Benefits
-
-#### **1. Environment Isolation**
-- **Separate state files** prevent environment interference
-- **Independent deployment cycles** for each environment
-- **Environment-specific configurations** without code duplication
-
-#### **2. Simplified Management**
-- **Single module** to maintain across all environments
-- **Consistent infrastructure** patterns across deployments
-- **Easy scaling** to new environments
-
-#### **3. Security & Compliance**
-- **Approval workflows** for production changes
-- **Complete audit trail** through Azure DevOps
-- **Infrastructure as Code** best practices
-- **Automated policy enforcement**
+#### **Reusable Templates** (`pipelines/templates/`)
+- **terraform-init.yml**: Standardized Terraform initialization
+- **terraform-plan.yml**: Infrastructure planning with validation
+- **terraform-apply.yml**: Safe infrastructure deployment
+- **terraform-destroy.yml**: Controlled infrastructure destruction
+- **security-scan.yml**: Comprehensive security scanning (tfsec, checkov, terrascan)
+- **infrastructure-validation.yml**: Post-deployment validation

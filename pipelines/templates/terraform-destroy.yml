@@ -1,0 +1,113 @@
+# Terraform Destroy Template
+# Reusable template for safely destroying Terraform infrastructure
+
+parameters:
+  - name: workspacePath
+    type: string
+  - name: environmentName
+    type: string
+  - name: serviceConnection
+    type: string
+  - name: terraformVersion
+    type: string
+    default: '1.5.7'
+  - name: requireApproval
+    type: boolean
+    default: true
+
+steps:
+- task: TerraformInstaller@0
+  displayName: 'Install Terraform ${{ parameters.terraformVersion }}'
+  inputs:
+    terraformVersion: ${{ parameters.terraformVersion }}
+
+- script: |
+    echo ":( WARNING: Preparing to destroy ${{ parameters.environmentName }} infrastructure"
+    echo "|) This action will permanently delete all resources!"
+    echo ""
+    echo "|) Resources to be destroyed:"
+    echo "   - Virtual Networks and Subnets"
+    echo "   - Virtual Machines and Storage"
+    echo "   - Databases and Key Vaults"
+    echo "   - All configuration and data"
+    echo ""
+    echo ":| Destruction will proceed automatically in deployment environment"
+  displayName: 'Destruction Warning for ${{ parameters.environmentName }}'
+
+- task: AzureCLI@2
+  displayName: 'Destroy ${{ parameters.environmentName }} Infrastructure'
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo ":( Destroying ${{ parameters.environmentName }} infrastructure..."
+      cd ${{ parameters.workspacePath }}
+      
+      # Initialize Terraform
+      terraform init
+      
+      # Show current state before destruction
+      echo "|) Current infrastructure state:"
+      terraform show -no-color | head -20
+      echo "..."
+      
+      # Create destroy plan
+      TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+      DESTROY_PLAN="${{ parameters.environmentName }}_destroy_${TIMESTAMP}.out"
+      
+      echo "|) Creating destroy plan..."
+      terraform plan \
+        -destroy \
+        -out="${DESTROY_PLAN}" \
+        -lock=true \
+        -lock-timeout=300s
+      
+      # Show destroy plan summary
+      echo "|) Destroy Plan Summary:"
+      terraform show -no-color "${DESTROY_PLAN}" | grep -E "Plan:|Changes to Outputs:" || true
+      
+      # Execute destroy
+      echo ":( Executing terraform destroy..."
+      terraform apply \
+        -auto-approve \
+        -lock=true \
+        -lock-timeout=300s \
+        "${DESTROY_PLAN}"
+      
+      # Verify destruction
+      if [ $? -eq 0 ]; then
+        echo ""
+        echo ":) ${{ parameters.environmentName }} infrastructure destroyed successfully!"
+        echo ":) All resources have been removed"
+        echo "|) No further costs will be incurred"
+      else
+        echo ":( Terraform destroy failed for ${{ parameters.environmentName }}!"
+        echo "|) Check for dependencies or locked resources"
+        exit 1
+      fi
+      
+      # Cleanup
+      rm -f "${DESTROY_PLAN}"
+
+- task: AzureCLI@2
+  displayName: 'Verify ${{ parameters.environmentName }} Cleanup'
+  inputs:
+    azureSubscription: ${{ parameters.serviceConnection }}
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo ":) Verifying ${{ parameters.environmentName }} resource cleanup..."
+      
+      # Check for remaining resource groups
+      REMAINING_RGS=$(az group list --query "[?starts_with(name, 'trl-hubspoke-${{ parameters.environmentName }}-')].name" -o tsv)
+      
+      if [ -z "$REMAINING_RGS" ]; then
+        echo ":) All ${{ parameters.environmentName }} resource groups have been destroyed"
+      else
+        echo ":| Warning: Some resource groups still exist:"
+        echo "$REMAINING_RGS"
+        echo "|) Manual cleanup may be required"
+      fi
+      
+      echo ":) Destruction verification completed for ${{ parameters.environmentName }}"

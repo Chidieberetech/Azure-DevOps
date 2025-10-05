@@ -22,11 +22,11 @@ This guide provides step-by-step instructions for implementing Azure DevOps pipe
 
 This project uses three dedicated Azure subscriptions following TRL naming convention:
 
-| Environment | Subscription Name | Subscription ID Pattern | Purpose |
-|-------------|------------------|------------------------|---------|
-| **Development** | `Sub-TRL-dev-weu` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Development workloads and testing |
-| **Staging** | `Sub-TRL-int-weu` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Integration testing and pre-production |
-| **Production** | `Sub-TRL-prod-weu` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Production workloads |
+| Environment     | Subscription Name  | Subscription ID Pattern                | Purpose                                |
+|-----------------|--------------------|----------------------------------------|----------------------------------------|
+| **Development** | `Sub-TRL-dev-weu`  | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Development workloads and testing      |
+| **Staging**     | `Sub-TRL-int-weu`  | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Integration testing and pre-production |
+| **Production**  | `Sub-TRL-prod-weu` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Production workloads                   |
 
 ### Step 1: Verify Subscription Access
 
@@ -737,11 +737,11 @@ trigger: none  # Manual only
 
 **Recommended VM sizes per environment**:
 
-| Environment | VM Size | vCPUs | RAM | Storage | Purpose |
-|-------------|---------|-------|-----|---------|---------|
-| Development | Standard_D2s_v3 | 2 | 8GB | 16GB SSD | Basic builds and tests |
-| Staging | Standard_D4s_v3 | 4 | 16GB | 32GB SSD | Integration testing |
-| Production | Standard_D8s_v3 | 8 | 32GB | 64GB SSD | Production deployments |
+| Environment | VM Size         | vCPUs | RAM  | Storage  | Purpose                |
+|-------------|-----------------|-------|------|----------|------------------------|
+| Development | Standard_D2s_v3 | 2     | 8GB  | 16GB SSD | Basic builds and tests |
+| Staging     | Standard_D4s_v3 | 4     | 16GB | 32GB SSD | Integration testing    |
+| Production  | Standard_D8s_v3 | 8     | 32GB | 64GB SSD | Production deployments |
 
 #### Step 2: Network Configuration for Self-Hosted Agents
 
@@ -921,26 +921,32 @@ graph TD
 ### Step 3: Pipeline Scheduling
 
 #### Automated Schedules:
+
 ```yaml
-# Development - Daily deployment
+#file: noinspection YAMLDuplicatedKeys
+# Weekly health checks
 schedules:
-- cron: "0 6 * * 1-5"  # 6 AM weekdays
-  displayName: Daily dev deployment
-  branches:
-    include:
-    - develop
-  always: false
+  - cron: "0 6 * * 1"  # Monday 6 AM
+    displayName: Weekly health check
+    branches:
+      include:
+        - main
 
-# Staging - Weekly deployment  
+# Monthly cost analysis
 schedules:
-- cron: "0 8 * * 1"    # 8 AM Mondays
-  displayName: Weekly staging deployment
-  branches:
-    include:
-    - main
-  always: false
+  - cron: "0 9 1 * *"  # First day of month 9 AM
+    displayName: Monthly cost analysis
+    branches:
+      include:
+        - main
 
-# Production - Manual only (no schedule)
+# Quarterly password rotation
+schedules:
+  - cron: "0 2 1 */3 *"  # First day of quarter 2 AM
+    displayName: Quarterly password rotation
+    branches:
+      include:
+        - main
 ```
 
 ## Password Rotation Pipeline
@@ -1125,3 +1131,412 @@ terraform force-unlock lock-id
 - **Environments**: https://docs.microsoft.com/en-us/azure/devops/pipelines/process/environments
 
 This implementation guide provides a complete roadmap for setting up enterprise-grade Azure DevOps pipelines for your TRL Hub and Spoke infrastructure with proper security, approval workflows, and automation capabilities.
+
+## Additional Recommended Scripts
+
+### Infrastructure Management Scripts
+
+#### **1. Health Check Script** (`scripts/health-check.sh`)
+**Purpose**: Comprehensive infrastructure health monitoring across all environments
+
+**Features**:
+- VM health validation (power state, agent status, boot diagnostics)
+- Network connectivity testing (VNet peering, routing tables)
+- Security component validation (Key Vault, private endpoints)
+- Multi-subscription health reporting
+
+**Usage**:
+```bash
+# Run complete health check
+./health-check.sh
+
+# Check if health report was generated
+ls -la health-check-report-*.txt
+
+# Check specific environment
+./health-check.sh -e prod
+
+# Generate detailed report
+./health-check.sh -r health-report.txt
+```
+
+**Integration**: Can be scheduled via Azure DevOps pipeline for weekly health monitoring
+
+#### **2. Cost Analysis Script** (`scripts/cost-analysis.sh`)
+**Purpose**: Analyzes Azure costs and provides optimization recommendations
+
+**Features**:
+- Multi-subscription cost analysis (Sub-TRL-dev-weu, Sub-TRL-int-weu, Sub-TRL-prod-weu)
+- Free tier usage monitoring
+- Cost optimization recommendations
+- Budget and alert configuration guidance
+
+**Usage**:
+```bash
+# Analyze last 30 days
+./cost-analysis.sh -d 30 -f table
+
+# Generate monthly report
+./cost-analysis.sh -d 90 -o monthly-cost-report.json
+
+# Quick cost overview
+./cost-analysis.sh -d 7 -f table
+```
+
+**Output**: Generates cost optimization recommendations and usage reports
+
+#### **3. Backup Management Script** (`scripts/backup-management.sh`)
+**Purpose**: Manages backups across all environments and validates backup integrity
+
+**Features**:
+- VM backup automation via Recovery Services Vault
+- Database backup validation (Azure SQL automatic backups)
+- Backup compliance reporting
+- Multi-environment backup operations
+
+**Usage**:
+```bash
+# Validate all backups
+./backup-management.sh -a validate -e all
+
+# Backup all production resources
+./backup-management.sh -a backup -e prod -t all
+
+# List backup status
+./backup-management.sh -a list -e all
+```
+
+**Integration**: Can be integrated with Azure DevOps for automated backup monitoring
+
+#### **4. Environment Cleanup Script** (`scripts/environment-cleanup.sh`)
+**Purpose**: Cleans up temporary resources and optimizes environments
+
+**Features**:
+- Storage cleanup (old blobs, empty containers)
+- Snapshot cleanup (retention policy enforcement)
+- Unused resource detection (NICs, disks)
+- Log Analytics optimization
+
+**Usage**:
+```bash
+# Dry run cleanup for dev environment
+./environment-cleanup.sh -e dev -t all -d
+
+# Force cleanup of old snapshots in staging
+./environment-cleanup.sh -e staging -t snapshots -f
+
+# Clean unused resources across all environments
+./environment-cleanup.sh -e all -t unused
+```
+
+**Safety Features**: Dry-run mode, confirmation prompts, detailed reporting
+
+### Pipeline Templates Enhancement
+
+#### **Updated Template Structure**
+The templates directory now includes 6 specialized reusable templates:
+
+1. **terraform-init.yml**: Backend setup and workspace initialization
+2. **terraform-plan.yml**: Plan creation with detailed analysis
+3. **terraform-apply.yml**: Safe deployment with validation
+4. **terraform-destroy.yml**: Controlled resource destruction
+5. **security-scan.yml**: Triple security scanning (tfsec, checkov, terrascan)
+6. **infrastructure-validation.yml**: Post-deployment infrastructure validation
+
+#### **Template Benefits**:
+- **Consistency**: Standardized operations across all environments
+- **Reusability**: Same template works for dev, staging, and production
+- **Maintainability**: Update once, applies to all pipelines
+- **Security**: Built-in security scanning and validation
+
+### Script Integration with Azure DevOps
+
+#### **Automated Scheduling**:
+```yaml
+# Weekly health checks
+schedules:
+- cron: "0 6 * * 1"  # Monday 6 AM
+  displayName: Weekly health check
+  branches:
+    include:
+    - main
+
+# Monthly cost analysis
+schedules:
+- cron: "0 9 1 * *"  # First day of month 9 AM
+  displayName: Monthly cost analysis
+  branches:
+    include:
+    - main
+
+# Quarterly password rotation
+schedules:
+- cron: "0 2 1 */3 *"  # First day of quarter 2 AM
+  displayName: Quarterly password rotation
+  branches:
+    include:
+    - main
+```
+
+## Script Implementation Guide
+
+This section provides step-by-step implementation instructions for all infrastructure management scripts included in the TRL Hub and Spoke project.
+
+### Script Implementation Prerequisites
+
+Before implementing any scripts, ensure you have:
+
+1. **Azure CLI installed and configured**:
+   ```bash
+   # Install Azure CLI (if not already installed)
+   curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+   
+   # Login to Azure
+   az login
+   
+   # Verify access to all subscriptions
+   az account list --output table
+   ```
+
+2. **Required permissions on all subscriptions**:
+   - Contributor role
+   - Key Vault Administrator role
+   - Backup Contributor role (for backup scripts)
+
+3. **Make scripts executable**:
+   ```bash
+   chmod +x scripts/*.sh
+   ```
+
+### 1. VM Password Rotation Script Implementation
+
+#### Step 1: Prepare the Script
+```bash
+# Navigate to scripts directory
+cd scripts/
+
+# Make script executable
+chmod +x vm-password-rotation.sh
+
+# Test script help
+./vm-password-rotation.sh --help
+```
+
+#### Step 2: Find Required Parameters
+```bash
+# Get Key Vault names for each environment
+az account set --subscription "Sub-TRL-dev-weu"
+DEV_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-dev-kv')].name" -o tsv | head -1)
+
+az account set --subscription "Sub-TRL-int-weu"
+STAGING_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-staging-kv')].name" -o tsv | head -1)
+
+az account set --subscription "Sub-TRL-prod-weu"
+PROD_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-prod-kv')].name" -o tsv | head -1)
+
+echo "Development Key Vault: $DEV_KV"
+echo "Staging Key Vault: $STAGING_KV"
+echo "Production Key Vault: $PROD_KV"
+```
+
+#### Step 3: Test Password Rotation (Development)
+```bash
+# Get development subscription ID
+DEV_SUB_ID=$(az account show --subscription "Sub-TRL-dev-weu" --query "id" -o tsv)
+
+# Run password rotation for development environment
+./vm-password-rotation.sh \
+  -k "$DEV_KV" \
+  -r "trl-hubspoke-dev-rg-hub" \
+  -s "$DEV_SUB_ID" \
+  -e "dev"
+
+# Verify new password in Key Vault
+az keyvault secret show --vault-name "$DEV_KV" --name "vm-admin-password-dev" --query "value" -o tsv
+```
+
+#### Step 4: Implement for All Environments
+```bash
+# Create rotation script for all environments
+cat > rotate-all-passwords.sh << 'EOF'
+#!/bin/bash
+echo ":) Starting password rotation for all environments..."
+
+# Development
+./vm-password-rotation.sh -k "$DEV_KV" -r "trl-hubspoke-dev-rg-hub" -s "$DEV_SUB_ID" -e "dev" -f
+
+# Staging
+./vm-password-rotation.sh -k "$STAGING_KV" -r "trl-hubspoke-staging-rg-hub" -s "$STAGING_SUB_ID" -e "staging" -f
+
+# Production (with confirmation)
+./vm-password-rotation.sh -k "$PROD_KV" -r "trl-hubspoke-prod-rg-hub" -s "$PROD_SUB_ID" -e "prod"
+
+echo ":) Password rotation completed for all environments"
+EOF
+
+chmod +x rotate-all-passwords.sh
+```
+
+### 2. Cost Analysis Script Implementation
+
+#### Step 1: Install Prerequisites
+```bash
+# Install jq for JSON processing (if not already installed)
+sudo apt install -y jq
+
+# Verify Azure CLI extensions
+az extension add --name costmanagement
+az extension add --name consumption
+```
+
+#### Step 2: Test Cost Analysis (Single Environment)
+```bash
+# Test cost analysis for development environment
+./cost-analysis.sh -d 7 -f table
+
+# Expected output:
+# :) Analyzing costs for Sub-TRL-dev-weu (dev)...
+# |) Resource group costs for dev:
+# [Cost data table will be displayed]
+```
+
+#### Step 3: Generate Monthly Cost Reports
+```bash
+# Create monthly cost reporting script
+cat > generate-monthly-cost-report.sh << 'EOF'
+#!/bin/bash
+echo ":) Generating monthly cost report for all TRL subscriptions..."
+
+# Set report date range (last 30 days)
+REPORT_DATE=$(date +%Y-%m)
+
+# Generate cost analysis for all environments
+./cost-analysis.sh -d 30 -o "monthly-cost-report-${REPORT_DATE}.json"
+
+# Create summary report
+echo "|) Monthly cost summary generated: monthly-cost-report-${REPORT_DATE}.json"
+echo ":) Review cost-optimization-recommendations.md for savings opportunities"
+EOF
+
+chmod +x generate-monthly-cost-report.sh
+```
+
+#### Step 4: Setup Cost Alerts
+```bash
+# Create cost alert setup script
+cat > setup-cost-alerts.sh << 'EOF'
+#!/bin/bash
+echo ":) Setting up cost alerts for all subscriptions..."
+
+for subscription in "Sub-TRL-dev-weu" "Sub-TRL-int-weu" "Sub-TRL-prod-weu"; do
+    echo "Setting up alerts for $subscription..."
+    az account set --subscription "$subscription"
+    
+    # Create budget alert (adjust amounts as needed)
+    case $subscription in
+        "Sub-TRL-dev-weu")
+            BUDGET_AMOUNT=50  # $50 for dev
+            ;;
+        "Sub-TRL-int-weu")
+            BUDGET_AMOUNT=100 # $100 for staging
+            ;;
+        "Sub-TRL-prod-weu")
+            BUDGET_AMOUNT=200 # $200 for prod
+            ;;
+    esac
+    
+    az consumption budget create \
+        --budget-name "trl-hubspoke-monthly-budget" \
+        --amount $BUDGET_AMOUNT \
+        --category "Cost" \
+        --time-grain "Monthly" \
+        --start-date $(date +%Y-%m-01) \
+        --end-date $(date -d "+1 year" +%Y-%m-01)
+done
+
+echo ":) Cost alerts setup completed"
+EOF
+
+chmod +x setup-cost-alerts.sh
+```
+
+### 3. Health Check Script Implementation
+
+#### Step 1: Test Health Check (Single Environment)
+```bash
+# Run health check for development environment
+./health-check.sh
+
+# Check if health report was generated
+ls -la health-check-report-*.txt
+```
+
+#### Step 2: Setup Automated Health Monitoring
+```bash
+# Create health monitoring pipeline script
+cat > setup-health-monitoring.sh << 'EOF'
+#!/bin/bash
+echo ":) Setting up automated health monitoring..."
+
+# Create health check schedule script
+cat > daily-health-check.sh << 'HEALTH_EOF'
+#!/bin/bash
+# Daily health check automation
+
+DATE=$(date +%Y-%m-%d)
+./health-check.sh > "daily-health-${DATE}.log" 2>&1
+
+# Check for critical issues
+if grep -q ":(" "daily-health-${DATE}.log"; then
+    echo ":( Critical issues found in health check"
+    # Send alert (integrate with notification system)
+else
+    echo ":) Health check passed"
+fi
+HEALTH_EOF
+
+chmod +x daily-health-check.sh
+echo ":) Health monitoring automation setup completed"
+EOF
+
+chmod +x setup-health-monitoring.sh
+```
+
+#### Step 3: Integrate with Azure Monitor
+```bash
+# Create health check integration script
+cat > integrate-health-monitoring.sh << 'EOF'
+#!/bin/bash
+echo ":) Integrating health checks with Azure Monitor..."
+
+# Setup Log Analytics workspace for health monitoring
+for subscription in "Sub-TRL-dev-weu" "Sub-TRL-int-weu" "Sub-TRL-prod-weu"; do
+    az account set --subscription "$subscription"
+    
+    # Create or get Log Analytics workspace
+    WORKSPACE_NAME="trl-hubspoke-$(echo $subscription | cut -d'-' -f3)-log-health"
+    RG_NAME="trl-hubspoke-$(echo $subscription | cut -d'-' -f3)-rg-monitoring"
+    
+    az group create --name "$RG_NAME" --location "West Europe" || true
+    az monitor log-analytics workspace create \
+        --resource-group "$RG_NAME" \
+        --workspace-name "$WORKSPACE_NAME" \
+        --location "West Europe" || true
+done
+
+echo ":) Health monitoring integration completed"
+EOF
+
+chmod +x integrate-health-monitoring.sh
+```
+
+### 4. Backup Management Script Implementation
+
+#### Step 1: Setup Recovery Services Vaults
+```bash
+# Create Recovery Services Vault setup script
+cat > setup-backup-vaults.sh << 'EOF'
+#!/bin/bash
+echo ":) Setting up Recovery Services Vaults for all environments..."
+
+for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"

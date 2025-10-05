@@ -130,7 +130,7 @@ resource "azurerm_firewall_policy_rule_collection_group" "main" {
   }
 }
 
-# Azure Firewall
+## Azure Firewall
 resource "azurerm_firewall" "main" {
   count               = var.enable_firewall ? 1 : 0
   name                = "afw-${local.resource_prefix}-${format("%03d", 1)}"

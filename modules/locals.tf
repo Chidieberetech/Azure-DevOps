@@ -40,7 +40,7 @@ locals {
   # Spoke names
   spoke_names = ["alpha", "beta", "gamma"]
 
-  # Common tags
+  # Common tags.
   common_tags = {
     Environment       = var.environment
     Project           = "Azure.IAC.hubspoke"

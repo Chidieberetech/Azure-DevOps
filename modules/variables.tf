@@ -4,6 +4,7 @@
 # ENVIRONMENT CONFIGURATION
 #================================================
 
+# Environment variable with validation
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string
@@ -13,12 +14,52 @@ variable "environment" {
   }
 }
 
+#================================================
+# CORE CONFIGURATION
+#================================================
+# Azure region variable
 variable "location" {
   description = "Azure region for resources"
   type        = string
   default     = "West Europe"
+
+  # Validation for primary location to be within approved regions
+  validation {
+    condition = contains([
+      "West Europe",
+      "East US",
+      "East US 2",
+      "Central US",
+      "North Europe",
+      "UK South",
+      "Southeast Asia"
+    ], var.location)
+    error_message = "Location must be one of the approved regions."
+  }
 }
 
+# Secondary location for geo-redundant resources
+variable "location_secondary" {
+  description = "Secondary Azure region for geo-redundant resources"
+  type        = string
+  default     = "North Europe"
+
+  # Validation to ensure secondary location is different from primary and within approved regions
+  validation {
+    condition = var.location != var.location_secondary && contains([
+      "West Europe",
+      "East US",
+      "East US 2",
+      "Central US",
+      "North Europe",
+      "UK South",
+      "Southeast Asia"
+    ], var.location_secondary)
+    error_message = "Secondary location must be different from primary location and one of the approved regions."
+  }
+}
+
+# Azure subscription ID variable
 variable "subscription_id" {
   description = "Azure subscription ID"
   type        = string
@@ -28,6 +69,7 @@ variable "subscription_id" {
 # HUB AND SPOKE CONFIGURATION
 #================================================
 
+# Number of spoke networks to create
 variable "spoke_count" {
   description = "Number of spoke networks to create"
   type        = number
@@ -42,6 +84,14 @@ variable "spoke_count" {
 # NETWORK CONFIGURATION
 #================================================
 
+# Enable DDoS Protection
+variable "enable_ddos_protection" {
+  description = "Enable DDoS Protection"
+  type        = bool
+  default     = false
+}
+
+# Enable Azure Firewall
 variable "enable_firewall" {
   description = "Enable Azure Firewall deployment"
   type        = bool
@@ -361,47 +411,10 @@ variable "enable_service_bus" {
   type        = bool
   default     = false
 }
-
-variable "enable_api_management" {
-  description = "Enable API Management"
-  type        = bool
-  default     = false
-}
-
-variable "api_management_publisher_name" {
-  description = "Publisher name for API Management"
+variable "service_bus_sku" {
+  description = "SKU for Service Bus"
   type        = string
-  default     = "TRL Organization"
-}
-
-variable "api_management_publisher_email" {
-  description = "Publisher email for API Management"
-  type        = string
-  default     = "admin@trl.com"
-}
-
-variable "api_management_sku" {
-  description = "SKU for API Management"
-  type        = string
-  default     = "Developer_1"
-}
-
-variable "enable_notification_hub" {
-  description = "Enable Notification Hub"
-  type        = bool
-  default     = false
-}
-
-variable "enable_search_service" {
-  description = "Enable Azure Search Service"
-  type        = bool
-  default     = false
-}
-
-variable "search_service_sku" {
-  description = "SKU for Search Service"
-  type        = string
-  default     = "basic"
+  default     = "Standard"
 }
 
 #================================================
@@ -850,12 +863,6 @@ variable "enable_mixed_reality_acr" {
 # MONITOR CONFIGURATION
 #================================================
 
-variable "enable_app_insights" {
-  description = "Enable Application Insights for apps"
-  type        = bool
-  default     = false
-}
-
 variable "enable_data_collection_endpoint" {
   description = "Enable Azure Monitor Data Collection Endpoint"
   type        = bool
@@ -938,10 +945,34 @@ variable "app_service_sku" {
   default     = "B1"
 }
 
+variable "enable_app_service_environment" {
+  description = "Enable App Service Environment"
+  type        = bool
+  default     = false
+}
+
 variable "enable_function_app" {
   description = "Enable Azure Function App"
   type        = bool
   default     = false
+}
+
+variable "enable_container_apps" {
+  description = "Enable Azure Container Apps"
+  type        = bool
+  default     = false
+}
+
+variable "enable_spring_apps" {
+  description = "Enable Azure Spring Apps"
+  type        = bool
+  default     = false
+}
+
+variable "spring_apps_sku" {
+  description = "SKU for Azure Spring Apps"
+  type        = string
+  default     = "S0"
 }
 
 variable "enable_static_web_app" {
@@ -974,6 +1005,63 @@ variable "front_door_sku" {
   default     = "Standard_AzureFrontDoor"
 }
 
+# API Management Configuration
+variable "enable_api_management" {
+  description = "Enable API Management"
+  type        = bool
+  default     = false
+}
+
+variable "api_management_publisher_name" {
+  description = "Publisher name for API Management"
+  type        = string
+  default     = "TRL Organization"
+}
+
+variable "api_management_publisher_email" {
+  description = "Publisher email for API Management"
+  type        = string
+  default     = "admin@trl.com"
+}
+
+variable "api_management_sku" {
+  description = "SKU for API Management"
+  type        = string
+  default     = "Developer_1"
+}
+
+# App Configuration
+variable "enable_app_configuration" {
+  description = "Enable App Configuration"
+  type        = bool
+  default     = false
+}
+
+variable "app_configuration_sku" {
+  description = "SKU for App Configuration"
+  type        = string
+  default     = "standard"
+}
+
+# Messaging and Notifications
+variable "enable_communication_services" {
+  description = "Enable Azure Communication Services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_email_communication_services" {
+  description = "Enable Email Communication Services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_notification_hub" {
+  description = "Enable Notification Hub"
+  type        = bool
+  default     = false
+}
+
 variable "enable_signalr" {
   description = "Enable Azure SignalR Service"
   type        = bool
@@ -992,14 +1080,70 @@ variable "signalr_capacity" {
   default     = 1
 }
 
-variable "enable_communication_services" {
-  description = "Enable Azure Communication Services"
+variable "enable_web_pubsub" {
+  description = "Enable Web PubSub Service"
+  type        = bool
+  default     = false
+}
+
+variable "web_pubsub_sku" {
+  description = "SKU for Web PubSub Service"
+  type        = string
+  default     = "Free_F1"
+}
+
+variable "web_pubsub_capacity" {
+  description = "Capacity for Web PubSub Service"
+  type        = number
+  default     = 1
+}
+
+variable "enable_fluid_relay" {
+  description = "Enable Fluid Relay"
+  type        = bool
+  default     = false
+}
+
+# Media Services and Search
+variable "enable_search_service" {
+  description = "Enable Azure AI Search Service"
+  type        = bool
+  default     = false
+}
+
+variable "search_service_sku" {
+  description = "SKU for Search Service"
+  type        = string
+  default     = "basic"
+}
+
+variable "search_service_replica_count" {
+  description = "Number of replicas for Search Service"
+  type        = number
+  default     = 1
+}
+
+variable "search_service_partition_count" {
+  description = "Number of partitions for Search Service"
+  type        = number
+  default     = 1
+}
+
+variable "enable_media_services" {
+  description = "Enable Azure Media Services"
   type        = bool
   default     = false
 }
 
 variable "enable_mobile_backend" {
   description = "Enable mobile backend services"
+  type        = bool
+  default     = false
+}
+
+# Application Insights
+variable "enable_app_insights" {
+  description = "Enable Application Insights for apps"
   type        = bool
   default     = false
 }

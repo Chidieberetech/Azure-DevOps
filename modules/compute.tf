@@ -10,6 +10,34 @@ data "azurerm_key_vault_secret" "vm_password" {
 }
 
 #================================================
+# AVAILABILITY SETS FOR HIGH AVAILABILITY
+#================================================
+
+# Availability Set for Spoke Alpha VMs
+resource "azurerm_availability_set" "spoke_alpha" {
+  count                        = var.spoke_count >= 1 ? 1 : 0
+  name                         = "avset-${local.resource_prefix}-alpha-${format("%03d", 1)}"
+  location                     = azurerm_resource_group.spokes[0].location
+  resource_group_name          = azurerm_resource_group.spokes[0].name
+  platform_fault_domain_count = 2
+  platform_update_domain_count = 5
+  managed                      = true
+  tags                         = local.common_tags
+}
+
+# Availability Set for Spoke Beta VMs
+resource "azurerm_availability_set" "spoke_beta" {
+  count                        = var.spoke_count >= 2 ? 1 : 0
+  name                         = "avset-${local.resource_prefix}-beta-${format("%03d", 1)}"
+  location                     = azurerm_resource_group.spokes[1].location
+  resource_group_name          = azurerm_resource_group.spokes[1].name
+  platform_fault_domain_count = 2
+  platform_update_domain_count = 5
+  managed                      = true
+  tags                         = local.common_tags
+}
+
+#================================================
 # SPOKE ALPHA VIRTUAL MACHINE
 #================================================
 
@@ -38,6 +66,7 @@ resource "azurerm_windows_virtual_machine" "spoke_alpha_vm" {
   size                = var.vm_size
   admin_username      = var.admin_username
   admin_password      = data.azurerm_key_vault_secret.vm_password.value
+  availability_set_id = var.spoke_count >= 1 ? azurerm_availability_set.spoke_alpha[0].id : null
   tags                = local.common_tags
 
   network_interface_ids = [
@@ -79,6 +108,23 @@ SETTINGS
   tags = local.common_tags
 }
 
+# VM Auto-shutdown schedule for cost optimization
+resource "azurerm_dev_test_global_vm_shutdown_schedule" "spoke_alpha_vm" {
+  count              = var.enable_vm_auto_shutdown && var.spoke_count >= 1 ? 1 : 0
+  virtual_machine_id = azurerm_windows_virtual_machine.spoke_alpha_vm[0].id
+  location           = azurerm_resource_group.spokes[0].location
+  enabled            = true
+
+  daily_recurrence_time = var.vm_shutdown_time
+  timezone              = "UTC"
+
+  notification_settings {
+    enabled = false
+  }
+
+  tags = local.common_tags
+}
+
 #================================================
 # SPOKE BETA VIRTUAL MACHINE
 #================================================
@@ -108,6 +154,7 @@ resource "azurerm_windows_virtual_machine" "spoke_beta_vm" {
   size                = var.vm_size
   admin_username      = var.admin_username
   admin_password      = data.azurerm_key_vault_secret.vm_password.value
+  availability_set_id = var.spoke_count >= 2 ? azurerm_availability_set.spoke_beta[0].id : null
   tags                = local.common_tags
 
   network_interface_ids = [
@@ -149,6 +196,23 @@ SETTINGS
   tags = local.common_tags
 }
 
+# VM Auto-shutdown schedule for cost optimization
+resource "azurerm_dev_test_global_vm_shutdown_schedule" "spoke_beta_vm" {
+  count              = var.enable_vm_auto_shutdown && var.spoke_count >= 2 ? 1 : 0
+  virtual_machine_id = azurerm_windows_virtual_machine.spoke_beta_vm[0].id
+  location           = azurerm_resource_group.spokes[1].location
+  enabled            = true
+
+  daily_recurrence_time = var.vm_shutdown_time
+  timezone              = "UTC"
+
+  notification_settings {
+    enabled = false
+  }
+
+  tags = local.common_tags
+}
+
 #================================================
 # ROUTE TABLES
 #================================================
@@ -181,4 +245,24 @@ resource "azurerm_subnet_route_table_association" "spoke_beta_vm" {
   count          = var.spoke_count >= 2 ? 1 : 0
   subnet_id      = azurerm_subnet.spoke_beta_vm[0].id
   route_table_id = azurerm_route_table.spoke_to_firewall[1].id
+}
+
+# Associate Route Table with Workload Subnets
+resource "azurerm_subnet_route_table_association" "spoke_alpha_workload" {
+  count          = var.spoke_count >= 1 ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_workload[0].id
+  route_table_id = azurerm_route_table.spoke_to_firewall[0].id
+}
+
+resource "azurerm_subnet_route_table_association" "spoke_beta_workload" {
+  count          = var.spoke_count >= 2 ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_beta_workload[0].id
+  route_table_id = azurerm_route_table.spoke_to_firewall[1].id
+}
+
+# Associate Route Table with Database Subnets
+resource "azurerm_subnet_route_table_association" "spoke_alpha_database" {
+  count          = var.spoke_count >= 1 ? 1 : 0
+  subnet_id      = azurerm_subnet.spoke_alpha_database[0].id
+  route_table_id = azurerm_route_table.spoke_to_firewall[0].id
 }

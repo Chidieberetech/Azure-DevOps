@@ -43,7 +43,7 @@ locals {
   # Common tags
   common_tags = {
     Environment     = var.environment
-    Project         = "TRL-Hub-Spoke"
+    Project         = "Azure.IAC.hubspoke"
     ManagedBy      = "Terraform"
     CreatedDate    = timestamp()
     CostCenter     = "IT-Infrastructure"
@@ -80,11 +80,13 @@ locals {
     private_endpoint   = "10.2.9.0/24"
   }
 
-  # Spoke Gamma subnet definitions
-  spoke_gamma_subnets = {
-    workload_subnet     = "10.3.1.0/24"
-    vm_subnet          = "10.3.4.0/24"
-    database_subnet    = "10.3.8.0/24"
-    private_endpoint   = "10.3.9.0/24"
-  }
+  # Spoke Gamma subnet definitions (for future use and scalability more than two spokes)
+  #spoke_gamma_subnets = {
+  #  workload_subnet     = "10.3.1.0/24"
+  #  vm_subnet          = "10.3.4.0/24"
+  #  database_subnet    = "10.3.8.0/24"
+  #  private_endpoint   = "10.3.9.0/24"
+  #}
+
 }
+

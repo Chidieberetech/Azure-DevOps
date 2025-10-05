@@ -930,7 +930,7 @@ schedules:
     displayName: Weekly health check
     branches:
       include:
-        - main
+      - main
 
 # Monthly cost analysis
 schedules:
@@ -938,7 +938,7 @@ schedules:
     displayName: Monthly cost analysis
     branches:
       include:
-        - main
+      - main
 
 # Quarterly password rotation
 schedules:
@@ -946,7 +946,7 @@ schedules:
     displayName: Quarterly password rotation
     branches:
       include:
-        - main
+      - main
 ```
 
 ## Password Rotation Pipeline
@@ -1347,9 +1347,10 @@ DEV_SUB_ID=$(az account show --subscription "Sub-TRL-dev-weu" --query "id" -o ts
 # Run password rotation for development environment
 ./vm-password-rotation.sh \
   -k "$DEV_KV" \
-  -r "trl-hubspoke-dev-rg-hub" \
+  -r "trl-hubspoke-$(echo $DEV_SUB_ID | cut -d'/' -f2)-rg-hub" \
   -s "$DEV_SUB_ID" \
-  -e "dev"
+  -e "dev" \
+  -f
 
 # Verify new password in Key Vault
 az keyvault secret show --vault-name "$DEV_KV" --name "vm-admin-password-dev" --query "value" -o tsv
@@ -1363,13 +1364,13 @@ cat > rotate-all-passwords.sh << 'EOF'
 echo ":) Starting password rotation for all environments..."
 
 # Development
-./vm-password-rotation.sh -k "$DEV_KV" -r "trl-hubspoke-dev-rg-hub" -s "$DEV_SUB_ID" -e "dev" -f
+./vm-password-rotation.sh -k "$DEV_KV" -r "trl-hubspoke-$(echo $DEV_SUB_ID | cut -d'/' -f2)-rg-hub" -s "$DEV_SUB_ID" -e "dev" -f
 
 # Staging
-./vm-password-rotation.sh -k "$STAGING_KV" -r "trl-hubspoke-staging-rg-hub" -s "$STAGING_SUB_ID" -e "staging" -f
+./vm-password-rotation.sh -k "$STAGING_KV" -r "trl-hubspoke-$(echo $STAGING_SUB_ID | cut -d'/' -f2)-rg-hub" -s "$STAGING_SUB_ID" -e "staging" -f
 
 # Production (with confirmation)
-./vm-password-rotation.sh -k "$PROD_KV" -r "trl-hubspoke-prod-rg-hub" -s "$PROD_SUB_ID" -e "prod"
+./vm-password-rotation.sh -k "$PROD_KV" -r "trl-hubspoke-$(echo $PROD_SUB_ID | cut -d'/' -f2)-rg-hub" -s "$PROD_SUB_ID" -e "prod"
 
 echo ":) Password rotation completed for all environments"
 EOF
@@ -1408,7 +1409,7 @@ cat > generate-monthly-cost-report.sh << 'EOF'
 echo ":) Generating monthly cost report for all TRL subscriptions..."
 
 # Set report date range (last 30 days)
-REPORT_DATE=$(date +%Y-%m)
+REPORT_DATE=$(date +%Y%m)
 
 # Generate cost analysis for all environments
 ./cost-analysis.sh -d 30 -o "monthly-cost-report-${REPORT_DATE}.json"
@@ -1540,3 +1541,1012 @@ cat > setup-backup-vaults.sh << 'EOF'
 echo ":) Setting up Recovery Services Vaults for all environments..."
 
 for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"
+do
+    IFS=':' read -r SUBSCRIPTION ENV <<< "$env_config"
+    
+    az account set --subscription "$SUBSCRIPTION"
+    
+    # Create resource group for backups
+    RG_NAME="trl-hubspoke-$(echo $SUBSCRIPTION | cut -d'-' -f3)-rg-backup"
+    az group create --name "$RG_NAME" --location "West Europe" || true
+    
+    # Create Recovery Services Vault
+    VAULT_NAME="trlHubSpokeBackupVault$RANDOM"
+    az backup vault create --name "$VAULT_NAME" --resource-group "$RG_NAME" --location "West Europe" --sku "Standard"
+    
+    # Enable soft delete
+    az backup vault update --name "$VAULT_NAME" --resource-group "$RG_NAME" --set properties.enableSoftDelete=true
+    
+    echo "Backup vault created: $VAULT_NAME in $ENV"
+done
+
+echo ":) Backup vault setup completed"
+EOF
+
+chmod +x setup-backup-vaults.sh
+```
+
+#### Step 2: Configure Backup Policies
+```bash
+# Create backup policy configuration script
+cat > configure-backup-policies.sh << 'EOF'
+#!/bin/bash
+echo ":) Configuring backup policies for all environments..."
+
+# Define policy settings
+DAILY_POLICY_NAME="trl-hubspoke-daily-backup"
+WEEKLY_POLICY_NAME="trl-hubspoke-weekly-backup"
+
+# Create or update daily backup policy
+az backup policy create \
+  --name $DAILY_POLICY_NAME \
+  --resource-group "trl-hubspoke-prod-rg-backup" \
+  --vault-name "trlHubSpokeBackupVault" \
+  --policy "$(cat <<EOF
+{
+  "version": "1.0",
+  "schedulePolicy": {
+    "scheduleType": "Daily",
+    "interval": 1,
+    "time": "0200",
+    "timeZone": "UTC"
+  },
+  "retentionPolicy": {
+    "dailySchedule": {
+      "retentionDuration": {
+        "count": 30,
+        "unit": "Days"
+      },
+      "retentionTimes": [
+        "0200"
+      ]
+    }
+  }
+}
+EOF
+)"
+
+# Create or update weekly backup policy
+az backup policy create \
+  --name $WEEKLY_POLICY_NAME \
+  --resource-group "trl-hubspoke-prod-rg-backup" \
+  --vault-name "trlHubSpokeBackupVault" \
+  --policy "$(cat <<EOF
+{
+  "version": "1.0",
+  "schedulePolicy": {
+    "scheduleType": "Weekly",
+    "interval": 1,
+    "daysOfWeek": [
+      "Sunday"
+    ],
+    "time": "0200",
+    "timeZone": "UTC"
+  },
+  "retentionPolicy": {
+    "weeklySchedule": {
+      "retentionDuration": {
+        "count": 12,
+        "unit": "Weeks"
+      },
+      "retentionTimes": [
+        "0200"
+      ]
+    }
+  }
+}
+EOF
+)"
+
+echo ":) Backup policies configured"
+EOF
+
+chmod +x configure-backup-policies.sh
+```
+
+### 5. Monitoring Setup Script Implementation
+
+#### Step 1: Create Monitoring Configuration Script
+```bash
+# Create monitoring configuration script
+cat > configure-monitoring.sh << 'EOF'
+#!/bin/bash
+echo ":) Configuring monitoring and alerts..."
+
+# Enable Azure Monitor for VMs
+az monitor vm create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --name "trl-hubspoke-prod-vm-monitor" \
+  --location "West Europe" \
+  --tags environment=production
+
+# Create action group for alerts
+az monitor action-group create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --name "trl-hubspoke-prod-action-group" \
+  --short-name "trlprodalerts" \
+  --email "admin@trl.com" \
+  --sms "1234567890"
+
+# Create metric alert for CPU usage
+az monitor metrics alert create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --name "cpu-high-alert" \
+  --scopes "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/trl-hubspoke-prod-rg-hub/providers/Microsoft.Compute/virtualMachines/trl-hubspoke-prod-vm" \
+  --condition "avg Percentage CPU > 80" \
+  --window-size 5m \
+  --evaluation-frequency 1m \
+  --action "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/trl-hubspoke-prod-rg-hub/providers/microsoft.insights/actionGroups/trl-hubspoke-prod-action-group"
+
+echo ":) Monitoring configuration completed"
+EOF
+
+chmod +x configure-monitoring.sh
+```
+
+### 6. Runbook Automation Script Implementation
+
+#### Step 1: Create Runbook Scripts
+```bash
+# Create runbook scripts for automation
+cat > restart-vm-runbook.ps1 << 'EOF'
+param(
+  [string] $resourceGroupName = "trl-hubspoke-prod-rg-hub",
+  [string] $vmName = "trl-hubspoke-prod-vm"
+)
+
+# Login to Azure
+Connect-AzAccount -Identity
+
+# Restart VM
+Restart-AzVM -ResourceGroupName $resourceGroupName -Name $vmName -Force
+
+Write-Output "VM $vmName in $resourceGroupName restarted successfully"
+EOF
+
+cat > backup-vault-runbook.ps1 << 'EOF'
+param(
+  [string] $vaultName = "trlHubSpokeBackupVault",
+  [string] $resourceGroupName = "trl-hubspoke-prod-rg-backup"
+)
+
+# Login to Azure
+Connect-AzAccount -Identity
+
+# Trigger backup now
+Invoke-AzBackupVault -ResourceGroupName $resourceGroupName -VaultName $vaultName
+
+Write-Output "Backup triggered for vault $vaultName"
+EOF
+```
+
+#### Step 2: Register Runbooks with Automation Account
+```bash
+# Register runbooks with Azure Automation
+az automation runbook create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --automation-account-name "trl-hubspoke-prod-automation" \
+  --name "Restart-VM-Runbook" \
+  --type "PowerShell" \
+  --location "West Europe" \
+  --runbook-file "restart-vm-runbook.ps1"
+
+az automation runbook create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --automation-account-name "trl-hubspoke-prod-automation" \
+  --name "Backup-Vault-Runbook" \
+  --type "PowerShell" \
+  --location "West Europe" \
+  --runbook-file "backup-vault-runbook.ps1"
+```
+
+#### Step 3: Schedule Runbooks
+```bash
+# Schedule runbooks for automation
+az automation schedule create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --automation-account-name "trl-hubspoke-prod-automation" \
+  --name "Daily-VM-Restart-Schedule" \
+  --frequency "Day" \
+  --interval 1 \
+  --start-time "2023-10-01T02:00:00Z" \
+  --time-zone "UTC"
+
+az automation schedule create \
+  --resource-group "trl-hubspoke-prod-rg-hub" \
+  --automation-account-name "trl-hubspoke-prod-automation" \
+  --name "Weekly-Backup-Vault-Schedule" \
+  --frequency "Week" \
+  --interval 1 \
+  --days-of-week "Sunday" \
+  --start-time "2023-10-01T02:00:00Z" \
+  --time-zone "UTC"
+```
+
+## Detailed Step-by-Step Implementation Guide
+
+### Azure CLI Installation and Configuration - Complete Guide
+
+This section provides precise, click-by-click instructions for Azure CLI setup across all platforms used in the TRL Hub and Spoke infrastructure project.
+
+## 1. Azure CLI Installation Options
+
+### Option A: Local Development Environment (IDE/VS Code)
+
+#### Windows Installation (Your Current Environment):
+
+**Step 1: Download Azure CLI Installer**
+1. Open web browser and navigate to: https://aka.ms/installazurecliwindows
+2. Click **Download the MSI installer** button
+3. Save file to Downloads folder: `azure-cli-2.53.0.msi`
+
+**Step 2: Install Azure CLI**
+1. Navigate to Downloads folder in File Explorer
+2. Double-click `azure-cli-2.53.0.msi`
+3. **User Account Control** popup → Click **Yes**
+4. **Azure CLI Setup Wizard** opens:
+   - Welcome screen → Click **Next**
+   - License Agreement → Check **I accept the terms** → Click **Next**
+   - Destination Folder → Leave default `C:\Program Files (x86)\Microsoft SDKs\Azure\CLI2\` → Click **Next**
+   - Ready to Install → Click **Install**
+   - Installation progress (2-3 minutes)
+   - Completed → Click **Finish**
+
+**Step 3: Verify Installation**
+1. Open **Command Prompt** (cmd.exe) or **PowerShell**
+2. Type: `az version`
+3. Expected output:
+   ```json
+   {
+     "azure-cli": "2.53.0",
+     "azure-cli-core": "2.53.0",
+     "azure-cli-telemetry": "1.1.0",
+     ...
+   }
+   ```
+
+**Step 4: Install VS Code Azure Extensions** (if using VS Code)
+1. Open **VS Code**
+2. Click **Extensions** icon (Ctrl+Shift+X)
+3. Search for **Azure Account**
+4. Click **Install** on "Azure Account" by Microsoft
+5. Search for **Azure CLI Tools**
+6. Click **Install** on "Azure CLI Tools" by Microsoft
+7. Search for **Azure Terraform**
+8. Click **Install** on "Azure Terraform" by Microsoft
+
+#### Linux Installation (for Self-Hosted Agents):
+
+**Step 1: Install via Package Manager (Ubuntu/Debian)**
+```bash
+# Update package index
+sudo apt-get update
+
+# Install required packages
+sudo apt-get install ca-certificates curl apt-transport-https lsb-release gnupg
+
+# Download Microsoft signing key
+curl -sL https://packages.microsoft.com/keys/microsoft.asc | \
+    gpg --dearmor | \
+    sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null
+
+# Add Azure CLI repository
+AZ_REPO=$(lsb_release -cs)
+echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main" | \
+    sudo tee /etc/apt/sources.list.d/azure-cli.list
+
+# Update package index and install
+sudo apt-get update
+sudo apt-get install azure-cli
+```
+
+**Step 2: Verify Installation**
+```bash
+az version
+```
+
+### Option B: Azure Cloud Shell (Browser-Based)
+
+**Step 1: Access Azure Cloud Shell**
+1. Open web browser → Navigate to https://portal.azure.com
+2. Sign in with your Azure account
+3. In top navigation bar → Click **Cloud Shell** icon (>_)
+4. **Welcome to Azure Cloud Shell** popup:
+   - Choose **Bash** or **PowerShell** → Click **Bash**
+   - **You have no storage mounted** popup → Click **Create storage**
+   - **Create storage** form:
+     - Subscription: Select your subscription
+     - Resource group: Click **Create new** → Enter `cloudshell-storage-rg`
+     - Storage account: Auto-generated name (leave default)
+     - File share: Auto-generated name (leave default)
+   - Click **Create**
+5. Wait for storage creation (30 seconds)
+6. Cloud Shell terminal opens in browser
+
+**Step 2: Verify Azure CLI in Cloud Shell**
+```bash
+# Azure CLI is pre-installed in Cloud Shell
+az version
+
+# Check current subscription
+az account show
+```
+
+### Option C: Azure DevOps Hosted Agents (Pipeline Environment)
+
+Azure CLI is pre-installed on all Microsoft-hosted agents. No installation required.
+
+**Available in Pipeline Tasks:**
+```yaml
+- task: AzureCLI@2
+  displayName: 'Azure CLI Task'
+  inputs:
+    azureSubscription: 'trl-hubspoke-dev-connection'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az version  # Azure CLI is already available
+```
+
+## 2. Azure CLI Authentication Setup
+
+### Local Development Authentication
+
+**Step 1: Interactive Login**
+1. Open **Command Prompt** or **PowerShell**
+2. Type: `az login`
+3. **Web browser opens automatically** to Azure sign-in page
+4. **Sign in to Azure**:
+   - Enter your email: `your-email@trl.com`
+   - Click **Next**
+   - Enter password
+   - Complete MFA if required
+5. **Browser shows**: "You have signed in to the Microsoft Azure Cross-platform Command Line Interface application"
+6. **Close browser** and return to command prompt
+7. **Command prompt shows**:
+   ```json
+   [
+     {
+       "cloudName": "AzureCloud",
+       "homeTenantId": "your-tenant-id",
+       "id": "subscription-id",
+       "isDefault": true,
+       "name": "Sub-TRL-dev-weu",
+       "state": "Enabled",
+       "tenantId": "your-tenant-id",
+       "user": {
+         "name": "your-email@trl.com",
+         "type": "user"
+       }
+     }
+   ]
+   ```
+
+**Step 2: Set Default Subscription**
+```bash
+# List all subscriptions you have access to
+az account list --output table
+
+# Set development subscription as default
+az account set --subscription "Sub-TRL-dev-weu"
+
+# Verify current subscription
+az account show --query "{Name:name, ID:id}" --output table
+```
+
+**Step 3: Verify Access to All TRL Subscriptions**
+```bash
+# Test development subscription
+az account set --subscription "Sub-TRL-dev-weu"
+az account show --query "name" --output tsv
+
+# Test staging subscription
+az account set --subscription "Sub-TRL-int-weu"
+az account show --query "name" --output tsv
+
+# Test production subscription
+az account set --subscription "Sub-TRL-prod-weu"
+az account show --query "name" --output tsv
+```
+
+### 3. Service Principal Creation - Step by Step
+
+### Create Service Principals for Each Subscription
+
+**Step 1: Create Development Environment Service Principal**
+
+1. **Set Development Subscription Context**:
+   ```bash
+   az account set --subscription "Sub-TRL-dev-weu"
+   ```
+
+2. **Create Service Principal**:
+   ```bash
+   az ad sp create-for-rbac \
+     --name "sp-trl-hubspoke-dev" \
+     --role "Contributor" \
+     --scopes "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+3. **Save Output** (CRITICAL - save this information):
+   ```json
+   {
+     "appId": "12345678-1234-1234-1234-123456789012",
+     "displayName": "sp-trl-hubspoke-dev",
+     "password": "your-generated-password",
+     "tenant": "87654321-4321-4321-4321-210987654321"
+   }
+   ```
+
+4. **Grant Additional Permissions**:
+   ```bash
+   # Get service principal app ID
+   DEV_SP_ID="12345678-1234-1234-1234-123456789012"  # Use appId from above
+   
+   # Grant Key Vault Administrator role
+   az role assignment create \
+     --assignee $DEV_SP_ID \
+     --role "Key Vault Administrator" \
+     --scope "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+**Step 2: Create Staging Environment Service Principal**
+
+1. **Set Staging Subscription Context**:
+   ```bash
+   az account set --subscription "Sub-TRL-int-weu"
+   ```
+
+2. **Create Service Principal**:
+   ```bash
+   az ad sp create-for-rbac \
+     --name "sp-trl-hubspoke-staging" \
+     --role "Contributor" \
+     --scopes "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+3. **Save Output and Grant Permissions**:
+   ```bash
+   STAGING_SP_ID="your-staging-app-id"  # Use appId from creation output
+   
+   az role assignment create \
+     --assignee $STAGING_SP_ID \
+     --role "Key Vault Administrator" \
+     --scope "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+**Step 3: Create Production Environment Service Principal**
+
+1. **Set Production Subscription Context**:
+   ```bash
+   az account set --subscription "Sub-TRL-prod-weu"
+   ```
+
+2. **Create Service Principal**:
+   ```bash
+   az ad sp create-for-rbac \
+     --name "sp-trl-hubspoke-prod" \
+     --role "Contributor" \
+     --scopes "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+3. **Save Output and Grant Permissions**:
+   ```bash
+   PROD_SP_ID="your-prod-app-id"  # Use appId from creation output
+   
+   az role assignment create \
+     --assignee $PROD_SP_ID \
+     --role "Key Vault Administrator" \
+     --scope "/subscriptions/$(az account show --query id -o tsv)"
+   ```
+
+## 4. Azure DevOps Service Connections - Click by Click
+
+### Create Development Service Connection
+
+**Step 1: Navigate to Service Connections**
+1. Open web browser → Navigate to https://dev.azure.com
+2. Sign in with your Azure DevOps account
+3. Click on **TRL-Infrastructure** organization
+4. Click on **TRL-HubSpoke-Infrastructure** project
+5. In left sidebar → Click **Project settings** (gear icon at bottom)
+6. In **Project Settings** menu → Under **Pipelines** section → Click **Service connections**
+
+**Step 2: Create New Service Connection**
+1. Click **Create service connection** (blue button)
+2. **New service connection** dialog opens
+3. Select **Azure Resource Manager** → Click **Next**
+4. **Authentication method** page:
+   - Select **Service principal (manual)** radio button
+   - Click **Next**
+
+**Step 3: Configure Development Service Connection**
+1. **New Azure service connection** form:
+   
+   **Scope Level Section:**
+   - Scope level: Select **Subscription** (dropdown)
+   
+   **Subscription Details Section:**
+   - Subscription Id: `Sub-TRL-dev-weu subscription ID`
+   - Subscription Name: `Sub-TRL-dev-weu`
+   
+   **Service Principal Details Section:**
+   - Service Principal Id: `appId from dev SP creation`
+   - Service Principal Key: `password from dev SP creation`
+   - Tenant ID: `tenant from dev SP creation`
+   
+   **Service connection details Section:**
+   - Service connection name: `trl-hubspoke-dev-connection`
+   - Description: `Service connection for TRL Hub and Spoke development environment`
+   - Security: Check **Grant access permission to all pipelines**
+
+2. Click **Verify** button
+3. **Verification successful** message appears → Click **Save**
+
+**Step 4: Create Staging Service Connection**
+
+1. In **Service connections** page → Click **Create service connection**
+2. Select **Azure Resource Manager** → Click **Next**
+3. Select **Service principal (manual)** → Click **Next**
+4. **Configure with staging details**:
+   - Subscription Id: `your-Sub-TRL-int-weu-subscription-id`
+   - Subscription Name: `Sub-TRL-int-weu`
+   - Service Principal Id: `staging-app-id` (from Step 3.2)
+   - Service Principal Key: `staging-password` (from Step 3.2)
+   - Tenant ID: `your-tenant-id`
+   - Service connection name: `trl-hubspoke-staging-connection`
+   - Description: `Service connection for TRL Hub and Spoke staging environment`
+5. Click **Verify** → **Save**
+
+**Step 5: Create Production Service Connection**
+
+1. Repeat same process with production details:
+   - Subscription Id: `your-Sub-TRL-prod-weu-subscription-id`
+   - Subscription Name: `Sub-TRL-prod-weu`
+   - Service Principal Id: `prod-app-id` (from Step 3.3)
+   - Service Principal Key: `prod-password` (from Step 3.3)
+   - Service connection name: `trl-hubspoke-prod-connection`
+   - Description: `Service connection for TRL Hub and Spoke production environment`
+
+## 5. Key Vault Setup - Step by Step
+
+### Create Key Vaults for Each Environment
+
+**Step 1: Create Development Key Vault**
+
+1. **Using Azure CLI**:
+   ```bash
+   # Set development subscription
+   az account set --subscription "Sub-TRL-dev-weu"
+   
+   # Create resource group for secrets
+   az group create \
+     --name "trl-hubspoke-dev-secrets-rg" \
+     --location "West Europe"
+   
+   # Create Key Vault with unique name
+   TIMESTAMP=$(date +%Y%m%d)
+   DEV_KV_NAME="trl-hubspoke-dev-kv-${TIMESTAMP}"
+   
+   az keyvault create \
+     --name "$DEV_KV_NAME" \
+     --resource-group "trl-hubspoke-dev-secrets-rg" \
+     --location "West Europe" \
+     --enable-rbac-authorization true
+   
+   echo "Development Key Vault created: $DEV_KV_NAME"
+   ```
+
+2. **Using Azure Portal** (Alternative):
+   - Navigate to https://portal.azure.com
+   - Sign in → Select **Sub-TRL-dev-weu** subscription
+   - Search bar → Type "Key Vault" → Select **Key vaults**
+   - Click **+ Create**
+   - **Create key vault** form:
+     - Subscription: `Sub-TRL-dev-weu`
+     - Resource group: Click **Create new** → `trl-hubspoke-dev-secrets-rg`
+     - Key vault name: `trl-hubspoke-dev-kv-20251005` (use current date)
+     - Region: `West Europe`
+     - Pricing tier: `Standard`
+   - Click **Review + create** → **Create**
+
+**Step 2: Grant Service Principal Access to Key Vault**
+```bash
+# Get service principal object ID
+DEV_SP_OBJECT_ID=$(az ad sp show --id "12345678-1234-1234-1234-123456789012" --query "id" -o tsv)
+
+# Grant Key Vault Secrets Officer role
+az role assignment create \
+  --assignee $DEV_SP_OBJECT_ID \
+  --role "Key Vault Secrets Officer" \
+  --scope "/subscriptions/$(az account show --query id -o tsv)/resourceGroups/trl-hubspoke-dev-secrets-rg/providers/Microsoft.KeyVault/vaults/$DEV_KV_NAME"
+```
+
+**Step 3: Repeat for Staging and Production**
+
+**Staging Key Vault**:
+```bash
+az account set --subscription "Sub-TRL-int-weu"
+STAGING_KV_NAME="trl-hubspoke-staging-kv-$(date +%Y%m%d)"
+
+az group create --name "trl-hubspoke-staging-secrets-rg" --location "West Europe"
+az keyvault create \
+  --name "$STAGING_KV_NAME" \
+  --resource-group "trl-hubspoke-staging-secrets-rg" \
+  --location "West Europe" \
+  --enable-rbac-authorization true
+```
+
+**Production Key Vault**:
+```bash
+az account set --subscription "Sub-TRL-prod-weu"
+PROD_KV_NAME="trl-hubspoke-prod-kv-$(date +%Y%m%d)"
+
+az group create --name "trl-hubspoke-prod-secrets-rg" --location "West Europe"
+az keyvault create \
+  --name "$PROD_KV_NAME" \
+  --resource-group "trl-hubspoke-prod-secrets-rg" \
+  --location "West Europe" \
+  --enable-rbac-authorization true
+```
+
+## 6. Secret Management Implementation
+
+### Store Secrets in Key Vault - Step by Step
+
+**Step 1: Store Development Environment Secrets**
+
+```bash
+# Set development subscription context
+az account set --subscription "Sub-TRL-dev-weu"
+
+# Get subscription ID for storage
+DEV_SUB_ID=$(az account show --query id -o tsv)
+TENANT_ID=$(az account show --query tenantId -o tsv)
+
+# Store subscription ID
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "subscription-id" \
+  --value "$DEV_SUB_ID"
+
+# Store tenant ID
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "tenant-id" \
+  --value "$TENANT_ID"
+
+# Store admin usernames
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "vm-admin-username" \
+  --value "azureadmin"
+
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "sql-admin-username" \
+  --value "sqladmin"
+
+# Generate and store VM admin password
+VM_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "vm-admin-password" \
+  --value "$VM_PASSWORD"
+
+# Generate and store SQL admin password
+SQL_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+az keyvault secret set \
+  --vault-name "$DEV_KV_NAME" \
+  --name "sql-admin-password" \
+  --value "$SQL_PASSWORD"
+
+echo ":) Development secrets stored successfully"
+```
+
+**Step 2: Verify Secret Storage**
+```bash
+# List secrets (names only, not values)
+az keyvault secret list --vault-name "$DEV_KV_NAME" --query "[].name" -o table
+
+# Test secret retrieval (for verification)
+az keyvault secret show --vault-name "$DEV_KV_NAME" --name "subscription-id" --query "value" -o tsv
+```
+
+**Step 3: Repeat for Staging and Production**
+
+Copy the same process for staging and production environments, using their respective Key Vault names and subscription contexts.
+
+## 7. Azure DevOps Variable Groups - Click by Click
+
+### Create Variable Groups with Key Vault Integration
+
+**Step 1: Navigate to Variable Groups**
+1. In Azure DevOps project → Left sidebar → Click **Pipelines**
+2. Under **Pipelines** → Click **Library**
+3. **Library** page opens → Click **+ Variable group** (blue button)
+
+**Step 2: Create Development Variable Group**
+1. **Variable group** form opens:
+   
+   **Details Section:**
+   - Variable group name: `trl-hubspoke-dev-variables`
+   - Description: `Variables for TRL Hub and Spoke development environment`
+   
+   **Variables Section:**
+   - Toggle **Link secrets from an Azure key vault** → **ON** (blue toggle)
+   
+   **Azure subscription dropdown appears:**
+   - Click dropdown → Select **trl-hubspoke-dev-connection**
+   - Click **Authorize** button next to dropdown
+   - **Authorize connection** popup → Click **Authorize**
+   
+   **Key vault name dropdown appears:**
+   - Click dropdown → Select your development Key Vault (e.g., `trl-hubspoke-dev-kv-20251005`)
+   
+   **Add variables from Key Vault:**
+   - Click **+ Add** button
+   - **Add variable** dialog opens
+   - **Name**: `subscription-id` → **Secret**: Select `subscription-id` from dropdown → Click **OK**
+   - Click **+ Add** again
+   - **Name**: `tenant-id` → **Secret**: Select `tenant-id` from dropdown → Click **OK**
+   - Click **+ Add** again
+   - **Name**: `vm-admin-username` → **Secret**: Select `vm-admin-username` from dropdown → Click **OK**
+   - Click **+ Add** again
+   - **Name**: `vm-admin-password` → **Secret**: Select `vm-admin-password` from dropdown → Click **OK**
+   - Click **+ Add** again
+   - **Name**: `sql-admin-username` → **Secret**: Select `sql-admin-username` from dropdown → Click **OK**
+   - Click **+ Add** again
+   - **Name**: `sql-admin-password` → **Secret**: Select `sql-admin-password` from dropdown → Click **OK**
+
+2. **Security Section:**
+   - **Pipeline permissions**: Select **Grant access permission to all pipelines**
+
+3. Click **Save** button
+
+**Step 3: Create Staging Variable Group**
+1. Click **+ Variable group** again
+2. Repeat same process with:
+   - Variable group name: `trl-hubspoke-staging-variables`
+   - Description: `Variables for TRL Hub and Spoke staging environment`
+   - Azure subscription: `trl-hubspoke-staging-connection`
+   - Key vault: Your staging Key Vault name
+   - Add same secrets as development
+
+**Step 4: Create Production Variable Group**
+1. Click **+ Variable group** again
+2. Repeat same process with:
+   - Variable group name: `trl-hubspoke-prod-variables`
+   - Description: `Variables for TRL Hub and Spoke production environment`
+   - Azure subscription: `trl-hubspoke-prod-connection`
+   - Key vault: Your production Key Vault name
+   - Add same secrets as development
+
+**Step 5: Create Common Variable Group (Non-Key Vault)**
+1. Click **+ Variable group** again
+2. **Variable group** form:
+   - Variable group name: `trl-hubspoke-common-variables`
+   - Description: `Common variables for all TRL environments`
+   - **Do NOT toggle** the Key Vault option (leave OFF)
+   
+   **Add variables manually:**
+   - Click **+ Add**:
+     - Name: `terraformVersion` → Value: `1.5.7` → Click **OK**
+   - Click **+ Add**:
+     - Name: `azureLocation` → Value: `West Europe` → Click **OK**
+   - Click **+ Add**:
+     - Name: `organizationName` → Value: `TRL` → Click **OK**
+   - Click **+ Add**:
+     - Name: `projectName` → Value: `hubspoke` → Click **OK**
+
+3. **Pipeline permissions**: Grant access to all pipelines
+4. Click **Save**
+
+## 8. Pipeline Implementation in Azure DevOps
+
+### Import Pipelines - Step by Step
+
+**Step 1: Create Main Deployment Pipeline**
+
+1. **Navigate to Pipelines**:
+   - Left sidebar → Click **Pipelines**
+   - Click **Create Pipeline** (blue button)
+
+2. **Where is your code?** page:
+   - Click **Azure Repos Git**
+
+3. **Select a repository** page:
+   - Click **TRL-HubSpoke-Infrastructure**
+
+4. **Configure your pipeline** page:
+   - Click **Existing Azure Pipelines YAML file**
+
+5. **Select an existing YAML file** dialog:
+   - Branch: `main` (dropdown)
+   - Path: Click dropdown → Select `/pipelines/azure-pipelines.yml`
+   - Click **Continue**
+
+6. **Review your pipeline YAML** page:
+   - Review the YAML content
+   - Click **Save** (dropdown arrow next to Run)
+   - Select **Save** (not "Save and run")
+
+7. **Pipeline saved** confirmation:
+   - Click **Pipeline name** at top (currently shows "TRL-HubSpoke-Infrastructure")
+   - Change name to: `TRL-HubSpoke-Main-Deployment`
+   - Click **Save**
+
+**Step 2: Create Initialization Pipeline**
+
+1. **Create new pipeline**:
+   - In **Pipelines** → Click **New pipeline**
+   - Azure Repos Git → TRL-HubSpoke-Infrastructure
+   - Existing Azure Pipelines YAML file
+   - Path: `/pipelines/init-pipeline.yml`
+   - Save (don't run)
+   - Rename to: `TRL-HubSpoke-Initialization`
+
+**Step 3: Create Planning Pipeline**
+
+1. **Create new pipeline**:
+   - Path: `/pipelines/plan-pipeline.yml`
+   - Rename to: `TRL-HubSpoke-Planning`
+
+**Step 4: Create Apply Pipeline**
+
+1. **Create new pipeline**:
+   - Path: `/pipelines/apply-pipeline.yml`
+   - Rename to: `TRL-HubSpoke-Apply`
+
+**Step 5: Create Destroy Pipeline**
+
+1. **Create new pipeline**:
+   - Path: `/pipelines/destroy-pipeline.yml`
+   - Rename to: `TRL-HubSpoke-Destroy`
+
+**Step 6: Create Password Rotation Pipeline**
+
+1. **Create new pipeline**:
+   - Path: `/pipelines/password-rotation.yml`
+   - Rename to: `TRL-HubSpoke-Password-Rotation`
+
+## 9. Environment Configuration in Azure DevOps
+
+### Create Environments - Click by Click
+
+**Step 1: Navigate to Environments**
+1. Left sidebar → Click **Pipelines**
+2. Under **Pipelines** → Click **Environments**
+3. **Environments** page → Click **New environment** (blue button)
+
+**Step 2: Create Development Environment**
+1. **New environment** dialog:
+   - Name: `trl-hubspoke-dev`
+   - Description: `Development environment for TRL Hub and Spoke infrastructure`
+   - Resource: Select **None** (virtual environment)
+   - Click **Create**
+
+2. **Environment created** page opens:
+   - Note the environment URL for reference
+   - Click **Pipelines** in breadcrumb to return
+
+**Step 3: Create Staging Environment**
+1. Click **New environment**
+2. **New environment** dialog:
+   - Name: `trl-hubspoke-staging`  
+   - Description: `Staging environment for TRL Hub and Spoke infrastructure`
+   - Resource: **None**
+   - Click **Create**
+
+**Step 4: Create Production Environment**
+1. Click **New environment**
+2. **New environment** dialog:
+   - Name: `trl-hubspoke-prod`
+   - Description: `Production environment for TRL Hub and Spoke infrastructure`
+   - Resource: **None**
+   - Click **Create**
+
+### Configure Production Environment Approvals
+
+**Step 1: Setup Approval Gates**
+1. **Navigate to production environment**:
+   - **Environments** page → Click **trl-hubspoke-prod**
+
+2. **Environment details** page opens:
+   - Click **Approvals and checks** (in top menu)
+
+3. **Approvals and checks** page:
+   - Click **+** (plus icon)
+   - Select **Approvals** from dropdown
+
+4. **Add approval** dialog:
+   - **Approvers section**:
+     - Click **+ Add** → **Users and groups**
+     - Search for team members: Type names and select users
+     - Add at least 2 approvers (e.g., Infrastructure Lead, DevOps Lead)
+   
+   - **Control options**:
+     - **Minimum number of approvers**: 2
+     - **Requester can approve their own changes**: **Uncheck** this box
+     - **Allow approvers to approve their own changes**: **Check** this box
+   
+   - **Advanced options**:
+     - **Timeout**: `7 days` (dropdown)
+     - **Instructions for approvers**: 
+       ```
+       Production deployment requires careful review:
+       1. Verify staging environment is working
+       2. Check security scan results
+       3. Review infrastructure changes
+       4. Confirm maintenance window
+       ```
+   
+   - Click **Create**
+
+**Step 2: Configure Branch Protection**
+1. In **Approvals and checks** page → Click **+**
+2. Select **Branch control**
+3. **Add branch control** dialog:
+   - **Allowed branches**: Click **+ Add**
+   - **Branch specification**: `main`
+   - Click **Add**
+   - Click **Create**
+
+## 10. Pipeline Execution Testing
+
+### Test Pipeline Sequence
+
+**Step 1: Run Initialization Pipeline**
+1. **Pipelines** → **TRL-HubSpoke-Initialization**
+2. Click **Run pipeline**
+3. **Run pipeline** dialog:
+   - Branch/tag: `main`
+   - Click **Run**
+4. **Monitor execution**:
+   - Watch each stage complete: Backend Setup → Initialize Workspaces → Validation
+   - Verify all jobs complete successfully
+   - Check logs for any errors
+
+**Step 2: Run Planning Pipeline**
+1. **Pipelines** → **TRL-HubSpoke-Planning**  
+2. Click **Run pipeline**
+3. **Monitor execution**:
+   - Plan Validation → Hub Planning → Management Planning → Spoke Planning
+   - Download and review plan artifacts
+   - Check security scan results
+
+**Step 3: Run Apply Pipeline (Development First)**
+1. **Pipelines** → **TRL-HubSpoke-Apply**
+2. Click **Run pipeline**
+3. **Monitor execution**:
+   - Pre-Apply Validation → Hub Apply → Management Apply → Dev Spokes Apply
+   - Note: Staging and Production will require approvals
+
+**Step 4: Deploy Staging (Day 4)**
+```bash
+# Staging deployment happens automatically after dev success
+# Monitor in Azure DevOps pipelines interface
+```
+
+**Step 5: Deploy Production (Day 5)**
+```bash
+# Production requires manual approval
+# 1. Pipeline will pause at approval gate
+# 2. Approvers receive notification
+# 3. Review deployment in Azure DevOps
+# 4. Click "Approve" or "Reject"
+```
+
+**Step 6: Validate Deployment (Day 6)**
+```bash
+# Run health check across all environments
+./scripts/health-check.sh
+
+# Run cost analysis
+./scripts/cost-analysis.sh -d 7 -f table
+
+# Validate backup setup
+./scripts/backup-management.sh -a validate -e all
+```
+
+This comprehensive implementation guide provides exact, click-by-click instructions for setting up the complete TRL Hub and Spoke infrastructure with Azure DevOps automation across your three Azure subscriptions.

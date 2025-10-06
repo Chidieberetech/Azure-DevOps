@@ -1690,10 +1690,8 @@ variable "budget_alert_thresholds" {
   type        = list(number)
   default     = [50, 75, 90, 100]
   validation {
-    condition = alltrue([
-      for threshold in var.budget_alert_thresholds : threshold > 0 && threshold <= 1000
-    ])
-    error_message = "Budget alert thresholds must be between 0 and 1000."
+    condition = length(var.budget_alert_thresholds) > 0
+    error_message = "Budget alert thresholds list cannot be empty."
   }
 }
 
@@ -1702,10 +1700,8 @@ variable "budget_forecast_thresholds" {
   type        = list(number)
   default     = [100, 110]
   validation {
-    condition = alltrue([
-      for threshold in var.budget_forecast_thresholds : threshold > 0 && threshold <= 1000
-    ])
-    error_message = "Budget forecast thresholds must be between 0 and 1000."
+    condition = length(var.budget_forecast_thresholds) > 0
+    error_message = "Budget forecast thresholds list cannot be empty."
   }
 }
 

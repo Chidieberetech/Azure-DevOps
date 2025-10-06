@@ -446,7 +446,7 @@ output "cdn_profile_id" {
 
 output "cdn_endpoint_url" {
   description = "URL of the CDN Endpoint"
-  value       = var.enable_cdn ? azurerm_cdn_endpoint.main[0].hostname : null
+  value       = var.enable_cdn ? azurerm_cdn_endpoint.main[0].fqdn : null
 }
 
 #================================================

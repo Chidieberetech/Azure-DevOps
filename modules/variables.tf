@@ -340,6 +340,12 @@ variable "memory_alert_threshold_bytes" {
   default     = 1073741824 # 1GB
 }
 
+variable "vm_memory_alert_threshold_bytes" {
+  description = "Memory alert threshold in bytes for VM monitoring"
+  type        = number
+  default     = 1073741824  # 1 GB in bytes
+}
+
 # Application alert thresholds
 variable "enable_application_alerts" {
   description = "Enable application performance alerts"
@@ -1530,4 +1536,401 @@ variable "enable_cdn" {
   description = "Enable Azure CDN"
   type        = bool
   default     = false
+}
+
+#================================================
+# ADVANCED MONITORING CONFIGURATION
+#================================================
+
+variable "enable_advanced_alerting" {
+  description = "Enable advanced alerting with multiple action groups for different severity levels"
+  type        = bool
+  default     = false
+}
+
+variable "critical_alert_emails" {
+  description = "Map of email addresses for critical alerts"
+  type        = map(string)
+  default     = {}
+}
+
+variable "critical_alert_sms" {
+  description = "Map of SMS numbers for critical alerts"
+  type = map(object({
+    country_code = string
+    phone_number = string
+  }))
+  default = {}
+}
+
+variable "critical_alert_webhooks" {
+  description = "Map of webhook URLs for critical alerts"
+  type        = map(string)
+  default     = {}
+}
+
+variable "warning_alert_emails" {
+  description = "Map of email addresses for warning alerts"
+  type        = map(string)
+  default     = {}
+}
+
+#================================================
+# INFRASTRUCTURE ALERT THRESHOLDS
+#================================================
+
+variable "vm_cpu_alert_threshold" {
+  description = "VM CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+  validation {
+    condition = var.vm_cpu_alert_threshold >= 1 && var.vm_cpu_alert_threshold <= 100
+    error_message = "VM CPU alert threshold must be between 1 and 100."
+  }
+}
+
+variable "storage_availability_threshold" {
+  description = "Storage account availability percentage threshold for alerts"
+  type        = number
+  default     = 99.0
+  validation {
+    condition = var.storage_availability_threshold >= 90 && var.storage_availability_threshold <= 100
+    error_message = "Storage availability threshold must be between 90 and 100."
+  }
+}
+
+variable "keyvault_availability_threshold" {
+  description = "Key Vault availability percentage threshold for alerts"
+  type        = number
+  default     = 99.0
+  validation {
+    condition = var.keyvault_availability_threshold >= 90 && var.keyvault_availability_threshold <= 100
+    error_message = "Key Vault availability threshold must be between 90 and 100."
+  }
+}
+
+#================================================
+# APPLICATION ALERT THRESHOLDS
+#================================================
+
+variable "app_response_time_threshold_seconds" {
+  description = "Application response time threshold in seconds for alerts"
+  type        = number
+  default     = 5
+  validation {
+    condition = var.app_response_time_threshold_seconds > 0
+    error_message = "Application response time threshold must be greater than 0."
+  }
+}
+
+variable "app_error_rate_threshold" {
+  description = "Application error rate threshold for alerts (number of 5xx errors)"
+  type        = number
+  default     = 10
+  validation {
+    condition = var.app_error_rate_threshold > 0
+    error_message = "Application error rate threshold must be greater than 0."
+  }
+}
+
+#================================================
+# DATABASE ALERT THRESHOLDS
+#================================================
+
+variable "sql_cpu_alert_threshold" {
+  description = "SQL Database CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+  validation {
+    condition = var.sql_cpu_alert_threshold >= 1 && var.sql_cpu_alert_threshold <= 100
+    error_message = "SQL CPU alert threshold must be between 1 and 100."
+  }
+}
+
+variable "sql_storage_alert_threshold" {
+  description = "SQL Database storage usage percentage threshold for alerts"
+  type        = number
+  default     = 85
+  validation {
+    condition = var.sql_storage_alert_threshold >= 1 && var.sql_storage_alert_threshold <= 100
+    error_message = "SQL storage alert threshold must be between 1 and 100."
+  }
+}
+
+#================================================
+# CONTAINER ALERT THRESHOLDS
+#================================================
+
+variable "aks_cpu_alert_threshold" {
+  description = "AKS node CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+  validation {
+    condition = var.aks_cpu_alert_threshold >= 1 && var.aks_cpu_alert_threshold <= 100
+    error_message = "AKS CPU alert threshold must be between 1 and 100."
+  }
+}
+
+variable "aks_memory_alert_threshold" {
+  description = "AKS node memory usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+  validation {
+    condition = var.aks_memory_alert_threshold >= 1 && var.aks_memory_alert_threshold <= 100
+    error_message = "AKS memory alert threshold must be between 1 and 100."
+  }
+}
+
+#================================================
+# COST MONITORING CONFIGURATION
+#================================================
+
+variable "budget_alert_thresholds" {
+  description = "List of budget alert thresholds (percentage of budget)"
+  type        = list(number)
+  default     = [50, 75, 90, 100]
+  validation {
+    condition = alltrue([
+      for threshold in var.budget_alert_thresholds : threshold > 0 && threshold <= 1000
+    ])
+    error_message = "Budget alert thresholds must be between 0 and 1000."
+  }
+}
+
+variable "budget_forecast_thresholds" {
+  description = "List of budget forecast alert thresholds (percentage of budget)"
+  type        = list(number)
+  default     = [100, 110]
+  validation {
+    condition = alltrue([
+      for threshold in var.budget_forecast_thresholds : threshold > 0 && threshold <= 1000
+    ])
+    error_message = "Budget forecast thresholds must be between 0 and 1000."
+  }
+}
+
+#================================================
+# LOG ANALYTICS DIAGNOSTIC CATEGORIES
+#================================================
+
+variable "activity_log_categories" {
+  description = "List of Activity Log categories to enable for diagnostic settings"
+  type        = list(string)
+  default = [
+    "Administrative",
+    "Security",
+    "ServiceHealth",
+    "Alert",
+    "Recommendation",
+    "Policy",
+    "Autoscale",
+    "ResourceHealth"
+  ]
+}
+
+#================================================
+# WORKBOOK AND DASHBOARD CONFIGURATION
+#================================================
+
+variable "enable_custom_workbooks" {
+  description = "Enable custom Azure Monitor workbooks"
+  type        = bool
+  default     = true
+}
+
+variable "enable_grafana_dashboard" {
+  description = "Enable Azure Managed Grafana dashboard"
+  type        = bool
+  default     = false
+}
+
+variable "grafana_sku" {
+  description = "Azure Managed Grafana SKU"
+  type        = string
+  default     = "Standard"
+  validation {
+    condition = contains(["Essential", "Standard"], var.grafana_sku)
+    error_message = "Grafana SKU must be Essential or Standard."
+  }
+}
+
+#================================================
+# ALERT SUPPRESSION RULES
+#================================================
+
+variable "enable_alert_suppression" {
+  description = "Enable alert suppression rules for maintenance windows"
+  type        = bool
+  default     = false
+}
+
+variable "maintenance_window_start" {
+  description = "Maintenance window start time (24-hour format HH:MM)"
+  type        = string
+  default     = "02:00"
+  validation {
+    condition = can(regex("^([01]?[0-9]|2[0-3]):[0-5][0-9]$", var.maintenance_window_start))
+    error_message = "Maintenance window start must be in HH:MM format (24-hour)."
+  }
+}
+
+variable "maintenance_window_duration_hours" {
+  description = "Maintenance window duration in hours"
+  type        = number
+  default     = 4
+  validation {
+    condition = var.maintenance_window_duration_hours >= 1 && var.maintenance_window_duration_hours <= 24
+    error_message = "Maintenance window duration must be between 1 and 24 hours."
+  }
+}
+
+#================================================
+# PERFORMANCE MONITORING CONFIGURATION
+#================================================
+
+variable "enable_performance_counters" {
+  description = "Enable custom performance counter collection"
+  type        = bool
+  default     = true
+}
+
+variable "custom_performance_counters" {
+  description = "List of custom performance counters to collect"
+  type = list(object({
+    object_name    = string
+    counter_name   = string
+    instance_name  = string
+    interval_seconds = number
+  }))
+  default = [
+    {
+      object_name    = "Processor"
+      counter_name   = "% Processor Time"
+      instance_name  = "_Total"
+      interval_seconds = 60
+    },
+    {
+      object_name    = "Memory"
+      counter_name   = "Available MBytes"
+      instance_name  = "*"
+      interval_seconds = 60
+    },
+    {
+      object_name    = "LogicalDisk"
+      counter_name   = "% Free Space"
+      instance_name  = "*"
+      interval_seconds = 300
+    }
+  ]
+}
+
+variable "enable_iis_logs" {
+  description = "Enable IIS log collection"
+  type        = bool
+  default     = false
+}
+
+variable "enable_event_logs" {
+  description = "Enable Windows Event log collection"
+  type        = bool
+  default     = true
+}
+
+variable "windows_event_logs" {
+  description = "List of Windows Event logs to collect"
+  type = list(object({
+    log_name = string
+    types    = list(string)
+  }))
+  default = [
+    {
+      log_name = "Application"
+      types    = ["Error", "Warning"]
+    },
+    {
+      log_name = "System"
+      types    = ["Error", "Warning"]
+    },
+    {
+      log_name = "Security"
+      types    = ["Error", "Warning"]
+    }
+  ]
+}
+
+#================================================
+# NETWORK MONITORING CONFIGURATION
+#================================================
+
+variable "enable_network_monitoring" {
+  description = "Enable network performance monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "network_latency_threshold_ms" {
+  description = "Network latency threshold in milliseconds for alerts"
+  type        = number
+  default     = 100
+  validation {
+    condition = var.network_latency_threshold_ms > 0
+    error_message = "Network latency threshold must be greater than 0."
+  }
+}
+
+variable "network_packet_loss_threshold" {
+  description = "Network packet loss percentage threshold for alerts"
+  type        = number
+  default     = 5
+  validation {
+    condition = var.network_packet_loss_threshold >= 0 && var.network_packet_loss_threshold <= 100
+    error_message = "Network packet loss threshold must be between 0 and 100."
+  }
+}
+
+#================================================
+# SECURITY MONITORING CONFIGURATION
+#================================================
+
+variable "enable_sentinel" {
+  description = "Enable Microsoft Sentinel for security monitoring"
+  type        = bool
+  default     = false
+}
+
+variable "sentinel_data_connectors" {
+  description = "List of data connectors to enable for Sentinel"
+  type        = list(string)
+  default = [
+    "AzureActivity",
+    "SecurityEvents",
+    "AzureFirewall",
+    "AzureKeyVault"
+  ]
+}
+
+variable "enable_security_playbooks" {
+  description = "Enable automated security response playbooks"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# CHAOS ENGINEERING CONFIGURATION
+#================================================
+
+variable "enable_chaos_studio" {
+  description = "Enable Azure Chaos Studio for resilience testing"
+  type        = bool
+  default     = false
+}
+
+variable "chaos_experiment_frequency" {
+  description = "Frequency for chaos experiments (in days)"
+  type        = number
+  default     = 30
+  validation {
+    condition = var.chaos_experiment_frequency >= 1 && var.chaos_experiment_frequency <= 365
+    error_message = "Chaos experiment frequency must be between 1 and 365 days."
+  }
 }

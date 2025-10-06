@@ -24,6 +24,16 @@ output "spoke_resource_group_ids" {
   value       = azurerm_resource_group.spokes[*].id
 }
 
+output "management_resource_group_name" {
+  description = "Name of the management resource group"
+  value       = azurerm_resource_group.management.name
+}
+
+output "management_resource_group_id" {
+  description = "ID of the management resource group"
+  value       = azurerm_resource_group.management.id
+}
+
 #================================================
 # NETWORK OUTPUTS
 #================================================
@@ -139,23 +149,33 @@ output "storage_account_primary_blob_endpoint" {
   value       = azurerm_storage_account.main.primary_blob_endpoint
 }
 
+output "premium_storage_account_id" {
+  description = "ID of the premium storage account"
+  value       = var.enable_premium_storage ? azurerm_storage_account.premium[0].id : null
+}
+
+output "data_lake_storage_account_id" {
+  description = "ID of the Data Lake Storage account"
+  value       = var.enable_data_lake_storage ? azurerm_storage_account.datalake[0].id : null
+}
+
 #================================================
 # KEY VAULT OUTPUTS
 #================================================
 
 output "key_vault_id" {
   description = "ID of the Key Vault"
-  value       = azurerm_key_vault.main.id
+  value       = var.enable_key_vault ? azurerm_key_vault.main.id : null
 }
 
 output "key_vault_name" {
   description = "Name of the Key Vault"
-  value       = azurerm_key_vault.main.name
+  value       = var.enable_key_vault ? azurerm_key_vault.main.name : null
 }
 
 output "key_vault_uri" {
   description = "URI of the Key Vault"
-  value       = azurerm_key_vault.main.vault_uri
+  value       = var.enable_key_vault ? azurerm_key_vault.main.vault_uri : null
 }
 
 #================================================
@@ -214,6 +234,8 @@ output "hub_subnet_ids" {
     gateway            = azurerm_subnet.gateway.id
     shared_services    = azurerm_subnet.shared_services.id
     private_endpoint   = azurerm_subnet.hub_private_endpoint.id
+    aks               = var.enable_containers && var.enable_aks && var.enable_aks_vnet_integration ? azurerm_subnet.hub_aks[0].id : null
+    containers        = var.enable_containers && var.enable_container_instances && var.enable_container_instances_vnet_integration ? azurerm_subnet.hub_containers[0].id : null
   }
 }
 
@@ -235,97 +257,43 @@ output "spoke_subnet_ids" {
 }
 
 #================================================
-# ROUTE TABLE OUTPUTS
-#================================================
-
-output "route_table_ids" {
-  description = "IDs of the route tables"
-  value       = azurerm_route_table.spoke_to_firewall[*].id
-}
-
-#================================================
-# TAGS OUTPUT
-#================================================
-
-output "common_tags" {
-  description = "Common tags applied to all resources"
-  value       = local.common_tags
-}
-
-#================================================
-# ANALYTICS OUTPUTS
+# MONITORING OUTPUTS
 #================================================
 
 output "log_analytics_workspace_id" {
   description = "ID of the Log Analytics workspace"
-  value       = var.enable_analytics ? azurerm_log_analytics_workspace.main[0].id : null
+  value       = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].id : null
 }
 
 output "log_analytics_workspace_name" {
   description = "Name of the Log Analytics workspace"
-  value       = var.enable_analytics ? azurerm_log_analytics_workspace.main[0].name : null
+  value       = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].name : null
 }
 
-output "application_insights_id" {
-  description = "ID of the Application Insights instance"
-  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].id : null
+output "log_analytics_workspace_workspace_id" {
+  description = "Workspace ID of the Log Analytics workspace"
+  value       = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].workspace_id : null
 }
 
-output "application_insights_instrumentation_key" {
-  description = "Instrumentation key for Application Insights"
-  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].instrumentation_key : null
+output "log_analytics_primary_shared_key" {
+  description = "Primary shared key for Log Analytics workspace"
+  value       = var.enable_monitoring ? azurerm_log_analytics_workspace.main[0].primary_shared_key : null
   sensitive   = true
 }
 
-output "application_insights_connection_string" {
-  description = "Connection string for Application Insights"
-  value       = var.enable_analytics && var.enable_application_insights ? azurerm_application_insights.main[0].connection_string : null
-  sensitive   = true
+output "action_group_id" {
+  description = "ID of the Monitor Action Group"
+  value       = var.enable_monitoring ? azurerm_monitor_action_group.main[0].id : null
 }
 
-output "data_factory_id" {
-  description = "ID of the Data Factory"
-  value       = var.enable_analytics && var.enable_data_factory ? azurerm_data_factory.main[0].id : null
+output "critical_action_group_id" {
+  description = "ID of the Critical Monitor Action Group"
+  value       = var.enable_monitoring && var.enable_advanced_alerting ? azurerm_monitor_action_group.critical[0].id : null
 }
 
-output "data_factory_name" {
-  description = "Name of the Data Factory"
-  value       = var.enable_analytics && var.enable_data_factory ? azurerm_data_factory.main[0].name : null
-}
-
-output "data_lake_storage_account_id" {
-  description = "ID of the Data Lake Storage account"
-  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].id : null
-}
-
-output "data_lake_storage_account_name" {
-  description = "Name of the Data Lake Storage account"
-  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].name : null
-}
-
-output "data_lake_primary_dfs_endpoint" {
-  description = "Primary DFS endpoint of the Data Lake Storage account"
-  value       = var.enable_analytics && var.enable_data_lake ? azurerm_storage_account.data_lake[0].primary_dfs_endpoint : null
-}
-
-output "synapse_workspace_id" {
-  description = "ID of the Synapse Analytics workspace"
-  value       = var.enable_analytics && var.enable_synapse ? azurerm_synapse_workspace.main[0].id : null
-}
-
-output "synapse_workspace_name" {
-  description = "Name of the Synapse Analytics workspace"
-  value       = var.enable_analytics && var.enable_synapse ? azurerm_synapse_workspace.main[0].name : null
-}
-
-output "synapse_sql_pool_id" {
-  description = "ID of the Synapse SQL Pool"
-  value       = var.enable_analytics && var.enable_synapse && var.enable_synapse_sql_pool ? azurerm_synapse_sql_pool.main[0].id : null
-}
-
-output "synapse_spark_pool_id" {
-  description = "ID of the Synapse Spark Pool"
-  value       = var.enable_analytics && var.enable_synapse && var.enable_synapse_spark_pool ? azurerm_synapse_spark_pool.main[0].id : null
+output "warning_action_group_id" {
+  description = "ID of the Warning Monitor Action Group"
+  value       = var.enable_monitoring && var.enable_advanced_alerting ? azurerm_monitor_action_group.warning[0].id : null
 }
 
 #================================================
@@ -343,7 +311,7 @@ output "container_registry_name" {
 }
 
 output "container_registry_login_server" {
-  description = "Login server of the Azure Container Registry"
+  description = "Login server URL for the Azure Container Registry"
   value       = var.enable_containers && var.enable_container_registry ? azurerm_container_registry.main[0].login_server : null
 }
 
@@ -363,51 +331,306 @@ output "aks_cluster_fqdn" {
 }
 
 output "aks_kube_config" {
-  description = "Kubernetes configuration for the AKS cluster"
+  description = "Kubernetes configuration for AKS cluster"
   value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].kube_config_raw : null
   sensitive   = true
 }
 
-output "aks_cluster_identity" {
-  description = "Identity of the AKS cluster"
-  value       = var.enable_containers && var.enable_aks ? azurerm_kubernetes_cluster.main[0].identity : null
-}
-
-output "container_instances_group_id" {
-  description = "ID of the Container Instances group"
-  value       = var.enable_containers && var.enable_container_instances ? azurerm_container_group.main[0].id : null
-}
-
-output "container_instances_fqdn" {
-  description = "FQDN of the Container Instances group"
-  value       = var.enable_containers && var.enable_container_instances ? azurerm_container_group.main[0].fqdn : null
-}
-
 output "container_app_environment_id" {
-  description = "ID of the Container Apps environment"
+  description = "ID of the Container App Environment"
   value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app_environment.main[0].id : null
 }
 
-output "container_app_id" {
-  description = "ID of the Container App"
-  value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app.main[0].id : null
+#================================================
+# AI/ML OUTPUTS
+#================================================
+
+output "cognitive_services_id" {
+  description = "ID of the Cognitive Services account"
+  value       = var.enable_cognitive_services ? azurerm_cognitive_account.main[0].id : null
 }
 
-output "container_app_url" {
-  description = "URL of the Container App"
-  value       = var.enable_containers && var.enable_container_apps ? azurerm_container_app.main[0].latest_revision_fqdn : null
+output "cognitive_services_endpoint" {
+  description = "Endpoint of the Cognitive Services account"
+  value       = var.enable_cognitive_services ? azurerm_cognitive_account.main[0].endpoint : null
+}
+
+output "cognitive_services_key" {
+  description = "Primary key for Cognitive Services account"
+  value       = var.enable_cognitive_services ? azurerm_cognitive_account.main[0].primary_access_key : null
+  sensitive   = true
+}
+
+output "machine_learning_workspace_id" {
+  description = "ID of the Machine Learning workspace"
+  value       = var.enable_machine_learning ? azurerm_machine_learning_workspace.main[0].id : null
+}
+
+output "machine_learning_workspace_name" {
+  description = "Name of the Machine Learning workspace"
+  value       = var.enable_machine_learning ? azurerm_machine_learning_workspace.main[0].name : null
 }
 
 #================================================
-# CONTAINER NETWORKING OUTPUTS
+# IOT OUTPUTS
 #================================================
 
-output "aks_subnet_id" {
-  description = "ID of the AKS subnet"
-  value       = var.enable_containers && var.enable_aks && var.enable_aks_vnet_integration ? azurerm_subnet.hub_aks[0].id : null
+output "iot_hub_id" {
+  description = "ID of the IoT Hub"
+  value       = var.enable_iot_hub ? azurerm_iothub.main[0].id : null
 }
 
-output "containers_subnet_id" {
-  description = "ID of the containers subnet"
-  value       = var.enable_containers && var.enable_container_instances && var.enable_container_instances_vnet_integration ? azurerm_subnet.hub_containers[0].id : null
+output "iot_hub_name" {
+  description = "Name of the IoT Hub"
+  value       = var.enable_iot_hub ? azurerm_iothub.main[0].name : null
+}
+
+output "iot_hub_hostname" {
+  description = "Hostname of the IoT Hub"
+  value       = var.enable_iot_hub ? azurerm_iothub.main[0].hostname : null
+}
+
+output "iot_dps_id" {
+  description = "ID of the IoT Device Provisioning Service"
+  value       = var.enable_iot_dps ? azurerm_iothub_dps.main[0].id : null
+}
+
+output "digital_twins_id" {
+  description = "ID of the Digital Twins instance"
+  value       = var.enable_digital_twins ? azurerm_digital_twins_instance.main[0].id : null
+}
+
+output "digital_twins_host_name" {
+  description = "Host name of the Digital Twins instance"
+  value       = var.enable_digital_twins ? azurerm_digital_twins_instance.main[0].host_name : null
+}
+
+#================================================
+# WEB & MOBILE OUTPUTS
+#================================================
+
+output "app_service_plan_id" {
+  description = "ID of the App Service Plan"
+  value       = var.enable_app_service ? azurerm_service_plan.main[0].id : null
+}
+
+output "web_app_id" {
+  description = "ID of the Web App"
+  value       = var.enable_app_service ? azurerm_linux_web_app.main[0].id : null
+}
+
+output "web_app_url" {
+  description = "Default hostname of the Web App"
+  value       = var.enable_app_service ? "https://${azurerm_linux_web_app.main[0].default_hostname}" : null
+}
+
+output "function_app_id" {
+  description = "ID of the Function App"
+  value       = var.enable_function_app ? azurerm_linux_function_app.main[0].id : null
+}
+
+output "static_web_app_id" {
+  description = "ID of the Static Web App"
+  value       = var.enable_static_web_app ? azurerm_static_web_app.main[0].id : null
+}
+
+output "static_web_app_url" {
+  description = "Default hostname of the Static Web App"
+  value       = var.enable_static_web_app ? azurerm_static_web_app.main[0].default_host_name : null
+}
+
+output "cdn_profile_id" {
+  description = "ID of the CDN Profile"
+  value       = var.enable_cdn ? azurerm_cdn_profile.main[0].id : null
+}
+
+output "cdn_endpoint_url" {
+  description = "URL of the CDN Endpoint"
+  value       = var.enable_cdn ? azurerm_cdn_endpoint.main[0].hostname : null
+}
+
+#================================================
+# DEVOPS OUTPUTS
+#================================================
+
+output "devops_container_registry_id" {
+  description = "ID of the DevOps Container Registry"
+  value       = var.enable_devops ? azurerm_container_registry.devops[0].id : null
+}
+
+output "devops_storage_account_id" {
+  description = "ID of the DevOps Storage Account"
+  value       = var.enable_devops ? azurerm_storage_account.devops[0].id : null
+}
+
+output "devops_key_vault_id" {
+  description = "ID of the DevOps Key Vault"
+  value       = var.enable_devops ? azurerm_key_vault.devops[0].id : null
+}
+
+output "app_configuration_id" {
+  description = "ID of the App Configuration service"
+  value       = var.enable_devops ? azurerm_app_configuration.devops[0].id : null
+}
+
+output "servicebus_namespace_id" {
+  description = "ID of the Service Bus namespace"
+  value       = var.enable_devops ? azurerm_servicebus_namespace.devops[0].id : null
+}
+
+#================================================
+# IDENTITY OUTPUTS
+#================================================
+
+output "managed_identity_id" {
+  description = "ID of the User Assigned Managed Identity"
+  value       = var.enable_managed_identity ? azurerm_user_assigned_identity.main[0].id : null
+}
+
+output "managed_identity_client_id" {
+  description = "Client ID of the User Assigned Managed Identity"
+  value       = var.enable_managed_identity ? azurerm_user_assigned_identity.main[0].client_id : null
+}
+
+output "managed_identity_principal_id" {
+  description = "Principal ID of the User Assigned Managed Identity"
+  value       = var.enable_managed_identity ? azurerm_user_assigned_identity.main[0].principal_id : null
+}
+
+#================================================
+# COMMON TAGS AND ENVIRONMENT
+#================================================
+
+output "common_tags" {
+  description = "Common tags applied to all resources"
+  value       = local.common_tags
+}
+
+output "environment" {
+  description = "Environment name"
+  value       = var.environment
+}
+
+output "location" {
+  description = "Primary Azure region"
+  value       = var.location
+}
+
+output "location_secondary" {
+  description = "Secondary Azure region"
+  value       = var.location_secondary
+}
+
+output "resource_prefix" {
+  description = "Resource naming prefix"
+  value       = local.resource_prefix
+}
+
+#================================================
+# ALERT AND MONITORING OUTPUTS
+#================================================
+
+output "monitoring_alerts_summary" {
+  description = "Summary of configured monitoring alerts"
+  value = {
+    infrastructure_alerts = var.enable_infrastructure_alerts
+    application_alerts   = var.enable_application_alerts
+    database_alerts      = var.enable_database_alerts
+    security_alerts      = var.enable_security_alerts
+    cost_monitoring      = var.enable_cost_monitoring
+    vm_monitoring        = var.enable_vm_monitoring
+  }
+}
+
+output "alert_thresholds" {
+  description = "Configured alert thresholds"
+  value = {
+    vm_cpu_threshold           = var.vm_cpu_alert_threshold
+    storage_availability       = var.storage_availability_threshold
+    keyvault_availability      = var.keyvault_availability_threshold
+    app_response_time         = var.app_response_time_threshold_seconds
+    sql_cpu_threshold         = var.sql_cpu_alert_threshold
+    aks_cpu_threshold         = var.aks_cpu_alert_threshold
+    monthly_budget            = var.monthly_budget_amount
+  }
+}
+
+#================================================
+# NETWORK WATCHER AND SECURITY
+#================================================
+
+output "network_watcher_id" {
+  description = "ID of the Network Watcher"
+  value       = azurerm_network_watcher.main.id
+}
+
+output "private_endpoint_summary" {
+  description = "Summary of private endpoints deployed"
+  value = {
+    key_vault          = var.enable_private_dns ? "enabled" : "disabled"
+    storage_blob       = var.spoke_count >= 1 ? "enabled" : "disabled"
+    storage_file       = var.spoke_count >= 1 ? "enabled" : "disabled"
+    container_registry = var.enable_containers && var.enable_container_registry && var.container_registry_sku == "Premium" && var.enable_private_endpoints ? "enabled" : "disabled"
+    iot_hub           = var.enable_iot_hub ? "enabled" : "disabled"
+  }
+}
+
+#================================================
+# INFRASTRUCTURE SUMMARY
+#================================================
+
+output "infrastructure_summary" {
+  description = "Comprehensive summary of deployed infrastructure"
+  value = {
+    environment    = var.environment
+    location       = var.location
+    resource_count = {
+      resource_groups = 1 + var.spoke_count + 1  # hub + spokes + management
+      vnets          = 1 + var.spoke_count       # hub + spoke vnets
+      subnets        = 5 + (var.spoke_count * 4) # hub subnets + spoke subnets
+    }
+    services = {
+      compute = {
+        vms_deployed     = var.spoke_count
+        aks_enabled      = var.enable_containers && var.enable_aks
+        containers       = var.enable_containers
+      }
+      networking = {
+        firewall_enabled = var.enable_firewall
+        bastion_enabled  = var.enable_bastion
+        private_dns      = var.enable_private_dns
+        vpn_gateway      = var.enable_vpn_gateway
+        expressroute     = var.enable_expressroute_gateway
+      }
+      data = {
+        sql_database     = var.enable_sql_database
+        cosmos_db        = var.enable_cosmos_db
+        storage_accounts = 2 + (var.enable_premium_storage ? 1 : 0) + (var.enable_data_lake_storage ? 1 : 0)
+        data_factory     = var.enable_data_factory
+        synapse          = var.enable_synapse
+      }
+      monitoring = {
+        log_analytics    = var.enable_monitoring
+        alerts_enabled   = var.enable_infrastructure_alerts
+        cost_monitoring  = var.enable_cost_monitoring
+        security_center  = var.enable_security_center
+      }
+      ai_ml = {
+        cognitive_services = var.enable_cognitive_services
+        machine_learning   = var.enable_machine_learning
+      }
+      iot = {
+        iot_hub          = var.enable_iot_hub
+        iot_dps          = var.enable_iot_dps
+        digital_twins    = var.enable_digital_twins
+        iot_central      = var.enable_iot_central
+      }
+      web_mobile = {
+        app_service      = var.enable_app_service
+        function_app     = var.enable_function_app
+        static_web_app   = var.enable_static_web_app
+        cdn              = var.enable_cdn
+      }
+    }
+  }
 }

@@ -273,3 +273,16 @@ resource "azurerm_route_table" "spoke_beta_vm" {
 
 # Route table associations are handled in compute.tf to avoid duplicates
 # This section is left empty to prevent conflicts
+
+#================================================
+# NETWORK WATCHER
+#================================================
+
+# Network Watcher for monitoring and diagnostics
+resource "azurerm_network_watcher" "main" {
+  name                = "nw-${local.resource_prefix}-${format("%03d", 1)}"
+  location            = azurerm_resource_group.hub.location
+  resource_group_name = azurerm_resource_group.hub.name
+
+  tags = local.common_tags
+}

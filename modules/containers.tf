@@ -27,11 +27,20 @@ resource "azurerm_container_registry" "main" {
     content {
       default_action = "Deny"
 
-      # Fixed: Use proper ip_rule syntax instead of network_rule
-      ip_rule {
-        action   = "Allow"
-        ip_range = azurerm_subnet.spoke_alpha_private_endpoint[0].address_prefixes[0]
-      }
+      # Fixed: Use correct attributes instead of blocks
+      ip_rule = [
+        {
+          action   = "Allow"
+          ip_range = "10.0.0.0/16"
+        }
+      ]
+
+      virtual_network = [
+        {
+          action    = "Allow"
+          subnet_id = azurerm_subnet.spoke_alpha_private_endpoint[0].id
+        }
+      ]
     }
   }
 
@@ -53,7 +62,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     node_count          = var.aks_node_count
     vm_size             = var.aks_vm_size
     type                = "VirtualMachineScaleSets"
-    availability_zones  = var.aks_availability_zones
+    zones               = var.aks_availability_zones  # Fixed: changed from availability_zones to zones
     enable_auto_scaling = var.aks_enable_auto_scaling
     min_count           = var.aks_enable_auto_scaling ? var.aks_min_count : null
     max_count           = var.aks_enable_auto_scaling ? var.aks_max_count : null
@@ -83,37 +92,22 @@ resource "azurerm_kubernetes_cluster" "main" {
     }
   }
 
-  # Azure Active Directory integration
+  # Azure Active Directory integration - Fixed deprecated syntax
   dynamic "azure_active_directory_role_based_access_control" {
     for_each = var.enable_aks_rbac ? [1] : []
     content {
-      managed                = true
-      admin_group_object_ids = var.aks_admin_group_object_ids
       azure_rbac_enabled     = true
+      admin_group_object_ids = var.aks_admin_group_object_ids
     }
   }
 
-  # Add-ons
-  dynamic "oms_agent" {
-    for_each = var.enable_analytics && var.enable_aks_monitoring ? [1] : []
-    content {
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
-    }
+  # Add-ons - Fixed block structure
+  oms_agent {
+    log_analytics_workspace_id = var.enable_analytics && var.enable_aks_monitoring ? azurerm_log_analytics_workspace.main[0].id : null
   }
 
-  dynamic "azure_policy" {
-    for_each = var.enable_aks_azure_policy ? [1] : []
-    content {
-      enabled = true
-    }
-  }
-
-  dynamic "http_application_routing" {
-    for_each = var.enable_aks_http_application_routing ? [1] : []
-    content {
-      enabled = true
-    }
-  }
+  azure_policy_enabled                = var.enable_aks_azure_policy
+  http_application_routing_enabled     = var.enable_aks_http_application_routing
 
   tags = local.common_tags
 }
@@ -258,7 +252,7 @@ resource "azurerm_private_endpoint" "container_registry" {
 # Role assignments for AKS to pull from ACR
 resource "azurerm_role_assignment" "aks_acr_pull" {
   count                = var.enable_containers && var.enable_aks && var.enable_container_registry ? 1 : 0
-  principal_id         = azurerm_kubernetes_cluster.main[0].kubelet_identity[0].user_assigned_identity_id
+  principal_id         = azurerm_kubernetes_cluster.main[0].identity[0].principal_id
   role_definition_name = "AcrPull"
   scope                = azurerm_container_registry.main[0].id
 }

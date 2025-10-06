@@ -33,9 +33,9 @@ resource "azurerm_iothub_dps" "main" {
   }
 
   linked_hub {
-    connection_string       = azurerm_iothub.main[0].shared_access_policy[0].primary_connection_string
-    location                = azurerm_resource_group.spokes[0].location
-    allocation_weight       = 1
+    connection_string       = "HostName=${azurerm_iothub.main[0].hostname};SharedAccessKeyName=iothubowner;SharedAccessKey=${azurerm_iothub.main[0].shared_access_policy[0].primary_key}"
+    location               = azurerm_resource_group.spokes[0].location
+    allocation_weight      = 1
     apply_allocation_policy = true
   }
 

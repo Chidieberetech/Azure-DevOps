@@ -118,10 +118,10 @@ resource "azurerm_private_endpoint" "migration_storage" {
   tags = local.common_tags
 }
 
-# Storage containers for import/export jobs
+# Storage Container for Import/Export - Fixed argument names
 resource "azurerm_storage_container" "import_export" {
   count                 = var.enable_import_export ? 1 : 0
   name                  = "import-export"
-  storage_account_id    = azurerm_storage_account.migration[0].id
+  storage_account_name  = azurerm_storage_account.migration[0].name
   container_access_type = "private"
 }

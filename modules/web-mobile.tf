@@ -60,8 +60,8 @@ resource "azurerm_linux_function_app" "main" {
   tags = local.common_tags
 }
 
-# Static Web App
-resource "azurerm_static_site" "main" {
+# Static Web App - Fixed: Use azurerm_static_web_app instead of deprecated azurerm_static_site
+resource "azurerm_static_web_app" "main" {
   count               = var.enable_static_web_app ? 1 : 0
   name                = "stapp-${local.resource_prefix}-${format("%03d", 1)}"
   resource_group_name = azurerm_resource_group.spokes[0].name

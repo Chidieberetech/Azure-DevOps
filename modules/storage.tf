@@ -39,36 +39,6 @@ resource "azurerm_storage_account" "datalake" {
   tags = local.common_tags
 }
 
-#================================================
-# STORAGE ACCOUNTS
-#================================================
-
-# Main Storage Account
-resource "azurerm_storage_account" "main" {
-  name                     = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
-  resource_group_name      = azurerm_resource_group.spokes[0].name
-  location                 = azurerm_resource_group.spokes[0].location
-  account_tier             = var.storage_account_tier
-  account_replication_type = var.storage_replication_type
-
-  # Security settings
-  public_network_access_enabled   = false
-  allow_nested_items_to_be_public = false
-  shared_access_key_enabled       = true
-
-  # Enable blob encryption
-  blob_properties {
-    delete_retention_policy {
-      days = 7
-    }
-    container_delete_retention_policy {
-      days = 7
-    }
-  }
-
-  tags = local.common_tags
-}
-
 # Diagnostics Storage Account for VM Boot Diagnostics
 resource "azurerm_storage_account" "diagnostics" {
   name                     = "stdiag${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
@@ -76,8 +46,8 @@ resource "azurerm_storage_account" "diagnostics" {
   location                 = azurerm_resource_group.hub.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-    account_kind             = "StorageV2"
-    access_tier              = "Hot"
+  account_kind             = "StorageV2"
+  access_tier              = "Hot"
 
   # Allow public access for diagnostics
   public_network_access_enabled   = false
@@ -134,22 +104,82 @@ resource "azurerm_private_endpoint" "storage_file" {
   tags = local.common_tags
 }
 
-# Storage Containers
+# Storage Containers - Fixed argument names
 resource "azurerm_storage_container" "data" {
   name                  = "data"
-  storage_account_id    = azurerm_storage_account.main.id
+  storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
 
 resource "azurerm_storage_container" "backups" {
   name                  = "backups"
-  storage_account_id    = azurerm_storage_account.main.id
+  storage_account_name  = azurerm_storage_account.main.name
   container_access_type = "private"
 }
 
-# File Share for shared data
+# File Share for shared data - Fixed argument names
 resource "azurerm_storage_share" "shared" {
-  name               = "shared-data"
-  storage_account_id = azurerm_storage_account.main.id
-  quota              = 50
+  name                 = "shared-data"
+  storage_account_name = azurerm_storage_account.main.name
+  quota                = 50
+}
+
+# Private DNS Zones for Storage Services
+resource "azurerm_private_dns_zone" "storage_blob" {
+  count               = var.enable_private_dns ? 1 : 0
+  name                = "privatelink.blob.core.windows.net"
+  resource_group_name = azurerm_resource_group.hub.name
+
+  tags = local.common_tags
+}
+
+resource "azurerm_private_dns_zone" "storage_file" {
+  count               = var.enable_private_dns ? 1 : 0
+  name                = "privatelink.file.core.windows.net"
+  resource_group_name = azurerm_resource_group.hub.name
+
+  tags = local.common_tags
+}
+
+# Virtual Network Links for Storage Private DNS Zones
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob_hub" {
+  count                 = var.enable_private_dns ? 1 : 0
+  name                  = "pdns-link-storage-blob-hub"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_blob[0].name
+  virtual_network_id    = azurerm_virtual_network.hub.id
+  registration_enabled  = false
+
+  tags = local.common_tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_file_hub" {
+  count                 = var.enable_private_dns ? 1 : 0
+  name                  = "pdns-link-storage-file-hub"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_file[0].name
+  virtual_network_id    = azurerm_virtual_network.hub.id
+  registration_enabled  = false
+
+  tags = local.common_tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob_spokes" {
+  count                 = var.enable_private_dns ? var.spoke_count : 0
+  name                  = "storage-blob-dns-link-spoke${count.index + 1}"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_blob[0].name
+  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
+  registration_enabled  = false
+  tags                  = local.common_tags
+}
+
+resource "azurerm_private_dns_zone_virtual_network_link" "storage_file_spokes" {
+  count                 = var.enable_private_dns ? var.spoke_count : 0
+  name                  = "storage-file-dns-link-spoke${count.index + 1}"
+  resource_group_name   = azurerm_resource_group.hub.name
+  private_dns_zone_name = azurerm_private_dns_zone.storage_file[0].name
+  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
+  registration_enabled  = false
+  tags                  = local.common_tags
 }

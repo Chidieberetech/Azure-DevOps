@@ -1098,100 +1098,214 @@ variable "enable_media_services" {
   default     = false
 }
 
-variable "enable_web_cdn" {
-  description = "Enable Azure CDN"
+#================================================
+# HYBRID AND MULTI-CLOUD CONFIGURATION
+#================================================
+
+variable "enable_arc_kubernetes" {
+  description = "Enable Azure Arc-enabled Kubernetes"
   type        = bool
   default     = false
 }
 
-variable "enable_front_door" {
-  description = "Enable Azure Front Door"
-  type        = bool
-  default     = false
-}
-
-variable "front_door_sku" {
-  description = "Azure Front Door SKU"
+variable "arc_kubernetes_public_key" {
+  description = "Public key certificate for Arc Kubernetes cluster"
   type        = string
-  default     = "Standard_AzureFrontDoor"
-  validation {
-    condition = contains(["Standard_AzureFrontDoor", "Premium_AzureFrontDoor"], var.front_door_sku)
-    error_message = "Front Door SKU must be Standard_AzureFrontDoor or Premium_AzureFrontDoor."
-  }
+  default     = ""
 }
 
-variable "enable_mobile_backend" {
-  description = "Enable mobile backend services"
+variable "enable_site_recovery" {
+  description = "Enable Azure Site Recovery"
+  type        = bool
+  default     = false
+}
+
+variable "enable_stack_hci" {
+  description = "Enable Azure Stack HCI"
+  type        = bool
+  default     = false
+}
+
+variable "enable_database_migration" {
+  description = "Enable Azure Database Migration Service"
+  type        = bool
+  default     = false
+}
+
+variable "enable_storage_sync" {
+  description = "Enable Azure File Sync"
+  type        = bool
+  default     = false
+}
+
+variable "enable_expressroute_gateway" {
+  description = "Enable ExpressRoute Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "enable_vpn_gateway" {
+  description = "Enable VPN Gateway"
   type        = bool
   default     = false
 }
 
 #================================================
-# IOT SERVICES CONFIGURATION
+# STORAGE CONFIGURATION
 #================================================
 
-variable "enable_iot_hub" {
-  description = "Enable IoT Hub"
+variable "enable_premium_storage" {
+  description = "Enable premium storage account"
   type        = bool
   default     = false
 }
 
-variable "iot_hub_sku_name" {
-  description = "IoT Hub SKU name"
+variable "enable_data_lake_storage" {
+  description = "Enable Data Lake Storage Gen2"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# ADMIN CONTACT CONFIGURATION
+#================================================
+
+variable "admin_email_address" {
+  description = "Admin email address for alerts and notifications"
   type        = string
-  default     = "F1"
-  validation {
-    condition = contains(["F1", "S1", "S2", "S3"], var.iot_hub_sku_name)
-    error_message = "IoT Hub SKU must be F1, S1, S2, or S3."
-  }
+  default     = "admin@example.com"
 }
 
-variable "iot_hub_capacity" {
-  description = "IoT Hub capacity"
-  type        = number
-  default     = 1
-  validation {
-    condition = var.iot_hub_capacity >= 1 && var.iot_hub_capacity <= 200
-    error_message = "IoT Hub capacity must be between 1 and 200."
-  }
+variable "admin_phone_number" {
+  description = "Admin phone number for SMS alerts"
+  type        = string
+  default     = "1234567890"
 }
 
-variable "enable_iot_dps" {
-  description = "Enable IoT Device Provisioning Service"
+#================================================
+# AI AND MACHINE LEARNING CONFIGURATION
+#================================================
+
+variable "enable_cognitive_services" {
+  description = "Enable Azure Cognitive Services"
   type        = bool
   default     = false
 }
 
-variable "enable_digital_twins" {
-  description = "Enable Azure Digital Twins"
-  type        = bool
-  default     = false
-}
-
-variable "enable_iot_central" {
-  description = "Enable IoT Central"
-  type        = bool
-  default     = false
-}
-
-variable "enable_maps" {
-  description = "Enable Azure Maps"
-  type        = bool
-  default     = false
-}
-
-variable "maps_sku_name" {
-  description = "Azure Maps SKU name"
+variable "cognitive_services_sku" {
+  description = "Cognitive Services SKU"
   type        = string
   default     = "S0"
   validation {
-    condition = contains(["S0", "S1"], var.maps_sku_name)
-    error_message = "Maps SKU must be S0 or S1."
+    condition = contains(["F0", "S0", "S1", "S2"], var.cognitive_services_sku)
+    error_message = "Cognitive Services SKU must be F0, S0, S1, or S2."
+  }
+}
+
+variable "enable_machine_learning" {
+  description = "Enable Azure Machine Learning"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# DEVOPS CONFIGURATION
+#================================================
+
+variable "enable_devops" {
+  description = "Enable DevOps services"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# GENERAL SERVICES CONFIGURATION
+#================================================
+
+variable "enable_automation" {
+  description = "Enable Azure Automation"
+  type        = bool
+  default     = false
+}
+
+variable "enable_service_bus" {
+  description = "Enable Azure Service Bus"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# HYBRID AND MULTI-CLOUD GATEWAY CONFIGURATION
+#================================================
+
+variable "expressroute_gateway_sku" {
+  description = "ExpressRoute Gateway SKU"
+  type        = string
+  default     = "Standard"
+  validation {
+    condition = contains(["Standard", "HighPerformance", "UltraPerformance"], var.expressroute_gateway_sku)
+    error_message = "ExpressRoute Gateway SKU must be Standard, HighPerformance, or UltraPerformance."
+  }
+}
+
+variable "vpn_gateway_sku" {
+  description = "VPN Gateway SKU"
+  type        = string
+  default     = "VpnGw1"
+  validation {
+    condition = contains(["Basic", "VpnGw1", "VpnGw2", "VpnGw3"], var.vpn_gateway_sku)
+    error_message = "VPN Gateway SKU must be Basic, VpnGw1, VpnGw2, or VpnGw3."
   }
 }
 
 #================================================
-# INTEGRATION SERVICES CONFIGURATION
+# IDENTITY CONFIGURATION
+#================================================
+
+variable "enable_aad_ds" {
+  description = "Enable Azure Active Directory Domain Services"
+  type        = bool
+  default     = false
+}
+
+variable "aad_ds_domain_name" {
+  description = "Azure AD Domain Services domain name"
+  type        = string
+  default     = "example.com"
+}
+
+variable "enable_managed_identity" {
+  description = "Enable User Assigned Managed Identity"
+  type        = bool
+  default     = true
+}
+
+variable "enable_aad_b2c" {
+  description = "Enable Azure AD B2C"
+  type        = bool
+  default     = false
+}
+
+variable "aad_b2c_country_code" {
+  description = "Azure AD B2C country code"
+  type        = string
+  default     = "US"
+}
+
+variable "enable_identity_keyvault" {
+  description = "Enable dedicated Key Vault for identity services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_custom_roles" {
+  description = "Enable custom role definitions"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# INTEGRATION CONFIGURATION
 #================================================
 
 variable "enable_integration_servicebus" {
@@ -1201,7 +1315,7 @@ variable "enable_integration_servicebus" {
 }
 
 variable "enable_event_grid" {
-  description = "Enable Event Grid"
+  description = "Enable Azure Event Grid"
   type        = bool
   default     = false
 }
@@ -1222,30 +1336,18 @@ variable "app_gateway_sku_name" {
   description = "Application Gateway SKU name"
   type        = string
   default     = "Standard_v2"
-  validation {
-    condition = contains(["Standard_v2", "WAF_v2"], var.app_gateway_sku_name)
-    error_message = "Application Gateway SKU must be Standard_v2 or WAF_v2."
-  }
 }
 
 variable "app_gateway_sku_tier" {
   description = "Application Gateway SKU tier"
   type        = string
   default     = "Standard_v2"
-  validation {
-    condition = contains(["Standard_v2", "WAF_v2"], var.app_gateway_sku_tier)
-    error_message = "Application Gateway SKU tier must be Standard_v2 or WAF_v2."
-  }
 }
 
 variable "app_gateway_capacity" {
   description = "Application Gateway capacity"
   type        = number
   default     = 2
-  validation {
-    condition = var.app_gateway_capacity >= 1 && var.app_gateway_capacity <= 125
-    error_message = "Application Gateway capacity must be between 1 and 125."
-  }
 }
 
 variable "enable_relay" {
@@ -1255,75 +1357,59 @@ variable "enable_relay" {
 }
 
 #================================================
-# MIXED REALITY CONFIGURATION
+# IOT CONFIGURATION
 #================================================
 
-variable "enable_spatial_anchors" {
-  description = "Enable Azure Spatial Anchors"
+variable "enable_iot_hub" {
+  description = "Enable Azure IoT Hub"
   type        = bool
   default     = false
 }
 
-variable "enable_mixed_reality_storage" {
-  description = "Enable storage for mixed reality assets"
+variable "iot_hub_sku_name" {
+  description = "IoT Hub SKU name"
+  type        = string
+  default     = "S1"
+}
+
+variable "iot_hub_capacity" {
+  description = "IoT Hub capacity"
+  type        = number
+  default     = 1
+}
+
+variable "enable_iot_dps" {
+  description = "Enable IoT Device Provisioning Service"
   type        = bool
   default     = false
 }
 
-variable "enable_mixed_reality_cdn" {
-  description = "Enable CDN for mixed reality content"
+variable "enable_digital_twins" {
+  description = "Enable Azure Digital Twins"
   type        = bool
   default     = false
 }
 
-variable "enable_mixed_reality_acr" {
-  description = "Enable Container Registry for mixed reality applications"
+variable "enable_iot_central" {
+  description = "Enable Azure IoT Central"
   type        = bool
   default     = false
 }
 
-#================================================
-# MIGRATION SERVICES CONFIGURATION
-#================================================
-
-variable "enable_migration_storage" {
-  description = "Enable storage for migration purposes"
+variable "enable_maps" {
+  description = "Enable Azure Maps"
   type        = bool
   default     = false
 }
 
-variable "enable_database_migration_service" {
-  description = "Enable Azure Database Migration Service"
-  type        = bool
-  default     = false
-}
-
-variable "enable_site_recovery_migration" {
-  description = "Enable Azure Site Recovery for migration"
-  type        = bool
-  default     = false
-}
-
-variable "enable_migration_backup" {
-  description = "Enable backup services for migration"
-  type        = bool
-  default     = false
-}
-
-variable "enable_app_migration" {
-  description = "Enable app migration services"
-  type        = bool
-  default     = false
-}
-
-variable "enable_import_export" {
-  description = "Enable Azure Import/Export service"
-  type        = bool
-  default     = false
+variable "maps_sku_name" {
+  description = "Azure Maps SKU"
+  type        = string
+  default     = "S0"
 }
 
 #================================================
-# MANAGEMENT & GOVERNANCE CONFIGURATION
+# MANAGEMENT AND GOVERNANCE CONFIGURATION
 #================================================
 
 variable "enable_policy" {
@@ -1338,22 +1424,16 @@ variable "enable_management_group" {
   default     = false
 }
 
-variable "enable_cost_management" {
-  description = "Enable Cost Management and Billing"
-  type        = bool
-  default     = true
-}
-
 variable "enable_governance_alerts" {
-  description = "Enable governance-related alerts"
+  description = "Enable governance alerts"
   type        = bool
   default     = true
 }
 
 variable "governance_alert_email" {
-  description = "Email address for governance alerts"
+  description = "Email for governance alerts"
   type        = string
-  default     = ""
+  default     = "admin@example.com"
 }
 
 variable "enable_governance_monitoring" {
@@ -1369,107 +1449,85 @@ variable "enable_custom_governance_roles" {
 }
 
 #================================================
-# IDENTITY SERVICES CONFIGURATION
+# MIGRATION CONFIGURATION
 #================================================
 
-variable "enable_aad_ds" {
-  description = "Enable Azure Active Directory Domain Services"
+variable "enable_migration_storage" {
+  description = "Enable migration storage account"
   type        = bool
   default     = false
 }
 
-variable "aad_ds_domain_name" {
-  description = "Domain name for Azure AD Domain Services"
+variable "enable_database_migration_service" {
+  description = "Enable Database Migration Service"
+  type        = bool
+  default     = false
+}
+
+variable "enable_site_recovery_migration" {
+  description = "Enable Site Recovery for migration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_migration_backup" {
+  description = "Enable backup policy for migration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_app_migration" {
+  description = "Enable app migration staging"
+  type        = bool
+  default     = false
+}
+
+variable "enable_import_export" {
+  description = "Enable Import/Export service"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MIXED REALITY CONFIGURATION
+#================================================
+
+variable "enable_spatial_anchors" {
+  description = "Enable Azure Spatial Anchors"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_storage" {
+  description = "Enable mixed reality storage"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_cdn" {
+  description = "Enable CDN for mixed reality"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_acr" {
+  description = "Enable Container Registry for mixed reality"
+  type        = bool
+  default     = false
+}
+
+variable "app_service_plan_sku" {
+  description = "App Service Plan SKU"
   type        = string
-  default     = "trl.local"
+  default     = "B1"
   validation {
-    condition = can(regex("^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\\.[a-zA-Z]{2,}$", var.aad_ds_domain_name))
-    error_message = "Domain name must be a valid FQDN format."
+    condition = contains(["F1", "D1", "B1", "B2", "S1", "S2", "P1V2", "P2V2"], var.app_service_plan_sku)
+    error_message = "App Service Plan SKU must be from the approved list."
   }
 }
 
-variable "enable_managed_identity" {
-  description = "Enable User Assigned Managed Identity"
-  type        = bool
-  default     = true
-}
-
-variable "enable_aad_b2c" {
-  description = "Enable Azure Active Directory B2C"
-  type        = bool
-  default     = false
-}
-
-variable "aad_b2c_country_code" {
-  description = "Country code for Azure AD B2C tenant"
-  type        = string
-  default     = "US"
-  validation {
-    condition = contains(["US", "EU", "GB", "CA", "AU"], var.aad_b2c_country_code)
-    error_message = "B2C country code must be US, EU, GB, CA, or AU."
-  }
-}
-
-variable "enable_identity_keyvault" {
-  description = "Enable dedicated Key Vault for identity services"
-  type        = bool
-  default     = false
-}
-
-variable "enable_custom_roles" {
-  description = "Enable custom RBAC roles"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# AI & MACHINE LEARNING CONFIGURATION
-#================================================
-
-variable "enable_cognitive_services" {
-  description = "Enable Azure Cognitive Services"
-  type        = bool
-  default     = false
-}
-
-variable "cognitive_services_sku" {
-  description = "Cognitive Services SKU"
-  type        = string
-  default     = "S0"
-  validation {
-    condition = contains(["F0", "S0", "S1", "S2", "S3", "S4"], var.cognitive_services_sku)
-    error_message = "Cognitive Services SKU must be F0, S0, S1, S2, S3, or S4."
-  }
-}
-
-variable "enable_machine_learning" {
-  description = "Enable Azure Machine Learning"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# DEVOPS CONFIGURATION
-#================================================
-
-variable "enable_devops" {
-  description = "Enable DevOps services and tools"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# GENERAL SERVICES CONFIGURATION
-#================================================
-
-variable "enable_automation" {
-  description = "Enable Azure Automation"
-  type        = bool
-  default     = false
-}
-
-variable "enable_service_bus" {
-  description = "Enable Azure Service Bus"
+variable "enable_cdn" {
+  description = "Enable Azure CDN"
   type        = bool
   default     = false
 }

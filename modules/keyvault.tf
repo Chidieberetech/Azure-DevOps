@@ -108,95 +108,23 @@ resource "azurerm_private_endpoint" "key_vault" {
 
 # Private DNS Zone for Key Vault
 resource "azurerm_private_dns_zone" "key_vault" {
-  count               = var.enable_private_dns ? 1 : 0
+  count               = var.enable_key_vault && var.enable_private_endpoints ? 1 : 0
   name                = "privatelink.vaultcore.azure.net"
   resource_group_name = azurerm_resource_group.hub.name
-  tags                = local.common_tags
+
+  tags = local.common_tags
 }
 
-# Private DNS Zone for Storage Blob
-resource "azurerm_private_dns_zone" "storage_blob" {
-  count               = var.enable_private_dns ? 1 : 0
-  name                = "privatelink.blob.core.windows.net"
-  resource_group_name = azurerm_resource_group.hub.name
-  tags                = local.common_tags
-}
-
-# Private DNS Zone for Storage File
-resource "azurerm_private_dns_zone" "storage_file" {
-  count               = var.enable_private_dns ? 1 : 0
-  name                = "privatelink.file.core.windows.net"
-  resource_group_name = azurerm_resource_group.hub.name
-  tags                = local.common_tags
-}
-
-# Private DNS Zone for SQL Database
-resource "azurerm_private_dns_zone" "sql_database" {
-  count               = var.enable_private_dns && var.enable_sql_database ? 1 : 0
-  name                = "privatelink.database.windows.net"
-  resource_group_name = azurerm_resource_group.hub.name
-  tags                = local.common_tags
-}
-
-# Private DNS Zone for Cosmos DB
-resource "azurerm_private_dns_zone" "cosmos_db" {
-  count               = var.enable_private_dns && var.enable_cosmos_db ? 1 : 0
-  name                = "privatelink.documents.azure.com"
-  resource_group_name = azurerm_resource_group.hub.name
-  tags                = local.common_tags
-}
-
-# Link Private DNS Zones to Hub VNet
+# Virtual Network Links for Key Vault Private DNS Zone
 resource "azurerm_private_dns_zone_virtual_network_link" "key_vault_hub" {
-  count                 = var.enable_private_dns ? 1 : 0
-  name                  = "kv-dns-link-hub"
+  count                 = var.enable_key_vault && var.enable_private_endpoints ? 1 : 0
+  name                  = "pdns-link-kv-hub"
   resource_group_name   = azurerm_resource_group.hub.name
   private_dns_zone_name = azurerm_private_dns_zone.key_vault[0].name
   virtual_network_id    = azurerm_virtual_network.hub.id
   registration_enabled  = false
-  tags                  = local.common_tags
-}
 
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob_hub" {
-  count                 = var.enable_private_dns ? 1 : 0
-  name                  = "storage-blob-dns-link-hub"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_blob[0].name
-  virtual_network_id    = azurerm_virtual_network.hub.id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_file_hub" {
-  count                 = var.enable_private_dns ? 1 : 0
-  name                  = "storage-file-dns-link-hub"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_file[0].name
-  virtual_network_id    = azurerm_virtual_network.hub.id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-# Link SQL Database DNS Zone to Hub VNet
-resource "azurerm_private_dns_zone_virtual_network_link" "sql_database_hub" {
-  count                 = var.enable_private_dns && var.enable_sql_database ? 1 : 0
-  name                  = "sql-dns-link-hub"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.sql_database[0].name
-  virtual_network_id    = azurerm_virtual_network.hub.id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-# Link Cosmos DB DNS Zone to Hub VNet
-resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_db_hub" {
-  count                 = var.enable_private_dns && var.enable_cosmos_db ? 1 : 0
-  name                  = "cosmos-dns-link-hub"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.cosmos_db[0].name
-  virtual_network_id    = azurerm_virtual_network.hub.id
-  registration_enabled  = false
-  tags                  = local.common_tags
+  tags = local.common_tags
 }
 
 # Link Private DNS Zones to Spoke VNets
@@ -205,48 +133,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "key_vault_spokes" {
   name                  = "kv-dns-link-spoke${count.index + 1}"
   resource_group_name   = azurerm_resource_group.hub.name
   private_dns_zone_name = azurerm_private_dns_zone.key_vault[0].name
-  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_blob_spokes" {
-  count                 = var.enable_private_dns ? var.spoke_count : 0
-  name                  = "storage-blob-dns-link-spoke${count.index + 1}"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_blob[0].name
-  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-resource "azurerm_private_dns_zone_virtual_network_link" "storage_file_spokes" {
-  count                 = var.enable_private_dns ? var.spoke_count : 0
-  name                  = "storage-file-dns-link-spoke${count.index + 1}"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.storage_file[0].name
-  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-# Link SQL Database DNS Zone to Spoke VNets
-resource "azurerm_private_dns_zone_virtual_network_link" "sql_database_spokes" {
-  count                 = var.enable_private_dns && var.enable_sql_database ? var.spoke_count : 0
-  name                  = "sql-dns-link-spoke-${local.spoke_names[count.index]}"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.sql_database[0].name
-  virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
-  registration_enabled  = false
-  tags                  = local.common_tags
-}
-
-# Link Cosmos DB DNS Zone to Spoke VNets
-resource "azurerm_private_dns_zone_virtual_network_link" "cosmos_db_spokes" {
-  count                 = var.enable_private_dns && var.enable_cosmos_db ? var.spoke_count : 0
-  name                  = "cosmos-dns-link-spoke-${local.spoke_names[count.index]}"
-  resource_group_name   = azurerm_resource_group.hub.name
-  private_dns_zone_name = azurerm_private_dns_zone.cosmos_db[0].name
   virtual_network_id    = azurerm_virtual_network.spokes[count.index].id
   registration_enabled  = false
   tags                  = local.common_tags

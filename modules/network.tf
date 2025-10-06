@@ -268,37 +268,8 @@ resource "azurerm_route_table" "spoke_beta_vm" {
 }
 
 #================================================
-# ROUTE TABLE ASSOCIATIONS
+# ROUTE TABLE ASSOCIATIONS (REMOVED DUPLICATES)
 #================================================
 
-# Associate Route Tables with Spoke Alpha Subnets (excluding Private Endpoint subnet)
-resource "azurerm_subnet_route_table_association" "spoke_alpha_workload" {
-  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
-  subnet_id      = azurerm_subnet.spoke_alpha_workload[0].id
-  route_table_id = azurerm_route_table.spoke_alpha_workload[0].id
-}
-
-resource "azurerm_subnet_route_table_association" "spoke_alpha_vm" {
-  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
-  subnet_id      = azurerm_subnet.spoke_alpha_vm[0].id
-  route_table_id = azurerm_route_table.spoke_alpha_vm[0].id
-}
-
-resource "azurerm_subnet_route_table_association" "spoke_alpha_database" {
-  count          = var.spoke_count >= 1 && var.enable_firewall ? 1 : 0
-  subnet_id      = azurerm_subnet.spoke_alpha_database[0].id
-  route_table_id = azurerm_route_table.spoke_alpha_database[0].id
-}
-
-# Associate Route Tables with Spoke Beta Subnets (excluding Private Endpoint subnet)
-resource "azurerm_subnet_route_table_association" "spoke_beta_workload" {
-  count          = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
-  subnet_id      = azurerm_subnet.spoke_beta_workload[0].id
-  route_table_id = azurerm_route_table.spoke_beta_workload[0].id
-}
-
-resource "azurerm_subnet_route_table_association" "spoke_beta_vm" {
-  count          = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
-  subnet_id      = azurerm_subnet.spoke_beta_vm[0].id
-  route_table_id = azurerm_route_table.spoke_beta_vm[0].id
-}
+# Route table associations are handled in compute.tf to avoid duplicates
+# This section is left empty to prevent conflicts

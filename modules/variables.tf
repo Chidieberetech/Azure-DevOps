@@ -855,3 +855,621 @@ variable "budget_alert_emails" {
   type        = list(string)
   default     = []
 }
+
+#================================================
+# ADDITIONAL TAGS CONFIGURATION
+#================================================
+
+variable "additional_tags" {
+  description = "Additional tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+#================================================
+# WEB & MOBILE SERVICES CONFIGURATION
+#================================================
+
+variable "app_service_sku" {
+  description = "App Service plan SKU"
+  type        = string
+  default     = "B1"
+  validation {
+    condition = contains(["F1", "D1", "B1", "B2", "B3", "S1", "S2", "S3", "P1", "P2", "P3"], var.app_service_sku)
+    error_message = "App Service SKU must be a valid tier."
+  }
+}
+
+variable "enable_app_service_environment" {
+  description = "Enable App Service Environment"
+  type        = bool
+  default     = false
+}
+
+variable "enable_app_insights" {
+  description = "Enable Application Insights for apps"
+  type        = bool
+  default     = true
+}
+
+variable "enable_function_app" {
+  description = "Enable Azure Functions"
+  type        = bool
+  default     = false
+}
+
+variable "enable_spring_apps" {
+  description = "Enable Azure Spring Apps"
+  type        = bool
+  default     = false
+}
+
+variable "spring_apps_sku" {
+  description = "Azure Spring Apps SKU"
+  type        = string
+  default     = "B0"
+  validation {
+    condition = contains(["B0", "S0"], var.spring_apps_sku)
+    error_message = "Spring Apps SKU must be B0 or S0."
+  }
+}
+
+variable "enable_static_web_app" {
+  description = "Enable Azure Static Web Apps"
+  type        = bool
+  default     = false
+}
+
+variable "static_web_app_sku" {
+  description = "Static Web App SKU"
+  type        = string
+  default     = "Free"
+  validation {
+    condition = contains(["Free", "Standard"], var.static_web_app_sku)
+    error_message = "Static Web App SKU must be Free or Standard."
+  }
+}
+
+variable "enable_api_management" {
+  description = "Enable API Management"
+  type        = bool
+  default     = false
+}
+
+variable "api_management_publisher_name" {
+  description = "API Management publisher name"
+  type        = string
+  default     = "TRL Organization"
+}
+
+variable "api_management_publisher_email" {
+  description = "API Management publisher email"
+  type        = string
+  default     = "admin@example.com"
+}
+
+variable "api_management_sku" {
+  description = "API Management SKU"
+  type        = string
+  default     = "Developer"
+  validation {
+    condition = contains(["Developer", "Basic", "Standard", "Premium"], var.api_management_sku)
+    error_message = "API Management SKU must be Developer, Basic, Standard, or Premium."
+  }
+}
+
+variable "enable_app_configuration" {
+  description = "Enable App Configuration"
+  type        = bool
+  default     = false
+}
+
+variable "app_configuration_sku" {
+  description = "App Configuration SKU"
+  type        = string
+  default     = "free"
+  validation {
+    condition = contains(["free", "standard"], var.app_configuration_sku)
+    error_message = "App Configuration SKU must be free or standard."
+  }
+}
+
+variable "enable_logic_apps" {
+  description = "Enable Logic Apps"
+  type        = bool
+  default     = false
+}
+
+variable "enable_communication_services" {
+  description = "Enable Communication Services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_email_communication_services" {
+  description = "Enable Email Communication Services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_notification_hub" {
+  description = "Enable Notification Hubs"
+  type        = bool
+  default     = false
+}
+
+variable "enable_signalr" {
+  description = "Enable SignalR Service"
+  type        = bool
+  default     = false
+}
+
+variable "signalr_sku_name" {
+  description = "SignalR Service SKU name"
+  type        = string
+  default     = "Free_F1"
+  validation {
+    condition = contains(["Free_F1", "Standard_S1"], var.signalr_sku_name)
+    error_message = "SignalR SKU must be Free_F1 or Standard_S1."
+  }
+}
+
+variable "signalr_capacity" {
+  description = "SignalR Service capacity"
+  type        = number
+  default     = 1
+  validation {
+    condition = var.signalr_capacity >= 1 && var.signalr_capacity <= 100
+    error_message = "SignalR capacity must be between 1 and 100."
+  }
+}
+
+variable "enable_web_pubsub" {
+  description = "Enable Web PubSub Service"
+  type        = bool
+  default     = false
+}
+
+variable "web_pubsub_sku" {
+  description = "Web PubSub SKU"
+  type        = string
+  default     = "Free_F1"
+  validation {
+    condition = contains(["Free_F1", "Standard_S1"], var.web_pubsub_sku)
+    error_message = "Web PubSub SKU must be Free_F1 or Standard_S1."
+  }
+}
+
+variable "web_pubsub_capacity" {
+  description = "Web PubSub capacity"
+  type        = number
+  default     = 1
+  validation {
+    condition = var.web_pubsub_capacity >= 1 && var.web_pubsub_capacity <= 100
+    error_message = "Web PubSub capacity must be between 1 and 100."
+  }
+}
+
+variable "enable_fluid_relay" {
+  description = "Enable Azure Fluid Relay"
+  type        = bool
+  default     = false
+}
+
+variable "enable_search_service" {
+  description = "Enable Azure Cognitive Search"
+  type        = bool
+  default     = false
+}
+
+variable "search_service_sku" {
+  description = "Azure Cognitive Search SKU"
+  type        = string
+  default     = "free"
+  validation {
+    condition = contains(["free", "basic", "standard", "standard2", "standard3"], var.search_service_sku)
+    error_message = "Search service SKU must be free, basic, standard, standard2, or standard3."
+  }
+}
+
+variable "search_service_replica_count" {
+  description = "Search service replica count"
+  type        = number
+  default     = 1
+  validation {
+    condition = var.search_service_replica_count >= 1 && var.search_service_replica_count <= 12
+    error_message = "Search service replica count must be between 1 and 12."
+  }
+}
+
+variable "search_service_partition_count" {
+  description = "Search service partition count"
+  type        = number
+  default     = 1
+  validation {
+    condition = var.search_service_partition_count >= 1 && var.search_service_partition_count <= 12
+    error_message = "Search service partition count must be between 1 and 12."
+  }
+}
+
+variable "enable_media_services" {
+  description = "Enable Azure Media Services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_web_cdn" {
+  description = "Enable Azure CDN"
+  type        = bool
+  default     = false
+}
+
+variable "enable_front_door" {
+  description = "Enable Azure Front Door"
+  type        = bool
+  default     = false
+}
+
+variable "front_door_sku" {
+  description = "Azure Front Door SKU"
+  type        = string
+  default     = "Standard_AzureFrontDoor"
+  validation {
+    condition = contains(["Standard_AzureFrontDoor", "Premium_AzureFrontDoor"], var.front_door_sku)
+    error_message = "Front Door SKU must be Standard_AzureFrontDoor or Premium_AzureFrontDoor."
+  }
+}
+
+variable "enable_mobile_backend" {
+  description = "Enable mobile backend services"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# IOT SERVICES CONFIGURATION
+#================================================
+
+variable "enable_iot_hub" {
+  description = "Enable IoT Hub"
+  type        = bool
+  default     = false
+}
+
+variable "iot_hub_sku_name" {
+  description = "IoT Hub SKU name"
+  type        = string
+  default     = "F1"
+  validation {
+    condition = contains(["F1", "S1", "S2", "S3"], var.iot_hub_sku_name)
+    error_message = "IoT Hub SKU must be F1, S1, S2, or S3."
+  }
+}
+
+variable "iot_hub_capacity" {
+  description = "IoT Hub capacity"
+  type        = number
+  default     = 1
+  validation {
+    condition = var.iot_hub_capacity >= 1 && var.iot_hub_capacity <= 200
+    error_message = "IoT Hub capacity must be between 1 and 200."
+  }
+}
+
+variable "enable_iot_dps" {
+  description = "Enable IoT Device Provisioning Service"
+  type        = bool
+  default     = false
+}
+
+variable "enable_digital_twins" {
+  description = "Enable Azure Digital Twins"
+  type        = bool
+  default     = false
+}
+
+variable "enable_iot_central" {
+  description = "Enable IoT Central"
+  type        = bool
+  default     = false
+}
+
+variable "enable_maps" {
+  description = "Enable Azure Maps"
+  type        = bool
+  default     = false
+}
+
+variable "maps_sku_name" {
+  description = "Azure Maps SKU name"
+  type        = string
+  default     = "S0"
+  validation {
+    condition = contains(["S0", "S1"], var.maps_sku_name)
+    error_message = "Maps SKU must be S0 or S1."
+  }
+}
+
+#================================================
+# INTEGRATION SERVICES CONFIGURATION
+#================================================
+
+variable "enable_integration_servicebus" {
+  description = "Enable Service Bus for integration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_event_grid" {
+  description = "Enable Event Grid"
+  type        = bool
+  default     = false
+}
+
+variable "enable_integration_logic_apps" {
+  description = "Enable Logic Apps for integration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_app_gateway" {
+  description = "Enable Application Gateway"
+  type        = bool
+  default     = false
+}
+
+variable "app_gateway_sku_name" {
+  description = "Application Gateway SKU name"
+  type        = string
+  default     = "Standard_v2"
+  validation {
+    condition = contains(["Standard_v2", "WAF_v2"], var.app_gateway_sku_name)
+    error_message = "Application Gateway SKU must be Standard_v2 or WAF_v2."
+  }
+}
+
+variable "app_gateway_sku_tier" {
+  description = "Application Gateway SKU tier"
+  type        = string
+  default     = "Standard_v2"
+  validation {
+    condition = contains(["Standard_v2", "WAF_v2"], var.app_gateway_sku_tier)
+    error_message = "Application Gateway SKU tier must be Standard_v2 or WAF_v2."
+  }
+}
+
+variable "app_gateway_capacity" {
+  description = "Application Gateway capacity"
+  type        = number
+  default     = 2
+  validation {
+    condition = var.app_gateway_capacity >= 1 && var.app_gateway_capacity <= 125
+    error_message = "Application Gateway capacity must be between 1 and 125."
+  }
+}
+
+variable "enable_relay" {
+  description = "Enable Azure Relay"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MIXED REALITY CONFIGURATION
+#================================================
+
+variable "enable_spatial_anchors" {
+  description = "Enable Azure Spatial Anchors"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_storage" {
+  description = "Enable storage for mixed reality assets"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_cdn" {
+  description = "Enable CDN for mixed reality content"
+  type        = bool
+  default     = false
+}
+
+variable "enable_mixed_reality_acr" {
+  description = "Enable Container Registry for mixed reality applications"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MIGRATION SERVICES CONFIGURATION
+#================================================
+
+variable "enable_migration_storage" {
+  description = "Enable storage for migration purposes"
+  type        = bool
+  default     = false
+}
+
+variable "enable_database_migration_service" {
+  description = "Enable Azure Database Migration Service"
+  type        = bool
+  default     = false
+}
+
+variable "enable_site_recovery_migration" {
+  description = "Enable Azure Site Recovery for migration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_migration_backup" {
+  description = "Enable backup services for migration"
+  type        = bool
+  default     = false
+}
+
+variable "enable_app_migration" {
+  description = "Enable app migration services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_import_export" {
+  description = "Enable Azure Import/Export service"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# MANAGEMENT & GOVERNANCE CONFIGURATION
+#================================================
+
+variable "enable_policy" {
+  description = "Enable Azure Policy"
+  type        = bool
+  default     = true
+}
+
+variable "enable_management_group" {
+  description = "Enable Management Groups"
+  type        = bool
+  default     = false
+}
+
+variable "enable_cost_management" {
+  description = "Enable Cost Management and Billing"
+  type        = bool
+  default     = true
+}
+
+variable "enable_governance_alerts" {
+  description = "Enable governance-related alerts"
+  type        = bool
+  default     = true
+}
+
+variable "governance_alert_email" {
+  description = "Email address for governance alerts"
+  type        = string
+  default     = ""
+}
+
+variable "enable_governance_monitoring" {
+  description = "Enable governance monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "enable_custom_governance_roles" {
+  description = "Enable custom governance roles"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# IDENTITY SERVICES CONFIGURATION
+#================================================
+
+variable "enable_aad_ds" {
+  description = "Enable Azure Active Directory Domain Services"
+  type        = bool
+  default     = false
+}
+
+variable "aad_ds_domain_name" {
+  description = "Domain name for Azure AD Domain Services"
+  type        = string
+  default     = "trl.local"
+  validation {
+    condition = can(regex("^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\\.[a-zA-Z]{2,}$", var.aad_ds_domain_name))
+    error_message = "Domain name must be a valid FQDN format."
+  }
+}
+
+variable "enable_managed_identity" {
+  description = "Enable User Assigned Managed Identity"
+  type        = bool
+  default     = true
+}
+
+variable "enable_aad_b2c" {
+  description = "Enable Azure Active Directory B2C"
+  type        = bool
+  default     = false
+}
+
+variable "aad_b2c_country_code" {
+  description = "Country code for Azure AD B2C tenant"
+  type        = string
+  default     = "US"
+  validation {
+    condition = contains(["US", "EU", "GB", "CA", "AU"], var.aad_b2c_country_code)
+    error_message = "B2C country code must be US, EU, GB, CA, or AU."
+  }
+}
+
+variable "enable_identity_keyvault" {
+  description = "Enable dedicated Key Vault for identity services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_custom_roles" {
+  description = "Enable custom RBAC roles"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# AI & MACHINE LEARNING CONFIGURATION
+#================================================
+
+variable "enable_cognitive_services" {
+  description = "Enable Azure Cognitive Services"
+  type        = bool
+  default     = false
+}
+
+variable "cognitive_services_sku" {
+  description = "Cognitive Services SKU"
+  type        = string
+  default     = "S0"
+  validation {
+    condition = contains(["F0", "S0", "S1", "S2", "S3", "S4"], var.cognitive_services_sku)
+    error_message = "Cognitive Services SKU must be F0, S0, S1, S2, S3, or S4."
+  }
+}
+
+variable "enable_machine_learning" {
+  description = "Enable Azure Machine Learning"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# DEVOPS CONFIGURATION
+#================================================
+
+variable "enable_devops" {
+  description = "Enable DevOps services and tools"
+  type        = bool
+  default     = false
+}
+
+#================================================
+# GENERAL SERVICES CONFIGURATION
+#================================================
+
+variable "enable_automation" {
+  description = "Enable Azure Automation"
+  type        = bool
+  default     = false
+}
+
+variable "enable_service_bus" {
+  description = "Enable Azure Service Bus"
+  type        = bool
+  default     = false
+}

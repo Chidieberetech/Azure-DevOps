@@ -58,13 +58,14 @@ resource "azurerm_key_vault" "devops" {
 # Application Configuration for feature flags
 resource "azurerm_app_configuration" "devops" {
   count               = var.enable_devops ? 1 : 0
-  name                = "appcs-${local.resource_prefix}-${format("%03d", 1)}"
-  resource_group_name = azurerm_resource_group.spokes[0].name
-  location            = azurerm_resource_group.spokes[0].location
-  sku                 = "standard"
+  name                = "appcs-devops-${local.resource_prefix}-${format("%03d", 1)}"
+  resource_group_name = azurerm_resource_group.management.name
+  location            = azurerm_resource_group.management.location
+  sku                 = "free"
 
-  # Security settings
-  public_network_access_enabled = false
+  identity {
+    type = "SystemAssigned"
+  }
 
   tags = local.common_tags
 }

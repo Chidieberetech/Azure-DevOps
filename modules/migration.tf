@@ -27,13 +27,13 @@ resource "azurerm_storage_account" "migration" {
   tags = local.common_tags
 }
 
-# Database Migration Service
-resource "azurerm_database_migration_service" "main" {
+# Database Migration Service for migration (renamed to avoid conflict)
+resource "azurerm_database_migration_service" "migration" {
   count               = var.enable_database_migration_service ? 1 : 0
-  name                = "dms-${local.resource_prefix}-${format("%03d", 1)}"
+  name                = "dms-migration-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
   location            = azurerm_resource_group.management.location
   resource_group_name = azurerm_resource_group.management.name
-  subnet_id           = azurerm_subnet.shared_services.id
+  subnet_id           = azurerm_subnet.spoke_alpha_workload[0].id
   sku_name            = "Standard_1vCores"
 
   tags = local.common_tags

@@ -27,9 +27,10 @@ resource "azurerm_container_registry" "main" {
     content {
       default_action = "Deny"
 
+      # Fixed: Use proper ip_rule syntax instead of network_rule
       ip_rule {
         action   = "Allow"
-        ip_range = "10.0.0.0/8"  # Allow internal network traffic
+        ip_range = azurerm_subnet.spoke_alpha_private_endpoint[0].address_prefixes[0]
       }
     }
   }
@@ -257,7 +258,7 @@ resource "azurerm_private_endpoint" "container_registry" {
 # Role assignments for AKS to pull from ACR
 resource "azurerm_role_assignment" "aks_acr_pull" {
   count                = var.enable_containers && var.enable_aks && var.enable_container_registry ? 1 : 0
-  principal_id         = azurerm_kubernetes_cluster.main[0].kubelet_identity[0].object_id
+  principal_id         = azurerm_kubernetes_cluster.main[0].kubelet_identity[0].user_assigned_identity_id
   role_definition_name = "AcrPull"
   scope                = azurerm_container_registry.main[0].id
 }

@@ -2,10 +2,10 @@
 # ANALYTICS RESOURCES
 #================================================
 
-# Log Analytics Workspace - Central logging and monitoring
-resource "azurerm_log_analytics_workspace" "main" {
+# Log Analytics Workspace for Analytics (renamed to avoid conflict with main.tf)
+resource "azurerm_log_analytics_workspace" "analytics" {
   count               = var.enable_analytics ? 1 : 0
-  name                = "law-trl-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
+  name                = "law-analytics-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
   location            = azurerm_resource_group.management.location
   resource_group_name = azurerm_resource_group.management.name
   sku                 = var.log_analytics_sku
@@ -14,13 +14,13 @@ resource "azurerm_log_analytics_workspace" "main" {
   tags = local.common_tags
 }
 
-# Application Insights for application performance monitoring
-resource "azurerm_application_insights" "main" {
+# Application Insights for analytics (renamed to avoid conflict)
+resource "azurerm_application_insights" "analytics" {
   count               = var.enable_analytics && var.enable_application_insights ? 1 : 0
-  name                = "ai-trl-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
+  name                = "ai-analytics-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
   location            = azurerm_resource_group.management.location
   resource_group_name = azurerm_resource_group.management.name
-  workspace_id        = azurerm_log_analytics_workspace.main[0].id
+  workspace_id        = azurerm_log_analytics_workspace.analytics[0].id
   application_type    = var.application_insights_type
 
   tags = local.common_tags

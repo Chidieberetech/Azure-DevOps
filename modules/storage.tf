@@ -1,4 +1,45 @@
 #================================================
+# STORAGE SERVICES
+#================================================
+
+# Premium Storage Account for high-performance workloads
+resource "azurerm_storage_account" "premium" {
+  count                    = var.enable_premium_storage ? 1 : 0
+  name                     = "stprem${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.management.name
+  location                 = azurerm_resource_group.management.location
+  account_tier             = "Premium"
+  account_replication_type = "LRS"
+  account_kind             = "BlockBlobStorage"
+
+  # Security settings
+  allow_nested_items_to_be_public = false
+  public_network_access_enabled   = false
+  min_tls_version                 = "TLS1_2"
+
+  tags = local.common_tags
+}
+
+# Data Lake Storage Gen2 Account
+resource "azurerm_storage_account" "datalake" {
+  count                    = var.enable_data_lake_storage ? 1 : 0
+  name                     = "stdl${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
+  resource_group_name      = azurerm_resource_group.management.name
+  location                 = azurerm_resource_group.management.location
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
+  account_kind             = "StorageV2"
+  is_hns_enabled          = true  # Hierarchical namespace for Data Lake
+
+  # Security settings
+  allow_nested_items_to_be_public = false
+  public_network_access_enabled   = false
+  min_tls_version                 = "TLS1_2"
+
+  tags = local.common_tags
+}
+
+#================================================
 # STORAGE ACCOUNTS
 #================================================
 

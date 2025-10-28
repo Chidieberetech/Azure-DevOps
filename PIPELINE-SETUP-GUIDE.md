@@ -31,6 +31,7 @@ This project uses three dedicated Azure subscriptions following TRL naming conve
 ### Step 1: Verify Subscription Access
 
 1. **Login to Azure Portal**: https://portal.azure.com
+
 2. **Verify Subscription Access**:
    ```bash
    # Login to Azure CLI
@@ -148,10 +149,12 @@ az ad sp create-for-rbac \
 1. **Navigate to Service Connections**:
    - Go to **Project Settings** > **Service connections**
    - Click **Create service connection**
+   
 
    ![Service Connections](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/media/service-connections/new-service-connection.png)
 
-2. **Create Development Service Connection**:
+
+1. **Create Development Service Connection**:
    - **Connection type**: `Azure Resource Manager`
    - **Authentication method**: `Service principal (manual)`
    - **Scope level**: `Subscription`
@@ -166,12 +169,12 @@ az ad sp create-for-rbac \
    - **Security**: Grant access permission to all pipelines
    - Click **Verify and save**
 
-3. **Create Integration Service Connection**:
+2. **Create Integration Service Connection**:
    - Repeat above steps with integration subscription details
    - **Service connection name**: `trl-hubspoke-int-connection`
    - Use integration service principal credentials
 
-4. **Create Production Service Connection**:
+3. **Create Production Service Connection**:
    - Repeat above steps with production subscription details
    - **Service connection name**: `trl-hubspoke-prod-connection`
    - Use production service principal credentials

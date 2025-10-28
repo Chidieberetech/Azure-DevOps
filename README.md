@@ -404,11 +404,23 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 - **Private Endpoints**: All Azure PaaS services accessed privately
 
 ### Security Features
-- No public IPs on VMs
-- All traffic routed through Azure Firewall
+- No public IPs on VMs - All management traffic via Azure Bastion 
+- All traffic routed through Azure Firewall for inspection and control
+- Private DNS zones for name resolution of private endpoints
+- Managed identities for secure access to Key Vault secrets
+- Logging and monitoring via Azure Monitor and Log Analytics
 - Private endpoints for all Azure services
+- secure VNet peering between hub and spokes
+- Strictly defined subnetting for workload segregation
+- Role-Based Access Control (RBAC) for resource access management
+- Use of Terraform for infrastructure as code and state management
+- least privilege principles applied throughout
+- Automated deployment pipelines for consistent provisioning
+- Audit logging enabled for all critical resources (0 = critical resources, 1= Normal resources, 2= low importance resources)
+- Multi-region redundancy for critical services (where applicable)
 - Azure Bastion for secure remote access
 - Key Vault integration for all credentials
+- scalable architecture to accommodate future growth
 - **NO Network Security Groups (NSGs)** - All traffic managed by Azure Firewall
 
 ## Step-by-Step Solution Architecture

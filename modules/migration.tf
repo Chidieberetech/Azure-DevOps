@@ -88,8 +88,8 @@ resource "azurerm_backup_policy_vm" "migration" {
   }
 }
 
-# App Service Migration staging environment
-resource "azurerm_service_plan" "migration_staging" {
+# App Service Migration temporary environment
+resource "azurerm_service_plan" "migration_temp" {
   count               = var.enable_app_migration ? 1 : 0
   name                = "asp-${local.resource_prefix}-migr-${format("%03d", 1)}"
   location            = azurerm_resource_group.spokes[0].location

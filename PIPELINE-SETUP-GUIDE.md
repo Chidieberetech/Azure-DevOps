@@ -1313,13 +1313,13 @@ az account set --subscription "Sub-TRL-dev-weu"
 DEV_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-dev-kv')].name" -o tsv | head -1)
 
 az account set --subscription "Sub-TRL-int-weu"
-STAGING_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-staging-kv')].name" -o tsv | head -1)
+INT_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-int-kv')].name" -o tsv | head -1)
 
 az account set --subscription "Sub-TRL-prod-weu"
 PROD_KV=$(az keyvault list --query "[?starts_with(name, 'trl-hubspoke-prod-kv')].name" -o tsv | head -1)
 
 echo "Development Key Vault: $DEV_KV"
-echo "Staging Key Vault: $STAGING_KV"
+echo "Integration Key Vault: $INT_KV"
 echo "Production Key Vault: $PROD_KV"
 ```
 
@@ -1784,8 +1784,7 @@ This section provides precise, click-by-click instructions for Azure CLI setup a
    {
      "azure-cli": "2.53.0",
      "azure-cli-core": "2.53.0",
-     "azure-cli-telemetry": "1.1.0",
-     ...
+     "azure-cli-telemetry": "1.1.0"
    }
    ```
 
@@ -2148,15 +2147,15 @@ az role assignment create \
 
 **Step 3: Repeat for Staging and Production**
 
-**Staging Key Vault**:
+**Integration Key Vault**:
 ```bash
 az account set --subscription "Sub-TRL-int-weu"
-STAGING_KV_NAME="trl-hubspoke-staging-kv-$(date +%Y%m%d)"
+INT_KV_NAME="trl-hubspoke-int-kv-$(date +%Y%m%d)"
 
-az group create --name "trl-hubspoke-staging-secrets-rg" --location "West Europe"
+az group create --name "trl-hubspoke-int-secrets-rg" --location "West Europe"
 az keyvault create \
-  --name "$STAGING_KV_NAME" \
-  --resource-group "trl-hubspoke-staging-secrets-rg" \
+  --name "$INT_KV_NAME" \
+  --resource-group "trl-hubspoke-int-secrets-rg" \
   --location "West Europe" \
   --enable-rbac-authorization true
 ```
@@ -2239,7 +2238,7 @@ az keyvault secret show --vault-name "$DEV_KV_NAME" --name "subscription-id" --q
 
 **Step 3: Repeat for Staging and Production**
 
-Copy the same process for staging and production environments, using their respective Key Vault names and subscription contexts.
+Copy the same process for integration and production environments, using their respective Key Vault names and subscription contexts.
 
 ## 7. Azure DevOps Variable Groups - Click by Click
 
@@ -2459,7 +2458,7 @@ Copy the same process for staging and production environments, using their respe
      - **Instructions for approvers**: 
        ```
        Production deployment requires careful review:
-       1. Verify staging environment is working
+       1. Verify integration environment is working
        2. Check security scan results
        3. Review infrastructure changes
        4. Confirm maintenance window

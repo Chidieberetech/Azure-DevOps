@@ -1483,7 +1483,7 @@ variable "enable_migration_backup" {
 }
 
 variable "enable_app_migration" {
-  description = "Enable app migration staging"
+  description = "Enable app migration temporary environment"
   type        = bool
   default     = false
 }

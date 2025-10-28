@@ -15,9 +15,9 @@ resource "random_string" "suffix" {
 locals {
   # Environment abbreviations
   env_abbr = {
-    dev     = "dev"
-    staging = "stg"
-    prod    = "prd"
+    dev = "dev"
+    int = "int"
+    prod = "prd"
   }
 
   # Location abbreviations

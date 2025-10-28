@@ -129,7 +129,7 @@ All resources follow the standardized naming pattern:
 
 ### Environment Abbreviations
 - **PRD**: Production
-- **STG**: Staging  
+- **INT**: Integration
 - **DEV**: Development
 
 ### Location Abbreviations
@@ -665,7 +665,7 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 
 ### Environment Progression
 1. **Development**: Single workspace deployment
-2. **Staging**: Multi-workspace with production-like setup
+2. **Integration**: Multi-workspace with production-like setup
 3. **Production**: Full multi-workspace with governance
 
 ## Monitoring and Observability

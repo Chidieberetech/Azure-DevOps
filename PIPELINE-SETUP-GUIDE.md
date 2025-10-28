@@ -115,6 +115,16 @@ az group create --name "trl-hubspoke-prod-tfstate-rg" --location "West Europe"
    - **Repositories**: Set default branch to `main`
    - **Boards**: Configure work item types if needed
 
+## Service Connections Configuration
+
+### Step 1: Create Service Principals
+
+Create a dedicated service principal for each environment:
+
+```bash
+# Development Environment Service Principal
+az account set --subscription "Sub-TRL-dev-weu"
+az ad sp create-for-rbac \
   --name "sp-trl-hubspoke-dev" \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
@@ -128,7 +138,7 @@ az ad sp create-for-rbac \
 
 # Production Environment Service Principal
 az account set --subscription "Sub-TRL-prod-weu"
-   - **Grant access permission to all pipelines**: ✓ (checked)
+az ad sp create-for-rbac \
   --name "sp-trl-hubspoke-prod" \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
@@ -219,7 +229,6 @@ az role assignment create --assignee $PROD_SP_ID --role "Key Vault Administrator
    - **Pool type**: `Self-hosted`
    - **Name**: `trl-hubspoke-prod-pool`
    - **Description**: `Self-hosted agents for production environment`
-   - **Grant access permission to all pipelines**: :)
    - **Grant access permission to all pipelines**: ✓ (checked)
 
 ### Step 2: Configure Microsoft-Hosted Agents (Alternative)

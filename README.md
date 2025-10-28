@@ -449,6 +449,13 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 1. Create storage account for Terraform state
 2. Configure backend configuration
 3. Set up state locking with blob lease
+4. Initialize Terraform in local environment
+5. Validate backend connectivity
+6. Create initial Terraform plan
+7. Apply initial Terraform configuration
+8. Verify state file in storage account
+9. Set up access policies for service principal
+10. Document Terraform state management process
 ```
 
 ### Phase 2: Network Infrastructure
@@ -481,6 +488,10 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 2. Hub to Spoke 2 peering
 3. Configure gateway transit
 4. Allow forwarded traffic
+5. Verify peering connections
+6. Test connectivity between VNets
+7. Document peering configuration
+8. Monitor peering status
 ```
 
 ### Phase 3: Security Infrastructure
@@ -492,7 +503,10 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 3. Configure firewall policy
 4. Set up application rules
 5. Set up network rules
-6. Configure NAT rules for management
+6. Configure NAT rules for management (DNAT & SNAT)
+7. Enable logging to workspace
+8. Test firewall rules with sample traffic
+9. Document firewall configuration
 ```
 
 #### Step 7: Route Tables Configuration

@@ -214,22 +214,22 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 ### Core Infrastructure
 
 | Resource Type           | Abbreviation | Max Length | Allowed Characters                                    | Example                           |
-|-------------------------|--------------|------------|-------------------------------------------------------|-----------------------------------|
-| Resource Group          | `rg`         | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `rg-trl-PRD-alpha-001`            |
-| Virtual Network         | `vnet`       | 64         | Alphanumeric, underscore, hyphen, period              | `vnet-PRD-WEU-hub-001`            |
-| Subnet                  | `snet`       | 80         | Alphanumeric, underscore, hyphen, period              | `snet-PRD-WEU-alpha-vm-001`       |
-| Network Interface       | `nic`        | 80         | Alphanumeric, underscore, hyphen, period              | `nic-PRD-WEU-alpha-vm-001`        |
-| Public IP               | `pip`        | 80         | Alphanumeric, underscore, hyphen, period              | `pip-PRD-WEU-afw-001`             |
-| Load Balancer           | `lb`         | 80         | Alphanumeric, underscore, hyphen, period              | `lb-PRD-WEU-web-001`              |
-| Application Gateway     | `agw`        | 80         | Alphanumeric, underscore, hyphen, period              | `agw-PRD-WEU-web-001`             |
-| Traffic Manager         | `tm`         | 63         | Alphanumeric, hyphen                                  | `tm-PRD-WEU-001`                  |
-| Front Door              | `fd`         | 64         | Alphanumeric, hyphen                                  | `fd-PRD-WEU-001`                  |
-| CDN Profile             | `cdnp`       | 260        | Alphanumeric, hyphen                                  | `cdnp-PRD-WEU-001`                |
-| CDN Endpoint            | `cdne`       | 50         | Alphanumeric, hyphen                                  | `cdne-PRD-WEU-001`                |
-| Express Route           | `er`         | 80         | Alphanumeric, underscore, hyphen, period              | `er-PRD-WEU-001`                  |
-| VPN Gateway             | `vpng`       | 80         | Alphanumeric, underscore, hyphen, period              | `vpng-PRD-WEU-001`                |
-| Local Network Gateway   | `lgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `lgw-PRD-WEU-001`                 |
-| Virtual Network Gateway | `vgw`        | 80         | Alphanumeric, underscore, hyphen, period              | `vgw-PRD-WEU-001`                 |
+|-------------------------|-------------|------------|-------------------------------------------------------|-----------------------------------|
+| Resource Group          | `rg`        | 90         | Alphanumeric, underscore, parentheses, hyphen, period | `rg-trl-PRD-alpha-001`            |
+| Virtual Network         | `vnet`      | 64         | Alphanumeric, underscore, hyphen, period              | `vnet-PRD-WEU-hub-001`            |
+| Subnet                  | `snet`      | 80         | Alphanumeric, underscore, hyphen, period              | `snet-PRD-WEU-alpha-vm-001`       |
+| Network Interface       | `nic`       | 80         | Alphanumeric, underscore, hyphen, period              | `nic-PRD-WEU-alpha-vm-001`        |
+| Public IP               | `pip`       | 80         | Alphanumeric, underscore, hyphen, period              | `pip-PRD-WEU-afw-001`             |
+| Load Balancer           | `lb`        | 80         | Alphanumeric, underscore, hyphen, period              | `lb-PRD-WEU-web-001`              |
+| Application Gateway     | `agw`       | 80         | Alphanumeric, underscore, hyphen, period              | `agw-PRD-WEU-web-001`             |
+| Traffic Manager         | `tm`        | 63         | Alphanumeric, hyphen                                  | `tm-PRD-WEU-001`                  |
+| Front Door              | `fd`        | 64         | Alphanumeric, hyphen                                  | `fd-PRD-WEU-001`                  |
+| CDN Profile             | `cdnp`      | 260        | Alphanumeric, hyphen                                  | `cdnp-PRD-WEU-001`                |
+| CDN Endpoint            | `cdne`      | 50         | Alphanumeric, hyphen                                  | `cdne-PRD-WEU-001`                |
+| Express Route           | `er`        | 80         | Alphanumeric, underscore, hyphen, period              | `er-PRD-WEU-001`                  |
+| VPN Gateway             | `vpng`      | 80         | Alphanumeric, underscore, hyphen, period              | `vpng-PRD-WEU-001`                |
+| Local Network Gateway   | `lgw`       | 80         | Alphanumeric, underscore, hyphen, period              | `lgw-PRD-WEU-001`                 |
+| Virtual Network Gateway | `vgw`       | 80         | Alphanumeric, underscore, hyphen, period              | `vgw-PRD-WEU-001`                 |
 
 ### Security & Identity
 

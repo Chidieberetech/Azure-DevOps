@@ -515,6 +515,9 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 2. Add default route (0.0.0.0/0) to Azure Firewall
 3. Associate route tables with spoke subnets
 4. Configure hub subnet routing
+5. Verify route propagation
+6. Test traffic flow through firewall
+7. Document route table configurations
 ```
 
 #### Step 8: Network Security Groups (But this implementation - NSGs are not used)

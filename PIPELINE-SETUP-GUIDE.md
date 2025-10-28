@@ -15,6 +15,8 @@ This guide provides step-by-step instructions for implementing Azure DevOps pipe
 8. [Build Agents Configuration](#build-agents-configuration)
 9. [Parallel Jobs Setup](#parallel-jobs-setup)
 10. [Testing and Validation](#testing-and-validation)
+11. [Additional Scripts and Automation](#additional-scripts-and-automation)
+12. [Implementation Checklist](#implementation-checklist)
 
 ## Azure Subscriptions Setup
 
@@ -84,7 +86,7 @@ az group create --name "trl-hubspoke-prod-tfstate-rg" --location "West Europe"
    - Region: `West Europe` (to match Azure region)
    - Click **Continue**
 
-   ![Create Organization](https://docs.microsoft.com/en-us/azure/devops/organizations/accounts/media/create-organization/create-organization.png)
+   ![Create Organization](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/media/create-organization/create-organization.png)
 
 ### Step 2: Create Azure DevOps Project
 
@@ -95,7 +97,7 @@ az group create --name "trl-hubspoke-prod-tfstate-rg" --location "West Europe"
    - Version control: `Git`
    - Work item process: `Agile`
 
-   ![Create Project](https://docs.microsoft.com/en-us/azure/devops/organizations/projects/media/create-project/create-new-project.png)
+   ![Create Project](https://learn.microsoft.com/en-us/azure/devops/organizations/projects/media/create-project/create-new-project.png)
 
 2. **Initialize Repository**:
    - Navigate to **Repos** > **Files**
@@ -113,16 +115,6 @@ az group create --name "trl-hubspoke-prod-tfstate-rg" --location "West Europe"
    - **Repositories**: Set default branch to `main`
    - **Boards**: Configure work item types if needed
 
-## Service Connections Configuration
-
-### Step 1: Create Service Principals for Each Subscription
-
-Create dedicated service principals for each environment:
-
-```bash
-# Development Environment Service Principal
-az account set --subscription "Sub-TRL-dev-weu"
-az ad sp create-for-rbac \
   --name "sp-trl-hubspoke-dev" \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
@@ -136,7 +128,7 @@ az ad sp create-for-rbac \
 
 # Production Environment Service Principal
 az account set --subscription "Sub-TRL-prod-weu"
-az ad sp create-for-rbac \
+   - **Grant access permission to all pipelines**: ✓ (checked)
   --name "sp-trl-hubspoke-prod" \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
@@ -147,11 +139,10 @@ az ad sp create-for-rbac \
 ### Step 2: Create Service Connections in Azure DevOps
 
 1. **Navigate to Service Connections**:
-   - Go to **Project Settings** > **Service connections**
    - Click **Create service connection**
-   
+   > **Reference**: [Azure DevOps Service Connections Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/library/service-endpoints)
 
-   ![Service Connections](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/media/service-connections/new-service-connection.png)
+   ![Service Connections](https://learn.microsoft.com/en-us/azure/devops/pipelines/library/media/service-connections/new-service-connection.png)
 
 
 1. **Create Development Service Connection**:
@@ -208,20 +199,20 @@ az role assignment create --assignee $PROD_SP_ID --role "Key Vault Administrator
    - Go to **Project Settings** > **Agent pools**
    - Click **Add pool**
 
-   ![Agent Pools](https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/media/pools-queues/add-agent-pool.png)
+   ![Agent Pools](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/media/pools-queues/add-agent-pool.png)
 
 2. **Create Development Agent Pool**:
    - **Pool type**: `Self-hosted`
    - **Name**: `trl-hubspoke-dev-pool`
-   - **Description**: `Self-hosted agents for development environment`
-   - **Grant access permission to all pipelines**: :)
+   - **Grant access permission to all pipelines**: ✓ (checked)
    - Click **Create**
+   ![Environment Approvals](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/media/environments/approvals-and-checks.png)
 
 3. **Create Integration Agent Pool**:
    - **Pool type**: `Self-hosted`
    - **Name**: `trl-hubspoke-int-pool` 
    - **Description**: `Self-hosted agents for integration environment`
-   - **Grant access permission to all pipelines**: :)
+   - **Grant access permission to all pipelines**: ✓ (checked)
    - Click **Create**
 
 4. **Create Production Agent Pool**:
@@ -229,7 +220,7 @@ az role assignment create --assignee $PROD_SP_ID --role "Key Vault Administrator
    - **Name**: `trl-hubspoke-prod-pool`
    - **Description**: `Self-hosted agents for production environment`
    - **Grant access permission to all pipelines**: :)
-   - Click **Create**
+   - **Grant access permission to all pipelines**: ✓ (checked)
 
 ### Step 2: Configure Microsoft-Hosted Agents (Alternative)
 
@@ -252,10 +243,10 @@ If using Microsoft-hosted agents instead:
    - Go to **Pipelines** > **Environments**
    - Click **New environment**
 
-   ![Environments](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/media/environments/new-environment.png)
+   ![Environments](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/media/environments/new-environment.png)
 
 2. **Create Development Environment**:
-   - **Name**: `trl-hubspoke-dev`
+   > **Reference**: [Azure DevOps Environments Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/environments)
    - **Description**: `Development environment for TRL Hub and Spoke infrastructure`
    - **Resource**: `None` (virtual environment)
    - Click **Create**
@@ -286,19 +277,18 @@ If using Microsoft-hosted agents instead:
 
 #### Production Environment:
 1. **Configure Approvals**:
-   - Click on **Production environment** > **Approvals and checks**
+   ![Variable Groups](https://learn.microsoft.com/en-us/azure/devops/pipelines/library/media/variable-groups/add-variable-group.png)
    - Add **Approvals**:
      - **Approvers**: Add infrastructure team members
      - **Minimum number of approvers**: 2
-     - **Requester can approve**: :( (disabled)
-     - **Timeout**: 30 days
+     - **Requester can approve**: ✗ (disabled)
 
    ![Environment Approvals](https://docs.microsoft.com/en-us/azure/devops/pipelines/process/media/environments/approvals-and-checks.png)
 
 2. **Configure Branch Control**:
    - Add **Branch control**:
      - **Allowed branches**: `main` branch only
-     - Click **Save**
+   > **Reference**: [Approvals and Checks Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/approvals)
 
 3. **Configure Business Hours** (optional):
    - Add **Business hours**:
@@ -362,17 +352,16 @@ az keyvault secret set --vault-name "trl-hubspoke-prod-kv-secrets" --name "tenan
 
 1. **Navigate to Library**:
    - Go to **Pipelines** > **Library**
-   - Click **+ Variable group**
+   ![Download Agent](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/media/v2-linux/download-agent.png)
 
    ![Variable Groups](https://docs.microsoft.com/en-us/azure/devops/pipelines/library/media/variable-groups/add-variable-group.png)
 
 2. **Create Development Variable Group**:
    - **Variable group name**: `trl-hubspoke-dev-variables`
    - **Description**: `Variables for development environment`
-   - **Link secrets from an Azure key vault**: :) (enabled)
-   - **Azure subscription**: Select `trl-hubspoke-dev-connection`
-   - **Key vault name**: `trl-hubspoke-dev-kv-secrets`
-   - **Authorize**: Click to authorize access
+   - **Link secrets from an Azure key vault**: ✓ (enabled)
+   
+   > **Reference**: [Variable Groups Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/library/variable-groups)
    - **Add secrets**:
      - `subscription-id`
      - `tenant-id`
@@ -451,7 +440,7 @@ az vm create \
    mkdir myagent && cd myagent
    wget https://vstsagentpackage.azureedge.net/agent/3.232.0/vsts-agent-linux-x64-3.232.0.tar.gz
    tar zxvf vsts-agent-linux-x64-3.232.0.tar.gz
-   
+   > **Reference**: [Azure Pipelines Agents Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/agents/agents)
    # Configure agent
    ./config.sh
    ```
@@ -719,7 +708,7 @@ trigger: none  # Manual only
    - **Agent specifications**: 2 vCPUs, 7GB RAM, 14GB SSD
 
 ### Self-Hosted Agents Setup (Advanced)
-
+   ![Parallel Jobs](https://learn.microsoft.com/en-us/azure/devops/pipelines/licensing/media/concurrent-jobs/concurrent-jobs.png)
 #### Step 1: Agent VM Specifications
 
 **Recommended VM sizes per environment**:
@@ -810,7 +799,7 @@ sudo ./svc.sh start
 
 ### Step 2: Configure Pipeline Parallelism
 
-#### Strategy 1: Environment-Based Parallelism
+   > **Reference**: [Concurrent Jobs Documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/licensing/concurrent-jobs)
 
 ```yaml
 jobs:
@@ -1044,6 +1033,78 @@ az keyvault show --name vault-name --resource-group rg-name
 ```bash
 # Force unlock if needed (use carefully)
 terraform force-unlock lock-id
+```
+
+## Additional Scripts and Automation
+
+### Infrastructure Management Scripts
+
+The project includes several automation scripts for ongoing maintenance:
+
+#### **1. VM Password Rotation Script** (`scripts/vm-password-rotation.sh`)
+- **Purpose**: Automated quarterly password rotation for all VMs
+- **Features**: Multi-environment support, Key Vault integration, safety checks
+- **Usage**: `./vm-password-rotation.sh -e prod -f`
+
+#### **2. Health Check Script** (`scripts/health-check.sh`)
+- **Purpose**: Comprehensive infrastructure health monitoring
+- **Features**: VM health validation, network connectivity testing, security validation
+- **Usage**: `./health-check.sh -e all`
+
+#### **3. Cost Analysis Script** (`scripts/cost-analysis.sh`)
+- **Purpose**: Analyzes Azure costs and provides optimization recommendations
+- **Features**: Multi-subscription analysis, free tier monitoring, cost reporting
+- **Usage**: `./cost-analysis.sh -d 30 -f table`
+
+#### **4. Backup Management Script** (`scripts/backup-management.sh`)
+- **Purpose**: Manages backups and validates backup integrity
+- **Features**: VM backup automation, database backup validation, compliance reporting
+- **Usage**: `./backup-management.sh -a validate -e all`
+
+#### **5. Environment Cleanup Script** (`scripts/environment-cleanup.sh`)
+- **Purpose**: Cleans up temporary resources and optimizes environments
+- **Features**: Storage cleanup, snapshot management, unused resource detection
+- **Usage**: `./environment-cleanup.sh -e dev -t all -d` (dry run)
+
+### Pipeline Templates
+
+The templates directory includes reusable pipeline templates:
+
+1. **terraform-init.yml**: Backend setup and workspace initialization
+2. **terraform-plan.yml**: Plan creation with detailed analysis
+3. **terraform-apply.yml**: Safe deployment with validation
+4. **terraform-destroy.yml**: Controlled resource destruction
+5. **security-scan.yml**: Triple security scanning (tfsec, checkov, terrascan)
+6. **infrastructure-validation.yml**: Post-deployment infrastructure validation
+
+### Automated Scheduling
+
+Configure automated pipelines for routine maintenance:
+
+```yaml
+# Weekly health checks
+schedules:
+- cron: "0 6 * * 1"  # Monday 6 AM
+  displayName: Weekly health check
+  branches:
+    include:
+    - main
+
+# Monthly cost analysis
+schedules:
+- cron: "0 9 1 * *"  # First day of month 9 AM
+  displayName: Monthly cost analysis
+  branches:
+    include:
+    - main
+
+# Quarterly password rotation
+schedules:
+- cron: "0 2 1 */3 *"  # First day of quarter 2 AM
+  displayName: Quarterly password rotation
+  branches:
+    include:
+    - main
 ```
 
 ## Implementation Checklist
@@ -1937,9 +1998,11 @@ az account show --query "name" --output tsv
 
 ### 3. Service Principal Creation - Step by Step
 
-### Create Service Principals for Each Subscription
+## Service Connections Configuration
 
-**Step 1: Create Development Environment Service Principal**
+### Step 1: Create Service Principals for Each Subscription
+
+**Step 1a: Create Development Environment Service Principal**
 
 1. **Set Development Subscription Context**:
    ```bash
@@ -2536,3 +2599,10 @@ Copy the same process for integration and production environments, using their r
 ```
 
 This comprehensive implementation guide provides exact, click-by-click instructions for setting up the complete TRL Hub and Spoke infrastructure with Azure DevOps automation across your three Azure subscriptions.
+
+---
+
+**Last Updated**: October 2025  
+**Version**: 1.0  
+**Maintainer**: TRL Infrastructure Team
+

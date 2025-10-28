@@ -11,7 +11,7 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 
 - **Organization**: `trl`
 - **Project**: `Azure.IAC.hubspoke` 
-- **Environment**: `dev`, `staging`, `prod`
+- **Environment**: `dev`, `int`, `prod`
 - **Resource Type**: See abbreviations table below
 - **Suffix**: Optional descriptive suffix (e.g., `main`, `01`, `web`)
 

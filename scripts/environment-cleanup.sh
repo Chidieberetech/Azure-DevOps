@@ -15,7 +15,7 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -e, --environment ENV   Environment to clean (dev/staging/prod/all)"
+    echo "  -e, --environment ENV   Environment to clean (dev/int/prod/all)"
     echo "  -t, --type TYPE         Cleanup type (storage/snapshots/logs/unused/all)"
     echo "  -d, --dry-run          Show what would be cleaned without executing"
     echo "  -f, --force            Force cleanup without confirmation"
@@ -249,7 +249,7 @@ CLEANUP OPERATIONS
 EOF
 
 # Execute cleanup for specified environments
-for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
     IFS=':' read -r subscription env_name <<< "$env_config"
 
     if [[ "$ENVIRONMENT" == "all" || "$ENVIRONMENT" == "$env_name" ]]; then

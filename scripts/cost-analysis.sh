@@ -98,9 +98,9 @@ else
     echo ":( Cannot access Sub-TRL-dev-weu subscription"
 fi
 
-# Staging Environment
+# Integration Environment
 if az account show --subscription "Sub-TRL-int-weu" >/dev/null 2>&1; then
-    analyze_subscription_costs "Sub-TRL-int-weu" "staging"
+    analyze_subscription_costs "Sub-TRL-int-weu" "int"
 else
     echo ":( Cannot access Sub-TRL-int-weu subscription"
 fi
@@ -121,7 +121,7 @@ cat > cost-optimization-recommendations.md << 'EOF'
 ## TRL Hub and Spoke Infrastructure
 
 ### Immediate Actions:
-1. **VM Auto-Shutdown**: Ensure all dev/staging VMs have auto-shutdown enabled
+1. **VM Auto-Shutdown**: Ensure all dev/int VMs have auto-shutdown enabled
 2. **Storage Tiering**: Move infrequently accessed data to cool storage
 3. **Right-sizing**: Analyze VM utilization and downsize underutilized instances
 4. **Reserved Instances**: Consider 1-year reserved instances for production VMs
@@ -145,7 +145,7 @@ cat > cost-optimization-recommendations.md << 'EOF'
 - Use Standard LRS storage for non-critical data
 - Consider spot instances for non-production testing
 
-#### Staging:
+#### Integration:
 - Mirror production configuration but with smaller VM sizes
 - Use staging slots for App Services to reduce costs
 - Implement data lifecycle policies for temporary test data
@@ -166,12 +166,12 @@ echo "========================"
 echo "|) Analysis period: $START_DATE to $END_DATE"
 echo "|) Subscriptions analyzed:"
 echo "   - Sub-TRL-dev-weu (Development)"
-echo "   - Sub-TRL-int-weu (Staging)"
+echo "   - Sub-TRL-int-weu (Integration)"
 echo "   - Sub-TRL-prod-weu (Production)"
 echo ""
 echo ":) Cost data files generated:"
 echo "   - dev_costs_raw.json"
-echo "   - staging_costs_raw.json"
+echo "   - int_costs_raw.json"
 echo "   - prod_costs_raw.json"
 echo "   - cost-optimization-recommendations.md"
 echo ""

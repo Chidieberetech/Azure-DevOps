@@ -19,7 +19,7 @@ usage() {
     echo "  -k, --keyvault NAME     Key Vault name (required)"
     echo "  -r, --resource-group    Hub resource group name (required)"
     echo "  -s, --subscription      Azure subscription ID (required)"
-    echo "  -e, --environment       Environment (dev/staging/prod) - optional, rotates all if not specified"
+    echo "  -e, --environment       Environment (dev/int/prod) - optional, rotates all if not specified"
     echo "  -f, --force            Force rotation without confirmation prompts"
     echo "  -h, --help             Display this help message"
     echo ""
@@ -172,7 +172,7 @@ if [ "$FORCE_ROTATION" != true ]; then
     if [ -n "$ENVIRONMENT" ]; then
         echo "Target Environment: $ENVIRONMENT"
     else
-        echo "Target Environments: ALL (dev, staging, prod)"
+        echo "Target Environments: ALL (dev, int, prod)"
     fi
 
     echo ""
@@ -192,7 +192,7 @@ echo ":) Starting password rotation process..."
 if [ -n "$ENVIRONMENT" ]; then
     ENVIRONMENTS=($ENVIRONMENT)
 else
-    ENVIRONMENTS=(dev staging prod)
+    ENVIRONMENTS=(dev int prod)
 fi
 
 # Initialize VM list

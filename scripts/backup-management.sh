@@ -16,7 +16,7 @@ usage() {
     echo ""
     echo "Options:"
     echo "  -a, --action ACTION     Action to perform (backup/restore/validate/list)"
-    echo "  -e, --environment ENV   Environment (dev/staging/prod/all)"
+    echo "  -e, --environment ENV   Environment (dev/int/prod/all)"
     echo "  -r, --retention DAYS    Backup retention in days (default: 30)"
     echo "  -t, --type TYPE         Backup type (vm/database/storage/all)"
     echo "  -h, --help             Display this help message"
@@ -24,7 +24,7 @@ usage() {
     echo "Examples:"
     echo "  $0 -a backup -e prod -t all           # Backup all resources in prod"
     echo "  $0 -a validate -e all                 # Validate all backups"
-    echo "  $0 -a list -e staging -t database     # List database backups in staging"
+    echo "  $0 -a list -e int -t database     # List database backups in integration"
 }
 
 # Parse command line arguments
@@ -189,7 +189,7 @@ BACKUP COMPLIANCE STATUS
 EOF
 
     # Check each environment
-    for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+    for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
         IFS=':' read -r subscription env_name <<< "$env_config"
 
         echo "" >> "$BACKUP_REPORT"
@@ -250,7 +250,7 @@ EOF
 case $ACTION in
     "backup")
         echo "|) Performing backup operation..."
-        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
             IFS=':' read -r subscription env_name <<< "$env_config"
 
             if [[ "$ENVIRONMENT" == "all" || "$ENVIRONMENT" == "$env_name" ]]; then
@@ -265,7 +265,7 @@ case $ACTION in
         ;;
     "validate")
         echo "|) Performing backup validation..."
-        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
             IFS=':' read -r subscription env_name <<< "$env_config"
 
             if [[ "$ENVIRONMENT" == "all" || "$ENVIRONMENT" == "$env_name" ]]; then
@@ -276,7 +276,7 @@ case $ACTION in
         ;;
     "list")
         echo "|) Listing backup information..."
-        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+        for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
             IFS=':' read -r subscription env_name <<< "$env_config"
 
             if [[ "$ENVIRONMENT" == "all" || "$ENVIRONMENT" == "$env_name" ]]; then

@@ -1,4 +1,4 @@
-# Staging Environment Configuration
+# Integration Environment Configuration
 terraform {
   required_version = ">= 1.5.0"
   required_providers {
@@ -12,7 +12,7 @@ terraform {
     resource_group_name  = "trl-hubspoke-tfstate-rg"
     storage_account_name = "trlhubspoketfstate"
     container_name      = "tfstate"
-    key                 = "staging.terraform.tfstate"
+    key                 = "int.terraform.tfstate"
   }
 }
 
@@ -39,12 +39,12 @@ data "terraform_remote_state" "hub" {
   }
 }
 
-# Spoke infrastructure for staging environment
+# Spoke infrastructure for integration environment
 module "spoke_infrastructure" {
   source = "../../../modules"
 
   # Environment configuration
-  environment     = "staging"
+  environment     = "int"
   location        = "West Europe"
   subscription_id = var.subscription_id
 
@@ -53,13 +53,13 @@ module "spoke_infrastructure" {
   enable_bastion     = false  # Hub manages bastion
   enable_private_dns = false  # Hub manages DNS
 
-  # Deploy 2 spokes for staging
+  # Deploy 2 spokes for integration
   spoke_count = 2
 
   # Compute configuration
   vm_size                   = "Standard_B1s"
   enable_vm_auto_shutdown   = true
-  vm_shutdown_time         = "2000"  # Later shutdown for staging
+  vm_shutdown_time         = "2000"  # Later shutdown for integration
 
   # Storage configuration
   storage_account_tier     = "Standard"
@@ -71,8 +71,8 @@ module "spoke_infrastructure" {
   enable_cosmos_db   = false
 
   additional_tags = {
-    Environment = "Staging"
-    Workspace   = "Spokes-Staging"
+    Environment = "Integration"
+    Workspace   = "Spokes-Integration"
     Purpose     = "Pre-production Testing"
   }
 }

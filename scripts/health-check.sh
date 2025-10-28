@@ -121,7 +121,7 @@ EXECUTIVE SUMMARY
 EOF
 
 # Check each environment
-for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
     IFS=':' read -r subscription env_name <<< "$env_config"
 
     echo ""
@@ -185,7 +185,7 @@ echo "======================"
 echo "|) Report generated: $REPORT_FILE"
 echo ":) Environments checked:"
 echo "   - Development (Sub-TRL-dev-weu)"
-echo "   - Staging (Sub-TRL-int-weu)"
+echo "   - Integration (Sub-TRL-int-weu)"
 echo "   - Production (Sub-TRL-prod-weu)"
 echo ""
 echo "|) Next steps:"

@@ -25,7 +25,7 @@ This project uses three dedicated Azure subscriptions following TRL naming conve
 | Environment     | Subscription Name  | Subscription ID Pattern                | Purpose                                |
 |-----------------|--------------------|----------------------------------------|----------------------------------------|
 | **Development** | `Sub-TRL-dev-weu`  | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Development workloads and testing      |
-| **Staging**     | `Sub-TRL-int-weu`  | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Integration testing and pre-production |
+| **Integration** | `Sub-TRL-int-weu`  | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Integration testing and pre-production |
 | **Production**  | `Sub-TRL-prod-weu` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | Production workloads                   |
 
 ### Step 1: Verify Subscription Access
@@ -64,9 +64,9 @@ Create storage for Terraform state files in each subscription:
 az account set --subscription "Sub-TRL-dev-weu"
 az group create --name "trl-hubspoke-dev-tfstate-rg" --location "West Europe"
 
-# Staging Subscription  
+# Integration Subscription  
 az account set --subscription "Sub-TRL-int-weu"
-az group create --name "trl-hubspoke-staging-tfstate-rg" --location "West Europe"
+az group create --name "trl-hubspoke-int-tfstate-rg" --location "West Europe"
 
 # Production Subscription
 az account set --subscription "Sub-TRL-prod-weu"
@@ -126,10 +126,10 @@ az ad sp create-for-rbac \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
 
-# Staging Environment Service Principal  
+# Integration Environment Service Principal  
 az account set --subscription "Sub-TRL-int-weu"
 az ad sp create-for-rbac \
-  --name "sp-trl-hubspoke-staging" \
+  --name "sp-trl-hubspoke-int" \
   --role "Contributor" \
   --scopes "/subscriptions/$(az account show --query id -o tsv)"
 
@@ -166,10 +166,10 @@ az ad sp create-for-rbac \
    - **Security**: Grant access permission to all pipelines
    - Click **Verify and save**
 
-3. **Create Staging Service Connection**:
-   - Repeat above steps with staging subscription details
-   - **Service connection name**: `trl-hubspoke-staging-connection`
-   - Use staging service principal credentials
+3. **Create Integration Service Connection**:
+   - Repeat above steps with integration subscription details
+   - **Service connection name**: `trl-hubspoke-int-connection`
+   - Use integration service principal credentials
 
 4. **Create Production Service Connection**:
    - Repeat above steps with production subscription details
@@ -186,10 +186,10 @@ az account set --subscription "Sub-TRL-dev-weu"
 DEV_SP_ID=$(az ad sp list --display-name "sp-trl-hubspoke-dev" --query "[0].appId" -o tsv)
 az role assignment create --assignee $DEV_SP_ID --role "Key Vault Administrator" --scope "/subscriptions/$(az account show --query id -o tsv)"
 
-# Staging Environment
+# Integration Environment
 az account set --subscription "Sub-TRL-int-weu"
-STAGING_SP_ID=$(az ad sp list --display-name "sp-trl-hubspoke-staging" --query "[0].appId" -o tsv)
-az role assignment create --assignee $STAGING_SP_ID --role "Key Vault Administrator" --scope "/subscriptions/$(az account show --query id -o tsv)"
+INT_SP_ID=$(az ad sp list --display-name "sp-trl-hubspoke-int" --query "[0].appId" -o tsv)
+az role assignment create --assignee $INT_SP_ID --role "Key Vault Administrator" --scope "/subscriptions/$(az account show --query id -o tsv)"
 
 # Production Environment
 az account set --subscription "Sub-TRL-prod-weu"
@@ -214,10 +214,10 @@ az role assignment create --assignee $PROD_SP_ID --role "Key Vault Administrator
    - **Grant access permission to all pipelines**: :)
    - Click **Create**
 
-3. **Create Staging Agent Pool**:
+3. **Create Integration Agent Pool**:
    - **Pool type**: `Self-hosted`
-   - **Name**: `trl-hubspoke-staging-pool` 
-   - **Description**: `Self-hosted agents for staging environment`
+   - **Name**: `trl-hubspoke-int-pool` 
+   - **Description**: `Self-hosted agents for integration environment`
    - **Grant access permission to all pipelines**: :)
    - Click **Create**
 
@@ -257,9 +257,9 @@ If using Microsoft-hosted agents instead:
    - **Resource**: `None` (virtual environment)
    - Click **Create**
 
-3. **Create Staging Environment**:
-   - **Name**: `trl-hubspoke-staging`
-   - **Description**: `Staging environment for TRL Hub and Spoke infrastructure`
+3. **Create Integration Environment**:
+   - **Name**: `trl-hubspoke-int`
+   - **Description**: `Integration environment for TRL Hub and Spoke infrastructure`
    - **Resource**: `None`
    - Click **Create**
 
@@ -276,7 +276,7 @@ If using Microsoft-hosted agents instead:
 - **Branch control**: Any branch
 - **Business hours**: Not required
 
-#### Staging Environment:
+#### Integration Environment:
 - **Approvals**: None (automatic after dev success)
 - **Branch control**: `main` and `develop` branches only
 - **Business hours**: Not required
@@ -317,11 +317,11 @@ az keyvault create \
   --location "West Europe" \
   --enable-rbac-authorization true
 
-# Staging Key Vault
+# Integration Key Vault
 az account set --subscription "Sub-TRL-int-weu"
 az keyvault create \
-  --name "trl-hubspoke-staging-kv-secrets" \
-  --resource-group "trl-hubspoke-staging-tfstate-rg" \
+  --name "trl-hubspoke-int-kv-secrets" \
+  --resource-group "trl-hubspoke-int-tfstate-rg" \
   --location "West Europe" \
   --enable-rbac-authorization true
 
@@ -344,10 +344,10 @@ az account set --subscription "Sub-TRL-dev-weu"
 az keyvault secret set --vault-name "trl-hubspoke-dev-kv-secrets" --name "subscription-id" --value "Sub-TRL-dev-weu-subscription-id"
 az keyvault secret set --vault-name "trl-hubspoke-dev-kv-secrets" --name "tenant-id" --value "your-tenant-id"
 
-# Staging secrets
+# Integration secrets
 az account set --subscription "Sub-TRL-int-weu"
-az keyvault secret set --vault-name "trl-hubspoke-staging-kv-secrets" --name "subscription-id" --value "Sub-TRL-int-weu-subscription-id"
-az keyvault secret set --vault-name "trl-hubspoke-staging-kv-secrets" --name "tenant-id" --value "your-tenant-id"
+az keyvault secret set --vault-name "trl-hubspoke-int-kv-secrets" --name "subscription-id" --value "Sub-TRL-int-weu-subscription-id"
+az keyvault secret set --vault-name "trl-hubspoke-int-kv-secrets" --name "tenant-id" --value "your-tenant-id"
 
 # Production secrets
 az account set --subscription "Sub-TRL-prod-weu"
@@ -376,29 +376,13 @@ az keyvault secret set --vault-name "trl-hubspoke-prod-kv-secrets" --name "tenan
    - **Pipeline permissions**: Allow access to all pipelines
    - Click **Save**
 
-3. **Create Staging Variable Group**:
-   - **Variable group name**: `trl-hubspoke-staging-variables`
-   - **Azure subscription**: `trl-hubspoke-staging-connection`
-   - **Key vault name**: `trl-hubspoke-staging-kv-secrets`
+3. **Create Integration Variable Group**:
+   - **Variable group name**: `trl-hubspoke-int-variables`
+   - **Azure subscription**: `trl-hubspoke-int-connection`
+   - **Key vault name**: `trl-hubspoke-int-kv-secrets`
    - Add same secrets as development
 
 4. **Create Production Variable Group**:
-   - **Variable group name**: `trl-hubspoke-prod-variables`
-   - **Azure subscription**: `trl-hubspoke-prod-connection`
-   - **Key vault name**: `trl-hubspoke-prod-kv-secrets`
-   - Add same secrets as development
-
-5. **Create Common Variable Group**:
-   - **Variable group name**: `trl-hubspoke-common-variables`
-   - **Variables** (not linked to Key Vault):
-     - `terraformVersion`: `1.5.7`
-     - `azureLocation`: `West Europe`
-     - `organizationName`: `TRL`
-     - `projectName`: `hubspoke`
-
-## Agent Pools Setup
-
-### Option A: Microsoft-Hosted Agents (Recommended for Start)
 
 **Advantages**:
 - No maintenance required
@@ -442,7 +426,7 @@ az vm create \
   --public-ip-sku "Standard" \
   --nsg-rule "SSH"
 
-# Repeat for staging and production subscriptions
+# Repeat for integration and production subscriptions
 ```
 
 #### Step 2: Install Agent Software
@@ -521,7 +505,7 @@ curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/inst
    - **SQL Database Tier**: S0 (free tier)
    - **Cosmos DB**: Disabled
 
-#### Staging Environment (`trl-hubspoke-staging`):
+#### Integration Environment (`trl-hubspoke-int`):
 
 1. **Security Settings**:
    - **Approvals**: Optional (team lead approval)
@@ -566,8 +550,8 @@ For each environment, configure specific secrets:
    sql_tier: "S0"
    enable_cosmos_db: false
    
-   # Staging environment variables  
-   environment: staging
+   # Integration environment variables  
+   environment: int
    vm_auto_shutdown: true
    vm_shutdown_time: "2000"
    storage_replication: "LRS"
@@ -613,10 +597,10 @@ variables:
   - group: trl-hubspoke-common-variables
   - group: trl-hubspoke-dev-variables
 
-# Staging Pipeline  
+# Integration Pipeline  
 variables:
   - group: trl-hubspoke-common-variables
-  - group: trl-hubspoke-staging-variables
+  - group: trl-hubspoke-int-variables
 
 # Production Pipeline
 variables:
@@ -834,9 +818,9 @@ jobs:
       dev:
         environmentName: 'dev'
         serviceConnection: 'trl-hubspoke-dev-connection'
-      staging:
-        environmentName: 'staging'
-        serviceConnection: 'trl-hubspoke-staging-connection'
+      int:
+        environmentName: 'int'
+        serviceConnection: 'trl-hubspoke-int-connection'
       prod:
         environmentName: 'prod'
         serviceConnection: 'trl-hubspoke-prod-connection'
@@ -980,10 +964,10 @@ jobs:
         environmentName: 'dev'
         serviceConnection: 'trl-hubspoke-dev-connection'
         keyVaultName: 'trl-hubspoke-dev-kv-secrets'
-      staging:
-        environmentName: 'staging'
-        serviceConnection: 'trl-hubspoke-staging-connection'
-        keyVaultName: 'trl-hubspoke-staging-kv-secrets'
+      int:
+        environmentName: 'int'
+        serviceConnection: 'trl-hubspoke-int-connection'
+        keyVaultName: 'trl-hubspoke-int-kv-secrets'
       prod:
         environmentName: 'prod'
         serviceConnection: 'trl-hubspoke-prod-connection'
@@ -1439,7 +1423,7 @@ for subscription in "Sub-TRL-dev-weu" "Sub-TRL-int-weu" "Sub-TRL-prod-weu"; do
             BUDGET_AMOUNT=50  # $50 for dev
             ;;
         "Sub-TRL-int-weu")
-            BUDGET_AMOUNT=100 # $100 for staging
+            BUDGET_AMOUNT=100 # $100 for integration
             ;;
         "Sub-TRL-prod-weu")
             BUDGET_AMOUNT=200 # $200 for prod
@@ -1540,7 +1524,7 @@ cat > setup-backup-vaults.sh << 'EOF'
 #!/bin/bash
 echo ":) Setting up Recovery Services Vaults for all environments..."
 
-for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"
+for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"
 do
     IFS=':' read -r SUBSCRIPTION ENV <<< "$env_config"
     
@@ -1940,7 +1924,7 @@ az account show --query "{Name:name, ID:id}" --output table
 az account set --subscription "Sub-TRL-dev-weu"
 az account show --query "name" --output tsv
 
-# Test staging subscription
+# Test integration subscription
 az account set --subscription "Sub-TRL-int-weu"
 az account show --query "name" --output tsv
 
@@ -1990,9 +1974,9 @@ az account show --query "name" --output tsv
      --scope "/subscriptions/$(az account show --query id -o tsv)"
    ```
 
-**Step 2: Create Staging Environment Service Principal**
+**Step 2: Create Integration Environment Service Principal**
 
-1. **Set Staging Subscription Context**:
+1. **Set Integration Subscription Context**:
    ```bash
    az account set --subscription "Sub-TRL-int-weu"
    ```
@@ -2304,13 +2288,13 @@ Copy the same process for staging and production environments, using their respe
 
 3. Click **Save** button
 
-**Step 3: Create Staging Variable Group**
+**Step 3: Create Integration Variable Group**
 1. Click **+ Variable group** again
 2. Repeat same process with:
-   - Variable group name: `trl-hubspoke-staging-variables`
-   - Description: `Variables for TRL Hub and Spoke staging environment`
-   - Azure subscription: `trl-hubspoke-staging-connection`
-   - Key vault: Your staging Key Vault name
+   - Variable group name: `trl-hubspoke-int-variables`
+   - Description: `Variables for TRL Hub and Spoke integration environment`
+   - Azure subscription: `trl-hubspoke-int-connection`
+   - Key vault: Your integration Key Vault name
    - Add same secrets as development
 
 **Step 4: Create Production Variable Group**
@@ -2430,11 +2414,11 @@ Copy the same process for staging and production environments, using their respe
    - Note the environment URL for reference
    - Click **Pipelines** in breadcrumb to return
 
-**Step 3: Create Staging Environment**
+**Step 3: Create Integration Environment**
 1. Click **New environment**
 2. **New environment** dialog:
-   - Name: `trl-hubspoke-staging`  
-   - Description: `Staging environment for TRL Hub and Spoke infrastructure`
+   - Name: `trl-hubspoke-int`  
+   - Description: `Integration environment for TRL Hub and Spoke infrastructure`
    - Resource: **None**
    - Click **Create**
 

@@ -15,7 +15,7 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -e, --environment ENV   Environment to setup (dev/staging/prod/all)"
+    echo "  -e, --environment ENV   Environment to setup (dev/int/prod/all)"
     echo "  -t, --type TYPE         Monitoring type (alerts/dashboards/logs/all)"
     echo "  -s, --severity LEVEL    Alert severity (critical/warning/info/all)"
     echo "  -h, --help             Display this help message"
@@ -272,7 +272,7 @@ MONITORING CONFIGURATION
 EOF
 
 # Setup monitoring for specified environments
-for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:staging" "Sub-TRL-prod-weu:prod"; do
+for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
     IFS=':' read -r subscription env_name <<< "$env_config"
 
     if [[ "$ENVIRONMENT" == "all" || "$ENVIRONMENT" == "$env_name" ]]; then
@@ -347,7 +347,7 @@ echo "============================"
 echo "|) Report generated: $MONITORING_REPORT"
 echo ":) Environments configured:"
 echo "   - Development (Sub-TRL-dev-weu)"
-echo "   - Staging (Sub-TRL-int-weu)"
+echo "   - Integration (Sub-TRL-int-weu)"
 echo "   - Production (Sub-TRL-prod-weu)"
 echo ""
 echo "|) Monitoring components setup:"

@@ -137,6 +137,17 @@ All resources follow the standardized naming pattern:
 - **EUS**: East US
 - **NEU**: North Europe
 - **CUS**: Central US
+- **SEU**: South Europe
+- **WUS**: West US
+- **EUC2**: East US 2
+- **NUS**: North US
+- **ASE**: Asia East
+- **ASW**: Asia South West
+- **JPN**: Japan East
+- **AUS**: Australia East
+- **BRA**: Brazil South
+- **IND**: India South
+- **CAN**: Canada Central
 
 ### Resource Examples
 - **Virtual Machines**: `vm-PRD-WEU-alpha-001`, `vm-PRD-WEU-beta-001`

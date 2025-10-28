@@ -297,7 +297,7 @@ All Azure resources must follow the **TRL standardized naming convention**:
 #### Components
 
 - **Resource Type**: Use standard Azure abbreviations (see README.md tables)
-- **Environment**: `DEV`, `STG`, `PRD`
+- **Environment**: `DEV`, `INT`, `PRD`
 - **Location**: `WEU` (West Europe), `EUS` (East US), etc.
 - **Purpose**: Service category or specific function
 - **Instance**: 3-digit number with leading zeros

@@ -434,7 +434,14 @@ Spoke Beta VNet (10.2.0.0/16) - vnet-PRD-WEU-beta-001
 3. Create resource groups:
    - rg-hub-prod-we (Hub resources)
    - rg-spoke-prod-we (Spoke resources)
+   - rg-alpha-prod-we (Spoke Alpha)
+    - rg-beta-prod-we (Spoke Beta)
+    - rg-storage-prod-we (Storage accounts)
+    - rg-sql-prod-we (SQL Databases)
+    -rg-cosmos-prod-we (Cosmos DB)
    - rg-shared-prod-we (Shared services)
+   - rg-monitoring-prod-we (Monitoring resources)
+      etc.
 ```
 
 #### Step 2: Terraform State Management

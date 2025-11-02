@@ -1,4 +1,4 @@
-# Hub Workspace Variables
+# Management Workspace Variables
 
 #================================================
 # BACKEND CONFIGURATION
@@ -29,7 +29,7 @@ variable "subscription_id" {
 }
 
 variable "environment" {
-  description = "Environment name for the hub workspace"
+  description = "Environment name for the management workspace"
   type        = string
   default     = "prod"
   validation {
@@ -39,55 +39,44 @@ variable "environment" {
 }
 
 variable "location" {
-  description = "Primary Azure region for hub resources"
+  description = "Primary Azure region for management resources"
   type        = string
   default     = "West Europe"
 }
 
 #================================================
 # NETWORK CONFIGURATION
+# Network components are disabled in management workspace
+# as they are managed by the hub workspace
 #================================================
 
 variable "enable_firewall" {
-  description = "Enable Azure Firewall in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_bastion" {
-  description = "Enable Azure Bastion in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_private_dns" {
-  description = "Enable private DNS zones in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_ddos_protection" {
-  description = "Enable DDoS Protection Plan"
+  description = "Enable Azure Firewall (always false for management workspace)"
   type        = bool
   default     = false
 }
 
-#================================================
-# SPOKE CONFIGURATION
-#================================================
+variable "enable_bastion" {
+  description = "Enable Azure Bastion (always false for management workspace)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_private_dns" {
+  description = "Enable private DNS zones (always false for management workspace)"
+  type        = bool
+  default     = false
+}
 
 variable "spoke_count" {
-  description = "Number of spoke networks to create from hub"
+  description = "Number of spoke networks (always 0 for management workspace)"
   type        = number
-  default     = 2
-  validation {
-    condition     = var.spoke_count >= 0 && var.spoke_count <= 3
-    error_message = "Spoke count must be between 0 and 3."
-  }
+  default     = 0
 }
 
 #================================================
 # COMPUTE CONFIGURATION
+# VM configuration required by module even if VMs not deployed
 #================================================
 
 variable "vm_size" {
@@ -110,92 +99,10 @@ variable "admin_password" {
   default     = ""
 }
 
-#================================================
-# SECURITY CONFIGURATION
-#================================================
-
-variable "enable_key_vault" {
-  description = "Enable Azure Key Vault in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_key_vault_soft_delete" {
-  description = "Enable Key Vault soft delete"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# DATABASE CONFIGURATION
-#================================================
-
-variable "enable_sql_database" {
-  description = "Enable SQL Database deployment"
-  type        = bool
-  default     = false
-}
-
-variable "enable_cosmos_db" {
-  description = "Enable Cosmos DB deployment"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# STORAGE CONFIGURATION
-#================================================
-
-variable "storage_account_tier" {
-  description = "Storage account tier"
-  type        = string
-  default     = "Standard"
-  validation {
-    condition     = contains(["Standard", "Premium"], var.storage_account_tier)
-    error_message = "Storage account tier must be Standard or Premium."
-  }
-}
-
-variable "storage_replication_type" {
-  description = "Storage account replication type"
-  type        = string
-  default     = "LRS"
-  validation {
-    condition     = contains(["LRS", "GRS", "RAGRS", "ZRS"], var.storage_replication_type)
-    error_message = "Storage replication type must be LRS, GRS, RAGRS, or ZRS."
-  }
-}
-
-variable "enable_premium_storage" {
-  description = "Enable premium storage account"
-  type        = bool
-  default     = false
-}
-
-variable "enable_data_lake_storage" {
-  description = "Enable Data Lake Storage Gen2"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# PRIVATE ENDPOINTS
-#================================================
-
-variable "enable_private_endpoints" {
-  description = "Enable private endpoints for services"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# ADVANCED COMPUTE CONFIGURATION
-#================================================
-
 variable "enable_vm_auto_shutdown" {
-  description = "Enable automatic VM shutdown for cost optimization"
+  description = "Enable automatic VM shutdown"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "vm_shutdown_time" {
@@ -207,11 +114,11 @@ variable "vm_shutdown_time" {
 variable "enable_vm_monitoring" {
   description = "Enable VM Insights monitoring"
   type        = bool
-  default     = true
+  default     = false
 }
 
 #================================================
-# MONITORING CONFIGURATION
+# MONITORING & GOVERNANCE CONFIGURATION
 #================================================
 
 variable "enable_monitoring" {
@@ -223,10 +130,10 @@ variable "enable_monitoring" {
 variable "log_retention_days" {
   description = "Number of days to retain logs"
   type        = number
-  default     = 30
+  default     = 90
   validation {
-    condition     = var.log_retention_days >= 30 && var.log_retention_days <= 365
-    error_message = "Log retention must be between 30 and 365 days."
+    condition     = var.log_retention_days >= 30 && var.log_retention_days <= 730
+    error_message = "Log retention must be between 30 and 730 days."
   }
 }
 
@@ -278,26 +185,66 @@ variable "alert_email_addresses" {
   default     = ["infrastructure@trl.com"]
 }
 
-variable "cpu_alert_threshold" {
-  description = "CPU usage percentage threshold for alerts"
-  type        = number
-  default     = 80
-  validation {
-    condition     = var.cpu_alert_threshold >= 1 && var.cpu_alert_threshold <= 100
-    error_message = "CPU alert threshold must be between 1 and 100."
-  }
-}
-
-variable "memory_alert_threshold_bytes" {
-  description = "Available memory threshold in bytes for alerts"
-  type        = number
-  default     = 1073741824
-}
-
 variable "enable_security_alerts" {
   description = "Enable security-related alerts"
   type        = bool
   default     = true
+}
+
+#================================================
+# SECURITY CONFIGURATION
+#================================================
+
+variable "enable_key_vault" {
+  description = "Enable Azure Key Vault for secrets management"
+  type        = bool
+  default     = true
+}
+
+variable "enable_key_vault_soft_delete" {
+  description = "Enable Key Vault soft delete"
+  type        = bool
+  default     = true
+}
+
+#================================================
+# STORAGE CONFIGURATION
+#================================================
+
+variable "storage_account_tier" {
+  description = "Storage account tier"
+  type        = string
+  default     = "Standard"
+  validation {
+    condition     = contains(["Standard", "Premium"], var.storage_account_tier)
+    error_message = "Storage account tier must be Standard or Premium."
+  }
+}
+
+variable "storage_replication_type" {
+  description = "Storage account replication type"
+  type        = string
+  default     = "GRS"
+  validation {
+    condition     = contains(["LRS", "GRS", "RAGRS", "ZRS"], var.storage_replication_type)
+    error_message = "Storage replication type must be LRS, GRS, RAGRS, or ZRS."
+  }
+}
+
+#================================================
+# COST MANAGEMENT
+#================================================
+
+variable "enable_cost_management_alerts" {
+  description = "Enable cost management and budget alerts"
+  type        = bool
+  default     = true
+}
+
+variable "monthly_budget_amount" {
+  description = "Monthly budget amount for cost alerts (in USD)"
+  type        = number
+  default     = 5000
 }
 
 #================================================
@@ -382,12 +329,9 @@ variable "additional_tags" {
   description = "Additional custom tags to apply to all resources"
   type        = map(string)
   default = {
-    Workspace       = "Hub"
-    Purpose         = "Shared Services and Spokes"
-    ManagedBy       = "Terraform"
-    Repository      = "Azure.IAC.hubspoke"
-    AutoShutdown    = "Enabled"
-    CostOptimized   = "true"
+    ManagedBy     = "Terraform"
+    Repository    = "Azure.IAC.hubspoke"
+    WorkspaceType = "Management"
   }
 }
 

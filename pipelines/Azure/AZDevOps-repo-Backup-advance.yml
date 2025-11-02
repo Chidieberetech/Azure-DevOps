@@ -1,0 +1,359 @@
+# AZDevOps-repo-Backup.yml
+name: AzureDevOps-Repo-Backup-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  schedules:
+  - cron: "0 2 * * *"  # Daily at 2 AM
+    displayName: 'DailyBackup'
+    branches:
+      include:
+      - main
+      - develop
+      - releases/*
+
+pr: none
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+- name: backupContainerName
+  value: 'azdevopsbackup'
+- name: retentionDays
+  value: '30'
+
+stages:
+- stage: Validate_Backup_Environment
+  displayName: 'Validate Backup Environment'
+  jobs:
+  - job: Validate_Storage_Container
+    displayName: 'Validate Storage Container'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Backup Storage Container'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Validating backup storage container..."
+          
+          # Check if storage account exists
+          echo "Storage Account: $(backendStorageAccountName)"
+          az storage account show --name $(backendStorageAccountName) --resource-group $(backendResourceGroupName)
+          
+          # Check if backup container exists, create if not
+          containerExists=$(az storage container exists --name $(backupContainerName) --account-name $(backendStorageAccountName) --account-key $(BACKEND_STORAGE_KEY) --query exists --output tsv)
+          
+          if [ "$containerExists" == "false" ]; then
+            echo "Creating backup container: $(backupContainerName)"
+            az storage container create --name $(backupContainerName) --account-name $(backendStorageAccountName) --account-key $(BACKEND_STORAGE_KEY) --public-access off
+          else
+            echo "Backup container already exists: $(backupContainerName)"
+          fi
+          
+          # List existing backups
+          echo "Existing backups in container:"
+          az storage blob list --container-name $(backupContainerName) --account-name $(backendStorageAccountName) --account-key $(BACKEND_STORAGE_KEY) --query "[].name" --output table
+
+- stage: Backup_Repositories
+  displayName: 'Backup Azure DevOps Repositories'
+  dependsOn: Validate_Backup_Environment
+  jobs:
+  - job: Backup_All_Repositories
+    displayName: 'Backup All Repositories'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Install Azure DevOps Extension'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Installing Azure DevOps CLI extension..."
+          az extension add --name azure-devops --yes
+          az devops configure --defaults organization=$(System.TeamFoundationCollectionUri) project=$(System.TeamProject)
+
+    - task: PowerShell@2
+      displayName: 'Backup Git Repositories'
+      inputs:
+        targetType: 'inline'
+        script: |
+          # Import required modules
+          Import-Module -Name Azure.Storage.Blobs -Force
+          
+          # Set variables
+          $storageAccountName = "$(backendStorageAccountName)"
+          $storageAccountKey = "$(BACKEND_STORAGE_KEY)"
+          $containerName = "$(backupContainerName)"
+          $projectName = "$(System.TeamProject)"
+          $retentionDays = [int]$(retentionDays)
+          $backupDate = Get-Date -Format "yyyyMMdd-HHmmss"
+          
+          # Create storage context
+          $context = New-AzStorageContext -StorageAccountName $storageAccountName -StorageAccountKey $storageAccountKey
+          
+          # Get all repositories in the project
+          Write-Host "Getting list of repositories in project: $projectName"
+          $repos = az repos list --project $projectName --output json | ConvertFrom-Json
+          
+          Write-Host "Found $($repos.Count) repositories to backup"
+          
+          foreach ($repo in $repos) {
+              $repoName = $repo.name
+              $repoId = $repo.id
+              
+              Write-Host "Backing up repository: $repoName"
+              
+              # Create backup filename
+              $backupFileName = "$projectName-$repoName-$backupDate.zip"
+              $tempBackupPath = Join-Path $env:BUILD_STAGINGDIRECTORY "$backupFileName"
+              
+              try {
+                  # Export repository using Azure DevOps CLI
+                  az repos show --repository $repoId --project $projectName --output json | Out-File -FilePath "$tempBackupPath-metadata.json" -Encoding UTF8
+                  
+                  # Download repository as zip (if possible) or clone and zip
+                  $cloneUrl = $repo.remoteUrl
+                  $tempClonePath = Join-Path $env:BUILD_STAGINGDIRECTORY "clone-$repoName"
+                  
+                  # Clone repository (using system access token)
+                  git clone $cloneUrl $tempClonePath
+                  
+                  # Create zip archive of the repository
+                  Compress-Archive -Path "$tempClonePath\*" -DestinationPath $tempBackupPath -CompressionLevel Optimal
+                  
+                  # Upload to storage
+                  Set-AzStorageBlobContent -File $tempBackupPath `
+                                          -Container $containerName `
+                                          -Blob "repositories/$backupFileName" `
+                                          -Context $context `
+                                          -Force
+                  
+                  # Upload metadata
+                  Set-AzStorageBlobContent -File "$tempBackupPath-metadata.json" `
+                                          -Container $containerName `
+                                          -Blob "metadata/$backupFileName-metadata.json" `
+                                          -Context $context `
+                                          -Force
+                  
+                  Write-Host "Successfully backed up repository: $repoName"
+                  
+                  # Cleanup temporary files
+                  Remove-Item $tempBackupPath -Force -ErrorAction SilentlyContinue
+                  Remove-Item "$tempBackupPath-metadata.json" -Force -ErrorAction SilentlyContinue
+                  Remove-Item $tempClonePath -Recurse -Force -ErrorAction SilentlyContinue
+                  
+              } catch {
+                  Write-Warning "Failed to backup repository: $repoName"
+                  Write-Warning $_.Exception.Message
+              }
+          }
+
+    - task: AzureCLI@2
+      displayName: 'Backup Pipeline Definitions'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Backing up pipeline definitions..."
+          
+          # Set variables
+          backupDate=$(date +"%Y%m%d-%H%M%S")
+          projectName="$(System.TeamProject)"
+          storageAccountName="$(backendStorageAccountName)"
+          storageAccountKey="$(BACKEND_STORAGE_KEY)"
+          containerName="$(backupContainerName)"
+          
+          # Get all pipelines
+          pipelines=$(az pipelines list --project "$projectName" --output json)
+          
+          # Upload pipelines backup
+          echo "$pipelines" | az storage blob upload --container-name "$containerName" \
+                                                    --name "pipelines/$projectName-pipelines-$backupDate.json" \
+                                                    --account-name "$storageAccountName" \
+                                                    --account-key "$storageAccountKey" \
+                                                    --content-type "application/json"
+
+- stage: Backup_Additional_Items
+  displayName: 'Backup Additional Items'
+  dependsOn: Backup_Repositories
+  jobs:
+  - job: Backup_Other_Items
+    displayName: 'Backup Other Azure DevOps Items'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Backup Variable Groups'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Backing up variable groups..."
+          
+          # Set variables
+          backupDate=$(date +"%Y%m%d-%H%M%S")
+          projectName="$(System.TeamProject)"
+          storageAccountName="$(backendStorageAccountName)"
+          storageAccountKey="$(BACKEND_STORAGE_KEY)"
+          containerName="$(backupContainerName)"
+          
+          # Get variable groups (note: secrets won't be included, only names and non-secret variables)
+          variableGroups=$(az pipelines variable-group list --project "$projectName" --output json)
+          
+          # Upload variable groups backup
+          echo "$variableGroups" | az storage blob upload --container-name "$containerName" \
+                                                         --name "variable-groups/$projectName-variable-groups-$backupDate.json" \
+                                                         --account-name "$storageAccountName" \
+                                                         --account-key "$storageAccountKey" \
+                                                         --content-type "application/json"
+
+    - task: AzureCLI@2
+      displayName: 'Backup Service Connections'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Backing up service connections metadata..."
+          
+          # Set variables
+          backupDate=$(date +"%Y%m%d-%H%M%S")
+          projectName="$(System.TeamProject)"
+          storageAccountName="$(backendStorageAccountName)"
+          storageAccountKey="$(BACKEND_STORAGE_KEY)"
+          containerName="$(backupContainerName)"
+          
+          # Get service connections (metadata only, no secrets)
+          serviceConnections=$(az devops service-endpoint list --project "$projectName" --output json)
+          
+          # Upload service connections backup
+          echo "$serviceConnections" | az storage blob upload --container-name "$containerName" \
+                                                             --name "service-connections/$projectName-service-connections-$backupDate.json" \
+                                                             --account-name "$storageAccountName" \
+                                                             --account-key "$storageAccountKey" \
+                                                             --content-type "application/json"
+
+- stage: Cleanup_Old_Backups
+  displayName: 'Cleanup Old Backups'
+  dependsOn: Backup_Additional_Items
+  jobs:
+  - job: Apply_Retention_Policy
+    displayName: 'Apply Retention Policy'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Delete Backups Older Than Retention Period'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Applying retention policy - deleting backups older than $(retentionDays) days..."
+          
+          # Calculate cutoff date
+          cutoffDate=$(date -d "$(retentionDays) days ago" +"%Y%m%d")
+          
+          # List all blobs and filter by date
+          blobs=$(az storage blob list --container-name $(backupContainerName) \
+                                      --account-name $(backendStorageAccountName) \
+                                      --account-key $(BACKEND_STORAGE_KEY) \
+                                      --query "[].{name:name, properties:properties}" \
+                                      --output json)
+          
+          echo "$blobs" | jq -r '.[] | "\(.name) \(.properties.lastModified)"' | while read blobName lastModified; do
+            # Extract date from blob name (format: project-repo-YYYYMMDD-HHMMSS.zip)
+            blobDate=$(echo "$blobName" | grep -oE '[0-9]{8}-[0-9]{6}' | cut -d'-' -f1)
+            
+            if [ ! -z "$blobDate" ] && [ "$blobDate" -lt "$cutoffDate" ]; then
+              echo "Deleting old backup: $blobName (date: $blobDate)"
+              az storage blob delete --container-name $(backupContainerName) \
+                                    --name "$blobName" \
+                                    --account-name $(backendStorageAccountName) \
+                                    --account-key $(BACKEND_STORAGE_KEY) \
+                                    --delete-snapshots include
+            fi
+          done
+
+- stage: Validate_Backup_Completion
+  displayName: 'Validate Backup Completion'
+  dependsOn: Cleanup_Old_Backups
+  jobs:
+  - job: Validate_Backup_Files
+    displayName: 'Validate Backup Files'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Verify Backup Files Created'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Backup Completion Validation ==="
+          
+          # List all backups created today
+          today=$(date +"%Y%m%d")
+          echo "Backups created today ($today):"
+          az storage blob list --container-name $(backupContainerName) \
+                              --account-name $(backendStorageAccountName) \
+                              --account-key $(BACKEND_STORAGE_KEY) \
+                              --query "[?contains(name, '$today')].{Name:name, Size:properties.contentLength, LastModified:properties.lastModified}" \
+                              --output table
+          
+          # Count backups by type
+          echo "Backup Summary:"
+          echo "Repository backups:"
+          az storage blob list --container-name $(backupContainerName) \
+                              --account-name $(backendStorageAccountName) \
+                              --account-key $(BACKEND_STORAGE_KEY) \
+                              --prefix "repositories/" \
+                              --query "[?contains(name, '$today')].name" --output tsv | wc -l
+                              
+          echo "Pipeline backups:"
+          az storage blob list --container-name $(backupContainerName) \
+                              --account-name $(backendStorageAccountName) \
+                              --account-key $(BACKEND_STORAGE_KEY) \
+                              --prefix "pipelines/" \
+                              --query "[?contains(name, '$today')].name" --output tsv | wc -l
+          
+          echo "Backup validation completed successfully"
+
+    - task: AzureCLI@2
+      displayName: 'Generate Backup Report'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Generating backup report..."
+          
+          # Generate backup report
+          reportDate=$(date +"%Y-%m-%d %H:%M:%S")
+          totalSize=$(az storage blob list --container-name $(backupContainerName) \
+                                          --account-name $(backendStorageAccountName) \
+                                          --account-key $(BACKEND_STORAGE_KEY) \
+                                          --query "[].properties.contentLength" \
+                                          --output tsv | awk '{sum+=$1} END {print sum/1024/1024}')
+          
+          totalBackups=$(az storage blob list --container-name $(backupContainerName) \
+                                            --account-name $(backendStorageAccountName) \
+                                            --account-key $(BACKEND_STORAGE_KEY) \
+                                            --query "length(@)")
+          
+          echo "=== Azure DevOps Backup Report ==="
+          echo "Report Date: $reportDate"
+          echo "Total Backups: $totalBackups"
+          echo "Total Storage Used: ${totalSize} MB"
+          echo "Storage Account: $(backendStorageAccountName)"
+          echo "Container: $(backupContainerName)"
+          echo "Retention Period: $(retentionDays) days"
+          echo "=================================="

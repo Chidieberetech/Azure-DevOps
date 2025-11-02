@@ -1,0 +1,168 @@
+# sub-alerts-destroy.yml
+name: Azure-Monitor-Alerts-Destroy-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger: none
+
+pr: none
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+- name: alertsWorkspacePath
+  value: 'workspaces/alerts'
+
+parameters:
+- name: environment
+  displayName: 'Environment to Destroy Alerts'
+  type: string
+  default: 'dev'
+  values:
+  - 'dev'
+  - 'int'
+  - 'prod'
+  - 'all'
+
+- name: alertTypes
+  displayName: 'Alert Types to Destroy'
+  type: string
+  default: 'all'
+  values:
+  - 'all'
+  - 'metric'
+  - 'activity'
+  - 'actiongroups'
+
+- name: confirmAlertsDestroy
+  displayName: 'I understand this will destroy monitoring alerts'
+  type: boolean
+  default: 'false'
+
+stages:
+- stage: Pre_Destroy_Validation
+  displayName: 'Pre-Alerts Destroy Validation'
+  condition: and(succeeded(), eq('${{ parameters.confirmAlertsDestroy }}', true))
+  jobs:
+  - job: Validate_Alerts_Destroy
+    displayName: 'Validate Alerts Destroy Parameters'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - script: |
+        echo "=== ALERTS DESTROY VALIDATION ==="
+        echo "WARNING: This will destroy Azure Monitor alerts"
+        echo "Environment: ${{ parameters.environment }}"
+        echo "Alert Types: ${{ parameters.alertTypes }}"
+        echo "Confirm Destroy: ${{ parameters.confirmAlertsDestroy }}"
+        
+        if [ "${{ parameters.environment }}" == "all" ]; then
+          echo "CRITICAL WARNING: This will destroy ALL alerts across ALL environments (DEV, INT, PROD)"
+        fi
+        
+        if [ "${{ parameters.alertTypes }}" == "all" ]; then
+          echo "This will destroy ALL alert types: Metric Alerts, Activity Log Alerts, and Action Groups"
+        fi
+      displayName: 'Display Alerts Destroy Warning'
+
+- stage: Destroy_Alerts
+  displayName: 'Destroy Alerts'
+  dependsOn: Pre_Destroy_Validation
+  condition: and(succeeded(), eq('${{ parameters.confirmAlertsDestroy }}', true))
+  jobs:
+  - job: Destroy_Dev_Alerts
+    displayName: 'Destroy DEV Alerts'
+    condition: or(eq('${{ parameters.environment }}', 'dev'), eq('${{ parameters.environment }}', 'all'))
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - DEV Alerts'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(alertsWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(devServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = 'alerts-dev.tfstate'
+          resource_group_name  = $(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Destroy - DEV Alerts'
+      inputs:
+        command: 'destroy'
+        workingDirectory: '$(alertsWorkspacePath)'
+        environmentServiceName: '$(devServiceConnection)'
+        commandOptions: '-auto-approve -var="environment=dev" -var="subscription_id=$(SUBSCRIPTION_ID_DEV)"'
+
+  - job: Destroy_Int_Alerts
+    displayName: 'Destroy INT Alerts'
+    condition: or(eq('${{ parameters.environment }}', 'int'), eq('${{ parameters.environment }}', 'all'))
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - INT Alerts'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(alertsWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(intServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = 'alerts-int.tfstate'
+          resource_group_name  = $(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Destroy - INT Alerts'
+      inputs:
+        command: 'destroy'
+        workingDirectory: '$(alertsWorkspacePath)'
+        environmentServiceName: '$(intServiceConnection)'
+        commandOptions: '-auto-approve -var="environment=int" -var="subscription_id=$(SUBSCRIPTION_ID_INT)"'
+
+  - job: Destroy_Prod_Alerts
+    displayName: 'Destroy PROD Alerts'
+    condition: or(eq('${{ parameters.environment }}', 'prod'), eq('${{ parameters.environment }}', 'all'))
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - PROD Alerts'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(alertsWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(prodServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = 'alerts-prod.tfstate'
+          resource_group_name  = $(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Destroy - PROD Alerts'
+      inputs:
+        command: 'destroy'
+        workingDirectory: '$(alertsWorkspacePath)'
+        environmentServiceName: '$(prodServiceConnection)'
+        commandOptions: '-auto-approve -var="environment=prod" -var="subscription_id=$(SUBSCRIPTION_ID_PROD)"'

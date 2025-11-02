@@ -14,10 +14,13 @@ resource "azurerm_monitor_action_group" "main" {
     email_address = var.admin_email_address
   }
 
-  sms_receiver {
-    name         = "admin-sms"
-    country_code = "1"
-    phone_number = var.admin_phone_number
+  dynamic "sms_receiver" {
+    for_each = var.admin_phone_number != "" ? [1] : []
+    content {
+      name         = "admin-sms"
+      country_code = "1"
+      phone_number = var.admin_phone_number
+    }
   }
 
   tags = local.common_tags
@@ -81,6 +84,9 @@ resource "azurerm_monitor_action_group" "warning" {
 #================================================
 
 # VM CPU Usage Alert
+# NOTE: VMs are defined at workspace level, not in module
+# Uncomment and customize these alerts in workspace-specific monitoring if needed
+/*
 resource "azurerm_monitor_metric_alert" "vm_cpu_high" {
   count               = var.enable_monitoring && var.enable_infrastructure_alerts && var.spoke_count > 0 ? var.spoke_count : 0
   name                = "vm-cpu-high-${local.spoke_names[count.index]}"
@@ -133,6 +139,7 @@ resource "azurerm_monitor_metric_alert" "vm_memory_low" {
 
   tags = local.common_tags
 }
+*/
 
 # Storage Account Availability Alert
 resource "azurerm_monitor_metric_alert" "storage_availability" {
@@ -309,6 +316,8 @@ resource "azurerm_monitor_metric_alert" "sql_storage_high" {
 #================================================
 
 # AKS Node CPU Alert
+# NOTE: Uncomment when AKS cluster resource is created in containers.tf
+/*
 resource "azurerm_monitor_metric_alert" "aks_node_cpu" {
   count               = var.enable_monitoring && var.enable_infrastructure_alerts && var.enable_containers && var.enable_aks ? 1 : 0
   name                = "aks-node-cpu-high"
@@ -334,8 +343,11 @@ resource "azurerm_monitor_metric_alert" "aks_node_cpu" {
 
   tags = local.common_tags
 }
+*/
 
 # AKS Node Memory Alert
+# NOTE: Uncomment when AKS cluster resource is created in containers.tf
+/*
 resource "azurerm_monitor_metric_alert" "aks_node_memory" {
   count               = var.enable_monitoring && var.enable_infrastructure_alerts && var.enable_containers && var.enable_aks ? 1 : 0
   name                = "aks-node-memory-high"
@@ -361,6 +373,7 @@ resource "azurerm_monitor_metric_alert" "aks_node_memory" {
 
   tags = local.common_tags
 }
+*/
 
 #================================================
 # SECURITY MONITORING ALERTS
@@ -567,11 +580,6 @@ resource "azurerm_monitor_diagnostic_setting" "activity_log" {
       category = enabled_log.value
     }
   }
-
-  metric {
-    category = "AllMetrics"
-    enabled  = false
-  }
 }
 
 # Key Vault Diagnostic Settings
@@ -589,10 +597,8 @@ resource "azurerm_monitor_diagnostic_setting" "key_vault" {
     category = "AzurePolicyEvaluationDetails"
   }
 
-  metric {
-    category = "AllMetrics"
-    enabled  = true
-  }
+  # Key Vault doesn't support AllMetrics, removed metric block
+  # If specific metrics are needed, they must be configured individually
 }
 
 # Storage Account Diagnostic Settings
@@ -602,13 +608,15 @@ resource "azurerm_monitor_diagnostic_setting" "storage" {
   target_resource_id         = azurerm_storage_account.main.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.main[0].id
 
-  metric {
-    category = "Transaction"
-    enabled  = true
+  enabled_log {
+    category = "StorageRead"
   }
 
-  metric {
-    category = "Capacity"
-    enabled  = true
+  enabled_log {
+    category = "StorageWrite"
+  }
+
+  enabled_log {
+    category = "StorageDelete"
   }
 }

@@ -96,7 +96,7 @@ cleanup_storage() {
                             --account-name "$storage_name" \
                             --account-key "$STORAGE_KEY" \
                             --source "$container" \
-                            --if-older-than $(date -d "30 days ago" +%Y-%m-%d) 2>/dev/null || true
+                            --if-older-than "$(date -d "30 days ago" +%Y-%m-%d)" 2>/dev/null || true
                     done
                 fi
             fi
@@ -135,7 +135,7 @@ cleanup_snapshots() {
                     az snapshot delete --name "$snapshot_name" --resource-group "$rg_name" --yes
                     echo "    :) Deleted snapshot: $snapshot_name"
                 else
-                    read -p "    Delete snapshot $snapshot_name? (y/n): " confirm
+                    read -r -p "    Delete snapshot $snapshot_name? (y/n): " confirm
                     if [[ "$confirm" == "y" ]]; then
                         az snapshot delete --name "$snapshot_name" --resource-group "$rg_name" --yes
                         echo "    :) Deleted snapshot: $snapshot_name"

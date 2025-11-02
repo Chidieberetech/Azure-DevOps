@@ -1,0 +1,217 @@
+# mg-TRL-root-tf.yml
+name: Terraform-Root-MG-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/root/*
+    - Modules/management-group/*
+    - Modules/policy/*
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/root/*
+    - Modules/management-group/*
+    - Modules/policy/*
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+- name: rootWorkspacePath
+  value: 'workspaces/root'
+- name: rootBackendKey
+  value: 'root-mg.tfstate'
+- name: rootServiceConnection
+  value: 'Sub-TRL-prd-weu-Azure.IAC.hubspoke'  # Using prod connection for tenant-level operations
+
+stages:
+- stage: Validate_Root_Access
+  displayName: 'Validate Tenant Root Access'
+  jobs:
+  - job: Validate_Access
+    displayName: 'Validate Tenant-Level Permissions'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Tenant Root Access'
+      inputs:
+        azureSubscription: '$(rootServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Validating tenant root management group access..."
+          
+          # Check if we can list management groups at tenant root
+          az account management-group list --query "[].name" --output tsv
+          
+          # Check current tenant ID
+          tenantId=$(az account show --query tenantId --output tsv)
+          echo "Tenant ID: $tenantId"
+          
+          # Check if we have required permissions
+          az role assignment list --assignee $(servicePrincipalId) --scope "/" --query "[].roleDefinitionName" --output tsv
+          
+          echo "Tenant root access validation completed successfully"
+
+- stage: Plan_Root
+  displayName: 'Terraform Plan - Root Management Group'
+  dependsOn: Validate_Root_Access
+  jobs:
+  - job: Terraform_Plan
+    displayName: 'Terraform Plan - Root MG'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - Root'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(rootWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(rootServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = $(rootBackendKey)
+          resource_group_name  = $(backendResourceGroupName)
+        backendConfigArm: true
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Validate - Root'
+      inputs:
+        command: 'validate'
+        workingDirectory: '$(rootWorkspacePath)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Plan - Root'
+      inputs:
+        command: 'plan'
+        workingDirectory: '$(rootWorkspacePath)'
+        environmentServiceName: '$(rootServiceConnection)'
+        commandOptions: '-var="company_name=$(COMPANY_NAME)" -var="project_name=$(PROJECT_NAME)" -var="cost_center=$(COST_CENTER)" -out=tfplan'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Terraform Plan - Root'
+      inputs:
+        pathtoPublish: '$(rootWorkspacePath)/tfplan'
+        artifactName: 'terraform-plan-root'
+
+- stage: Apply_Root
+  displayName: 'Terraform Apply - Root Management Group'
+  dependsOn: Plan_Root
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: Terraform_Apply
+    displayName: 'Apply Root Management Group Changes'
+    environment: 'ROOT-MG'
+    pool:
+      name: $(agentPoolName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '$(terraformVersion)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Init - Root'
+            inputs:
+              command: 'init'
+              workingDirectory: '$(rootWorkspacePath)'
+              backendType: 'azurerm'
+              backendServiceArm: '$(rootServiceConnection)'
+              ensureBackend: true
+              backendConfig: |
+                storage_account_name = $(backendStorageAccountName)
+                container_name       = $(backendContainerName)
+                key                  = $(rootBackendKey)
+                resource_group_name  = $(backendResourceGroupName)
+              backendConfigArm: true
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifactName: 'terraform-plan-root'
+              downloadPath: '$(rootWorkspacePath)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Apply - Root'
+            inputs:
+              command: 'apply'
+              workingDirectory: '$(rootWorkspacePath)'
+              environmentServiceName: '$(rootServiceConnection)'
+              commandOptions: '-auto-approve tfplan'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Output - Root'
+            inputs:
+              command: 'output'
+              workingDirectory: '$(rootWorkspacePath)'
+              environmentServiceName: '$(rootServiceConnection)'
+
+- stage: Post_Deployment_Validation
+  displayName: 'Post-Deployment Validation'
+  dependsOn: Apply_Root
+  jobs:
+  - job: Validate_Deployment
+    displayName: 'Validate Root Management Group Deployment'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Management Groups'
+      inputs:
+        azureSubscription: '$(rootServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Root Management Group Deployment Validation ==="
+          
+          # List all management groups
+          echo "Current management group structure:"
+          az account management-group list --output table
+          
+          # Validate specific management groups
+          echo "Validating TRL management groups..."
+          az account management-group show --name "TRL" --query "{name:name, displayName:displayName}" --output table
+          
+          # Check for child management groups
+          echo "Child management groups under TRL:"
+          az account management-group show --name "TRL" --expand --query "children[].{name:name, displayName:displayName, type:type}" --output table
+          
+          echo "Root management group deployment validation completed"
+
+    - task: AzureCLI@2
+      displayName: 'Validate Policies and Initiatives'
+      inputs:
+        azureSubscription: '$(rootServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Policy Deployment Validation ==="
+          
+          # List policy assignments at tenant root
+          echo "Policy assignments at tenant root:"
+          az policy assignment list --disable-scope-strict-match --query "[].{name:name, scope:scope, policyDefinitionId:policyDefinitionId}" --output table
+          
+          # List policy set definitions (initiatives)
+          echo "Custom policy initiatives:"
+          az policy set-definition list --custom --query "[].{name:name, displayName:displayName}" --output table
+          
+          echo "Policy validation completed"

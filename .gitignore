@@ -1,37 +1,315 @@
-# Local .terraform directories
-.terraform/
+#================================================
+# TERRAFORM FILES
+#================================================
 
-# .tfstate files
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files - contain infrastructure state and sensitive data
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 
 # Crash log files
 crash.log
 crash.*.log
 
-# Exclude all .tfvars files, which are likely to contain sensitive data, such as
-# password, private keys, and other secrets. These should not be part of version 
-# control as they are data points which are potentially sensitive and subject 
-# to change depending on the environment.
+# Terraform plan files
+*.tfplan
+*tfplan*
+plan.out
+tfplan
+
+# Exclude all .tfvars files - likely to contain sensitive data
+# (passwords, private keys, secrets, etc.)
 *.tfvars
 *.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
 
-# Ignore override files as they are usually used to override resources locally and so
-# are not checked in
+# Ignore override files (used for local development)
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Ignore transient lock info files created by terraform apply
+# Ignore transient lock info files
 .terraform.tfstate.lock.info
-
-# Include override files you do wish to add to version control using negated pattern
-# !example_override.tf
-
-# Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
-# example: *tfplan*
 
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# Terraform cache and plugin directories
+.terraform.lock.hcl
+.terraform.lock.hcl.*
+terraform.tfstate.d/
+
+#================================================
+# SENSITIVE DATA & SECRETS
+#================================================
+
+# SSH keys
+*.pem
+*.key
+*.ppk
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+
+# SSL/TLS certificates
+*.crt
+*.cer
+*.pfx
+*.p12
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+!.env.template
+*.secret
+secrets.yml
+secrets.yaml
+secrets.json
+
+# Password and credential files
+passwords.txt
+credentials.txt
+credentials.json
+
+# Azure service principal files
+azure-credentials.json
+sp-credentials.json
+service-principal.json
+
+# Kubeconfig files (may contain credentials)
+kubeconfig
+*.kubeconfig
+config.kubernetes
+
+#================================================
+# LOGS & REPORTS
+#================================================
+
+# General logs
+*.log
+logs/
+*.log.*
+
+# Azure logs
+azure-debug.log
+
+# Test and coverage reports
+coverage/
+test-results/
+*.coverage
+.coverage
+htmlcov/
+
+# Cost analysis and reports
+cost-analysis-*.json
+cost-analysis-*.txt
+cost-optimization-recommendations.md
+*_costs_raw.*
+backup-report-*.txt
+health-check-*.txt
+security-summary-*.txt
+
+# Terraform output files
+terraform-output.json
+outputs.json
+
+#================================================
+# IDE & EDITOR FILES
+#================================================
+
+# JetBrains IDEs (IntelliJ, PyCharm, WebStorm, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Vim
+*.swp
+*.swo
+*~
+.*.sw?
+
+# Emacs
+\#*\#
+.\#*
+
+# Atom
+.atom/
+
+#================================================
+# OS FILES
+#================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+#================================================
+# BACKUP & TEMPORARY FILES
+#================================================
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
+
+# Temporary files
+tmp/
+temp/
+*.temp
+
+# Archives (if accidentally created)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+#================================================
+# AZURE SPECIFIC
+#================================================
+
+# Azure CLI
+.azure/
+
+# Azure Functions
+local.settings.json
+.python_packages/
+__blobstorage__/
+__queuestorage__/
+__azurite_db*__.json
+
+#================================================
+# SCRIPTING & DEPENDENCIES
+#================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+env/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.npm
+.yarn-integrity
+
+# Ruby
+*.gem
+.bundle
+vendor/bundle
+
+#================================================
+# CI/CD & PIPELINE FILES
+#================================================
+
+# Pipeline artifacts
+artifacts/
+.artifacts/
+
+# Test outputs
+*.junit.xml
+test-output/
+
+# Build outputs
+dist/
+build/
+out/
+
+#================================================
+# TERRAFORM SPECIFIC PATTERNS
+#================================================
+
+# Lock files from modules
+**/.terraform.lock.hcl.backup
+
+# Generated documentation
+terraform-docs/
+docs/generated/
+
+# Sentinel (Terraform Enterprise)
+.sentinel/
+
+# Terragrunt
+.terragrunt-cache/
+
+#================================================
+# EXCEPTIONS - Files to INCLUDE
+#================================================
+
+# Example files (uncomment to include specific patterns)
+# !example.tfvars
+# !*.example.tfvars
+# !terraform.tfvars.example
+
+# Note: .terraform.lock.hcl is managed via Azure DevOps pipelines
+# and is intentionally ignored (see line 42)
+

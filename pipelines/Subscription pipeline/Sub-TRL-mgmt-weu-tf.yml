@@ -1,0 +1,224 @@
+# Sub-TRL-mgmt-weu-tf.yml
+name: Terraform-Deploy-Management-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/management/*
+    - Modules/monitoring/*
+    - Modules/automation/*
+    - Modules/keyvault/*
+    - Modules/log-analytics/*
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/management/*
+    - Modules/monitoring/*
+    - Modules/automation/*
+    - Modules/keyvault/*
+    - Modules/log-analytics/*
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+
+stages:
+- stage: Validate_Management_Deployment
+  displayName: 'Validate Management Deployment'
+  jobs:
+  - job: Validate_Management_Resources
+    displayName: 'Validate Management Resources'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Management Subscription Access'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Validating Management subscription access..."
+          
+          # Get current subscription
+          subscriptionId=$(az account show --query id --output tsv)
+          subscriptionName=$(az account show --query name --output tsv)
+          echo "Management Subscription: $subscriptionName ($subscriptionId)"
+          
+          # Validate resource groups for management resources
+          echo "Existing resource groups in management subscription:"
+          az group list --query "[].name" --output table
+          
+          # Check for existing Log Analytics workspace
+          echo "Existing Log Analytics workspaces:"
+          az monitor log-analytics workspace list --query "[].name" --output table
+          
+          echo "Management subscription validation completed successfully"
+
+- stage: Plan_Management
+  displayName: 'Terraform Plan - Management'
+  dependsOn: Validate_Management_Deployment
+  jobs:
+  - job: Terraform_Plan
+    displayName: 'Terraform Plan - Management'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - Management'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(managementWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(managementServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = $(managementBackendKey)
+          resource_group_name  = $(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Validate - Management'
+      inputs:
+        command: 'validate'
+        workingDirectory: '$(managementWorkspacePath)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Plan - Management'
+      inputs:
+        command: 'plan'
+        workingDirectory: '$(managementWorkspacePath)'
+        environmentServiceName: '$(managementServiceConnection)'
+        commandOptions: '-var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" -var="company_name=$(COMPANY_NAME)" -var="project_name=$(PROJECT_NAME)" -var="cost_center=$(COST_CENTER)" -out=tfplan'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Terraform Plan - Management'
+      inputs:
+        pathtoPublish: '$(managementWorkspacePath)/tfplan'
+        artifactName: 'terraform-plan-management'
+
+- stage: Apply_Management
+  displayName: 'Terraform Apply - Management'
+  dependsOn: Plan_Management
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: Terraform_Apply
+    displayName: 'Apply Management Resources Changes'
+    environment: 'MANAGEMENT-PRD'
+    pool:
+      name: $(agentPoolName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '$(terraformVersion)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Init - Management'
+            inputs:
+              command: 'init'
+              workingDirectory: '$(managementWorkspacePath)'
+              backendType: 'azurerm'
+              backendServiceArm: '$(managementServiceConnection)'
+              ensureBackend: true
+              backendConfig: |
+                storage_account_name = $(backendStorageAccountName)
+                container_name       = $(backendContainerName)
+                key                  = $(managementBackendKey)
+                resource_group_name  = $(backendResourceGroupName)
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifactName: 'terraform-plan-management'
+              downloadPath: '$(managementWorkspacePath)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Apply - Management'
+            inputs:
+              command: 'apply'
+              workingDirectory: '$(managementWorkspacePath)'
+              environmentServiceName: '$(managementServiceConnection)'
+              commandOptions: '-auto-approve tfplan'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Output - Management'
+            inputs:
+              command: 'output'
+              workingDirectory: '$(managementWorkspacePath)'
+              environmentServiceName: '$(managementServiceConnection)'
+
+- stage: Post_Management_Deployment_Validation
+  displayName: 'Post-Management Deployment Validation'
+  dependsOn: Apply_Management
+  jobs:
+  - job: Validate_Management_Resources
+    displayName: 'Validate Management Resources Deployment'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Management Resources'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Management Resources Deployment Validation ==="
+          
+          # Validate Log Analytics Workspace
+          echo "Log Analytics Workspaces:"
+          az monitor log-analytics workspace list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
+          
+          # Validate Automation Account
+          echo "Automation Accounts:"
+          az automation account list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
+          
+          # Validate Key Vaults
+          echo "Key Vaults:"
+          az keyvault list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
+          
+          # Validate Recovery Services Vaults
+          echo "Recovery Services Vaults:"
+          az backup vault list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
+          
+          # Validate Monitor Action Groups
+          echo "Action Groups:"
+          az monitor action-group list --query "[].{Name:name, ResourceGroup:resourceGroup}" --output table
+          
+          echo "Management resources validation completed"
+
+    - task: AzureCLI@2
+      displayName: 'Validate Monitoring Configuration'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Monitoring Configuration Validation ==="
+          
+          # Check Alert Rules
+          echo "Alert Rules:"
+          az monitor metrics alert list --query "[].{Name:name, ResourceGroup:resourceGroup, Enabled:enabled}" --output table
+          
+          # Check Diagnostic Settings
+          echo "Diagnostic Settings:"
+          az monitor diagnostic-settings list --resource-group $(backendResourceGroupName) --query "value[].{Name:name, StorageAccount:storageAccountId}" --output table
+          
+          echo "Monitoring configuration validation completed"

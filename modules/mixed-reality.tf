@@ -3,6 +3,9 @@
 #================================================
 
 # Spatial Anchors Account
+# NOTE: This resource has been deprecated and will be removed in v5.0 of the AzureRM Provider
+# Commented out to avoid deprecation warnings
+/*
 resource "azurerm_spatial_anchors_account" "main" {
   count               = var.enable_spatial_anchors ? 1 : 0
   name                = "spa-${local.resource_prefix}-${format("%03d", 1)}"
@@ -11,11 +14,12 @@ resource "azurerm_spatial_anchors_account" "main" {
 
   tags = local.common_tags
 }
+*/
 
 # Storage Account for Mixed Reality content
 resource "azurerm_storage_account" "mixed_reality" {
   count                    = var.enable_mixed_reality_storage ? 1 : 0
-  name                     = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}mr${random_string.suffix.result}"
+  name                     = "st${lower(local.environment_abbr)}${lower(local.location_abbr_value)}mr${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.spokes[0].name
   location                 = azurerm_resource_group.spokes[0].location
   account_tier             = "Standard"
@@ -64,7 +68,7 @@ resource "azurerm_cdn_endpoint" "mixed_reality" {
 # Container Registry for Mixed Reality applications
 resource "azurerm_container_registry" "mixed_reality" {
   count               = var.enable_mixed_reality_acr ? 1 : 0
-  name                = "acr${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}mr${random_string.suffix.result}"
+  name                = "acr${lower(local.environment_abbr)}${lower(local.location_abbr_value)}mr${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.spokes[0].name
   location            = azurerm_resource_group.spokes[0].location
   sku                 = "Premium"

@@ -35,7 +35,7 @@ check_vm_health() {
 
             # Check boot diagnostics
             BOOT_DIAG=$(az vm boot-diagnostics get-boot-log --name "$vm_name" --resource-group "$rg_name" 2>/dev/null | tail -5 || echo "Boot diagnostics not available")
-            echo "    Boot Status: Available"
+            echo "    Boot Diagnostics: ${BOOT_DIAG:0:50}..." # Show first 50 chars
         fi
     done <<< "$VMS"
 }

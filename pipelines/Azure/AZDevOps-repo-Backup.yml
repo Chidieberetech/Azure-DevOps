@@ -1,0 +1,52 @@
+# AZDevOps-repo-simple-backup.yml
+name: AzureDevOps-Simple-Backup-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  schedules:
+  - cron: "0 2 * * *"  # Daily at 2 AM
+    displayName: 'DailyBackup'
+    branches:
+      include:
+      - main
+
+pr: none
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+- name: backupContainerName
+  value: 'azdevopsbackup'
+
+stages:
+- stage: Backup_Repositories
+  displayName: 'Backup Repositories'
+  jobs:
+  - job: Backup_Repos
+    displayName: 'Backup Git Repositories'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - powershell: |
+        # Backup current repository
+        $storageAccountName = "$(backendStorageAccountName)"
+        $storageAccountKey = "$(BACKEND_STORAGE_KEY)"
+        $containerName = "$(backupContainerName)"
+        $backupDate = Get-Date -Format "yyyyMMdd-HHmmss"
+        $repoName = "$(Build.Repository.Name)"
+        $backupFileName = "$repoName-$backupDate.zip"
+        $backupPath = Join-Path $env:BUILD_ARTIFACTSTAGINGDIRECTORY $backupFileName
+        
+        # Create zip of current directory (excluding .git folder)
+        Get-ChildItem -Path $(Build.SourcesDirectory) -Exclude ".git" | Compress-Archive -DestinationPath $backupPath -CompressionLevel Optimal
+        
+        # Upload to Azure Storage
+        az storage blob upload --account-name $storageAccountName `
+                              --account-key $storageAccountKey `
+                              --container-name $containerName `
+                              --name $backupFileName `
+                              --file $backupFileName `
+                              --overwrite
+                              
+        Write-Host "Backup completed: $backupFileName"
+      displayName: 'Create and Upload Backup'
+      workingDirectory: $(Build.ArtifactStagingDirectory)AZDevOps-repo-Backup.yml

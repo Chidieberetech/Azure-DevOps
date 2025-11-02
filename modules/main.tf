@@ -12,14 +12,14 @@ resource "azurerm_resource_group" "hub" {
 # Spoke Resource Groups with proper naming convention
 resource "azurerm_resource_group" "spokes" {
   count    = var.spoke_count
-  name     = "rg-trl-${local.env_abbr[var.environment]}-${local.spoke_names[count.index]}-${format("%03d", count.index + 1)}"
+  name     = "rg-trl-${local.environment_abbr}-${local.spoke_names[count.index]}-${format("%03d", count.index + 1)}"
   location = var.location
   tags     = local.common_tags
 }
 
 # Management Resource Group for operational tools
 resource "azurerm_resource_group" "management" {
-  name     = "rg-trl-${local.env_abbr[var.environment]}-mgmt-${format("%03d", 1)}"
+  name     = "rg-trl-${local.environment_abbr}-mgmt-${format("%03d", 1)}"
   location = var.location
   tags     = local.common_tags
 }
@@ -43,7 +43,7 @@ resource "azurerm_log_analytics_workspace" "main" {
 
 # Main Storage Account
 resource "azurerm_storage_account" "main" {
-  name                     = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}${random_string.suffix.result}"
+  name                     = "st${lower(local.environment_abbr)}${lower(local.location_abbr_value)}${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.management.name
   location                 = azurerm_resource_group.management.location
   account_tier             = var.storage_account_tier
@@ -69,14 +69,27 @@ resource "azurerm_storage_account" "main" {
     }
   }
 
-  # Network access
-  network_rules {
-    default_action             = "Deny"
-    bypass                     = ["AzureServices"]
-    virtual_network_subnet_ids = var.spoke_count >= 1 ? [azurerm_subnet.spoke_alpha_workload[0].id] : []
-  }
-
   tags = local.common_tags
 
-  depends_on = [azurerm_subnet.spoke_alpha_workload]
+  # Ignore changes to network_rules since they're managed separately
+  lifecycle {
+    ignore_changes = [
+      network_rules
+    ]
+  }
+}
+
+# Storage Account Network Rules - Applied separately to avoid service endpoint race condition
+resource "azurerm_storage_account_network_rules" "main" {
+  storage_account_id = azurerm_storage_account.main.id
+
+  default_action             = "Deny"
+  bypass                     = ["AzureServices"]
+  virtual_network_subnet_ids = var.spoke_count >= 1 ? [azurerm_subnet.spoke_alpha_workload[0].id] : []
+
+  # Ensure service endpoints are fully configured before applying network rules
+  depends_on = [
+    azurerm_subnet.spoke_alpha_workload,
+    azurerm_storage_account.main
+  ]
 }

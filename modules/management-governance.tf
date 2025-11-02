@@ -34,10 +34,9 @@ resource "azurerm_management_group" "main" {
 
 # Storage Container for Cost Management - Fixed argument names
 resource "azurerm_storage_container" "cost_management" {
-  count                 = var.enable_cost_monitoring ? 1 : 0
-  name                  = "cost-management"
-  storage_account_name  = azurerm_storage_account.main.name
-  container_access_type = "private"
+  count                = var.enable_cost_monitoring ? 1 : 0
+  name                 = "cost-management"
+  storage_account_id   = azurerm_storage_account.main.id
 }
 
 # Azure Monitor Action Group for governance alerts

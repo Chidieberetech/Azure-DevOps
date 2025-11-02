@@ -109,13 +109,12 @@ rotate_vm_password() {
 
     # Update VM password
     echo ":) Updating VM password..."
-    az vm user update \
+    if az vm user update \
         --resource-group "$resource_group" \
         --name "$vm_name" \
         --username "azureadmin" \
-        --password "$NEW_PASSWORD"
+        --password "$NEW_PASSWORD"; then
 
-    if [ $? -eq 0 ]; then
         echo ":) Password rotation completed for $vm_name"
 
         # Store backup of previous password (optional)
@@ -176,7 +175,7 @@ if [ "$FORCE_ROTATION" != true ]; then
     fi
 
     echo ""
-    read -p ":| Do you want to proceed with password rotation? (yes/no): " CONFIRM
+    read -r -p ":| Do you want to proceed with password rotation? (yes/no): " CONFIRM
 
     if [ "$CONFIRM" != "yes" ]; then
         echo ":( Password rotation cancelled by user"
@@ -190,7 +189,7 @@ echo ":) Starting password rotation process..."
 
 # Determine environments to process
 if [ -n "$ENVIRONMENT" ]; then
-    ENVIRONMENTS=($ENVIRONMENT)
+    ENVIRONMENTS=("$ENVIRONMENT")
 else
     ENVIRONMENTS=(dev int prod)
 fi

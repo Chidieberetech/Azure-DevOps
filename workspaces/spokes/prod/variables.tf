@@ -1,4 +1,4 @@
-# Hub Workspace Variables
+# Prod Spoke Workspace Variables
 
 #================================================
 # BACKEND CONFIGURATION
@@ -19,6 +19,11 @@ variable "backendContainerName" {
   type        = string
 }
 
+variable "hubBackendKey" {
+  description = "State file key for hub workspace"
+  type        = string
+}
+
 #================================================
 # CORE CONFIGURATION
 #================================================
@@ -29,7 +34,7 @@ variable "subscription_id" {
 }
 
 variable "environment" {
-  description = "Environment name for the hub workspace"
+  description = "Environment name for the spoke workspace"
   type        = string
   default     = "prod"
   validation {
@@ -39,51 +44,66 @@ variable "environment" {
 }
 
 variable "location" {
-  description = "Primary Azure region for hub resources"
+  description = "Primary Azure region for spoke resources"
   type        = string
   default     = "West Europe"
 }
 
 #================================================
 # NETWORK CONFIGURATION
+# Network components disabled - managed by hub
 #================================================
 
 variable "enable_firewall" {
-  description = "Enable Azure Firewall in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_bastion" {
-  description = "Enable Azure Bastion in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_private_dns" {
-  description = "Enable private DNS zones in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_ddos_protection" {
-  description = "Enable DDoS Protection Plan"
+  description = "Enable Azure Firewall (always false - managed by hub)"
   type        = bool
   default     = false
 }
 
-#================================================
-# SPOKE CONFIGURATION
-#================================================
+variable "enable_bastion" {
+  description = "Enable Azure Bastion (always false - managed by hub)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_private_dns" {
+  description = "Enable private DNS zones (always false - managed by hub)"
+  type        = bool
+  default     = false
+}
 
 variable "spoke_count" {
-  description = "Number of spoke networks to create from hub"
+  description = "Number of spoke networks to deploy"
   type        = number
   default     = 2
   validation {
     condition     = var.spoke_count >= 0 && var.spoke_count <= 3
     error_message = "Spoke count must be between 0 and 3."
   }
+}
+
+variable "vm_vnet_address_space" {
+  description = "Address space for the Windows VM VNet"
+  type        = list(string)
+  default     = ["10.10.0.0/16"]
+}
+
+variable "vm_subnet_prefix" {
+  description = "Subnet prefix for Windows VM"
+  type        = list(string)
+  default     = ["10.10.1.0/24"]
+}
+
+variable "sftp_vnet_address_space" {
+  description = "Address space for the SFTP Storage VNet"
+  type        = list(string)
+  default     = ["10.20.0.0/16"]
+}
+
+variable "sftp_subnet_prefix" {
+  description = "Subnet prefix for SFTP storage"
+  type        = list(string)
+  default     = ["10.20.1.0/24"]
 }
 
 #================================================
@@ -93,7 +113,7 @@ variable "spoke_count" {
 variable "vm_size" {
   description = "Size of the virtual machines"
   type        = string
-  default     = "Standard_B1s"
+  default     = "Standard_B2s"
 }
 
 variable "admin_username" {
@@ -104,40 +124,37 @@ variable "admin_username" {
 }
 
 variable "admin_password" {
-  description = "Admin password for virtual machines"
+  description = "Admin password for VMs"
   type        = string
   sensitive   = true
-  default     = ""
 }
 
-#================================================
-# SECURITY CONFIGURATION
-#================================================
-
-variable "enable_key_vault" {
-  description = "Enable Azure Key Vault in the hub"
-  type        = bool
-  default     = true
+variable "vm_admin_password" {
+  description = "Admin password for VMs (alternative name)"
+  type        = string
+  sensitive   = true
 }
 
-variable "enable_key_vault_soft_delete" {
-  description = "Enable Key Vault soft delete"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# DATABASE CONFIGURATION
-#================================================
-
-variable "enable_sql_database" {
-  description = "Enable SQL Database deployment"
+variable "enable_vm_auto_shutdown" {
+  description = "Enable automatic VM shutdown for cost optimization"
   type        = bool
   default     = false
 }
 
-variable "enable_cosmos_db" {
-  description = "Enable Cosmos DB deployment"
+variable "vm_shutdown_time" {
+  description = "Time to automatically shutdown VMs (24-hour format)"
+  type        = string
+  default     = "2200"
+}
+
+variable "enable_vm_monitoring" {
+  description = "Enable VM Insights monitoring"
+  type        = bool
+  default     = true
+}
+
+variable "enable_windows_vm" {
+  description = "Enable Windows VM deployment"
   type        = bool
   default     = false
 }
@@ -159,55 +176,51 @@ variable "storage_account_tier" {
 variable "storage_replication_type" {
   description = "Storage account replication type"
   type        = string
-  default     = "LRS"
+  default     = "GRS"
   validation {
     condition     = contains(["LRS", "GRS", "RAGRS", "ZRS"], var.storage_replication_type)
     error_message = "Storage replication type must be LRS, GRS, RAGRS, or ZRS."
   }
 }
 
-variable "enable_premium_storage" {
-  description = "Enable premium storage account"
+variable "enable_sftp_storage" {
+  description = "Enable SFTP storage account deployment"
   type        = bool
   default     = false
 }
 
-variable "enable_data_lake_storage" {
-  description = "Enable Data Lake Storage Gen2"
-  type        = bool
-  default     = false
-}
-
-#================================================
-# PRIVATE ENDPOINTS
-#================================================
-
-variable "enable_private_endpoints" {
-  description = "Enable private endpoints for services"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# ADVANCED COMPUTE CONFIGURATION
-#================================================
-
-variable "enable_vm_auto_shutdown" {
-  description = "Enable automatic VM shutdown for cost optimization"
-  type        = bool
-  default     = true
-}
-
-variable "vm_shutdown_time" {
-  description = "Time to automatically shutdown VMs (24-hour format)"
+variable "sftp_allowed_ip" {
+  description = "Allowed IP address for SFTP storage account access"
   type        = string
-  default     = "1900"
+  default     = ""
 }
 
-variable "enable_vm_monitoring" {
-  description = "Enable VM Insights monitoring"
+#================================================
+# DATABASE CONFIGURATION
+#================================================
+
+variable "enable_sql_database" {
+  description = "Enable SQL Database deployment"
   type        = bool
-  default     = true
+  default     = false
+}
+
+variable "sql_database_sku" {
+  description = "SQL Database SKU"
+  type        = string
+  default     = "S0"
+}
+
+variable "enable_cosmos_db" {
+  description = "Enable Cosmos DB deployment"
+  type        = bool
+  default     = false
+}
+
+variable "sql_admin_password" {
+  description = "Admin password for SQL databases"
+  type        = string
+  sensitive   = true
 }
 
 #================================================
@@ -223,86 +236,38 @@ variable "enable_monitoring" {
 variable "log_retention_days" {
   description = "Number of days to retain logs"
   type        = number
-  default     = 30
+  default     = 90
   validation {
     condition     = var.log_retention_days >= 30 && var.log_retention_days <= 365
     error_message = "Log retention must be between 30 and 365 days."
   }
 }
 
-variable "log_analytics_sku" {
-  description = "Log Analytics workspace SKU"
+variable "admin_phone_number" {
+  description = "Admin phone number for SMS alerts (optional, e.g., +1234567890)"
   type        = string
-  default     = "PerGB2018"
+  default     = ""
   validation {
-    condition     = contains(["Free", "PerNode", "PerGB2018", "Premium"], var.log_analytics_sku)
-    error_message = "Log Analytics SKU must be Free, PerNode, PerGB2018, or Premium."
+    condition     = var.admin_phone_number == "" || can(regex("^\\+?[1-9][0-9]{7,14}$", var.admin_phone_number))
+    error_message = "Phone number must be in E.164 format (e.g., +1234567890) or empty. It should start with + followed by country code and 8-15 digits."
   }
-}
-
-variable "log_analytics_daily_quota_gb" {
-  description = "Daily data ingestion quota in GB for Log Analytics workspace"
-  type        = number
-  default     = -1
-}
-
-variable "app_insights_retention_days" {
-  description = "Application Insights data retention in days"
-  type        = number
-  default     = 90
-  validation {
-    condition     = var.app_insights_retention_days >= 30 && var.app_insights_retention_days <= 730
-    error_message = "Application Insights retention must be between 30 and 730 days."
-  }
-}
-
-variable "enable_monitoring_dashboard" {
-  description = "Enable custom monitoring dashboard"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# ALERTING CONFIGURATION
-#================================================
-
-variable "enable_infrastructure_alerts" {
-  description = "Enable infrastructure metric alerts"
-  type        = bool
-  default     = true
-}
-
-variable "alert_email_addresses" {
-  description = "List of email addresses for alert notifications"
-  type        = list(string)
-  default     = ["infrastructure@trl.com"]
-}
-
-variable "cpu_alert_threshold" {
-  description = "CPU usage percentage threshold for alerts"
-  type        = number
-  default     = 80
-  validation {
-    condition     = var.cpu_alert_threshold >= 1 && var.cpu_alert_threshold <= 100
-    error_message = "CPU alert threshold must be between 1 and 100."
-  }
-}
-
-variable "memory_alert_threshold_bytes" {
-  description = "Available memory threshold in bytes for alerts"
-  type        = number
-  default     = 1073741824
-}
-
-variable "enable_security_alerts" {
-  description = "Enable security-related alerts"
-  type        = bool
-  default     = true
 }
 
 #================================================
 # TAGGING
 #================================================
+
+variable "additional_tags" {
+  description = "Additional tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "company_name" {
+  description = "Company name for tagging"
+  type        = string
+  default     = "TRL"
+}
 
 variable "created_by" {
   description = "Name or identifier of the person/team who created the resources"
@@ -343,7 +308,7 @@ variable "owner_email" {
 variable "data_classification" {
   description = "Data classification level"
   type        = string
-  default     = "Internal"
+  default     = "Confidential"
   validation {
     condition     = contains(["Public", "Internal", "Confidential", "Restricted"], var.data_classification)
     error_message = "Data classification must be Public, Internal, Confidential, or Restricted."
@@ -353,7 +318,7 @@ variable "data_classification" {
 variable "compliance_requirements" {
   description = "Compliance frameworks applicable to resources"
   type        = list(string)
-  default     = ["ISO-27001", "SOC2"]
+  default     = ["ISO-27001", "SOC2", "PCI-DSS"]
 }
 
 variable "backup_required" {
@@ -378,16 +343,54 @@ variable "maintenance_window" {
   default     = "Saturday 02:00-06:00 UTC"
 }
 
-variable "additional_tags" {
-  description = "Additional custom tags to apply to all resources"
+
+#================================================
+# COMMON TAGS
+#================================================
+
+variable "common_tags" {
+  description = "Common tags to be applied to all resources"
   type        = map(string)
-  default = {
-    Workspace       = "Hub"
-    Purpose         = "Shared Services and Spokes"
-    ManagedBy       = "Terraform"
-    Repository      = "Azure.IAC.hubspoke"
-    AutoShutdown    = "Enabled"
-    CostOptimized   = "true"
+  default     = {}
+}
+
+locals {
+  # All common tags defined once
+  all_common_tags = {
+    Environment               = var.environment
+    "Created By"              = var.created_by
+    "Service Provider"        = var.service_provider
+    "Cost Center"             = var.cost_center
+    "Business Unit"           = var.business_unit
+    "Project Name"            = var.project_name
+    "Owner Email"             = var.owner_email
+    "Data Classification"     = var.data_classification
+    "Compliance Requirements" = join(", ", var.compliance_requirements)
+    "Backup Required"         = var.backup_required ? "Yes" : "No"
+    "Disaster Recovery Tier"  = var.disaster_recovery_tier
+    "Maintenance Window"      = var.maintenance_window
+    ManagedBy                 = "Terraform"
+    Repository                = "Azure.IAC.hubspoke"
+    CriticalityLevel          = "High"
   }
+
+  # Merge with any additional common tags from variable
+  base_tags = merge(local.all_common_tags, var.common_tags)
+
+  # Specific tag sets
+  sftp_tags = merge(local.base_tags, {
+    Workspace = "Spoke-Prod-SFTP"
+    Purpose   = "SFTP Storage Infrastructure"
+  })
+
+  windows_vm_tags = merge(local.base_tags, {
+    Workspace = "Spoke-Prod-WinVM"
+    Purpose   = "Windows VM Infrastructure"
+  })
+
+  spoke_tags = merge(local.base_tags, {
+    Workspace = "Spoke-Prod"
+    Purpose   = "Production Workloads"
+  })
 }
 

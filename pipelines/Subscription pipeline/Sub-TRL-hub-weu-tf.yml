@@ -1,0 +1,217 @@
+# Sub-TRL-hub-weu-tf.yml
+name: Terraform-Deploy-Hub-$(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/hub/*
+    - Modules/network/*
+    - Modules/security/*
+    - Modules/compute/*
+
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - workspaces/hub/*
+    - Modules/network/*
+    - Modules/security/*
+    - Modules/compute/*
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+
+stages:
+- stage: Validate_Hub_Deployment
+  displayName: 'Validate Hub Deployment'
+  jobs:
+  - job: Validate_Hub_Resources
+    displayName: 'Validate Hub Resources'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Hub Subscription Access'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Validating Hub subscription access..."
+          
+          # Get current subscription
+          subscriptionId=$(az account show --query id --output tsv)
+          subscriptionName=$(az account show --query name --output tsv)
+          echo "Hub Subscription: $subscriptionName ($subscriptionId)"
+          
+          # Validate resource group for hub resources exists or can be created
+          az group list --query "[].name" --output tsv
+          
+          echo "Hub subscription validation completed successfully"
+
+- stage: Plan_Hub
+  displayName: 'Terraform Plan - Hub'
+  dependsOn: Validate_Hub_Deployment
+  jobs:
+  - job: Terraform_Plan
+    displayName: 'Terraform Plan - Hub'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init - Hub'
+      inputs:
+        command: 'init'
+        workingDirectory: '$(hubWorkspacePath)'
+        backendType: 'azurerm'
+        backendServiceArm: '$(hubServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name = $(backendStorageAccountName)
+          container_name       = $(backendContainerName)
+          key                  = $(hubBackendKey)
+          resource_group_name  = $(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Validate - Hub'
+      inputs:
+        command: 'validate'
+        workingDirectory: '$(hubWorkspacePath)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Plan - Hub'
+      inputs:
+        command: 'plan'
+        workingDirectory: '$(hubWorkspacePath)'
+        environmentServiceName: '$(hubServiceConnection)'
+        commandOptions: '-var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" -var="company_name=$(COMPANY_NAME)" -var="project_name=$(PROJECT_NAME)" -var="cost_center=$(COST_CENTER)" -out=tfplan'
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Terraform Plan - Hub'
+      inputs:
+        pathtoPublish: '$(hubWorkspacePath)/tfplan'
+        artifactName: 'terraform-plan-hub'
+
+- stage: Apply_Hub
+  displayName: 'Terraform Apply - Hub'
+  dependsOn: Plan_Hub
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: Terraform_Apply
+    displayName: 'Apply Hub Network Changes'
+    environment: 'HUB-PRD'
+    pool:
+      name: $(agentPoolName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: '$(terraformVersion)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Init - Hub'
+            inputs:
+              command: 'init'
+              workingDirectory: '$(hubWorkspacePath)'
+              backendType: 'azurerm'
+              backendServiceArm: '$(hubServiceConnection)'
+              ensureBackend: true
+              backendConfig: |
+                storage_account_name = $(backendStorageAccountName)
+                container_name       = $(backendContainerName)
+                key                  = $(hubBackendKey)
+                resource_group_name  = $(backendResourceGroupName)
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifactName: 'terraform-plan-hub'
+              downloadPath: '$(hubWorkspacePath)'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Apply - Hub'
+            inputs:
+              command: 'apply'
+              workingDirectory: '$(hubWorkspacePath)'
+              environmentServiceName: '$(hubServiceConnection)'
+              commandOptions: '-auto-approve tfplan'
+
+          - task: TerraformCLI@0
+            displayName: 'Terraform Output - Hub'
+            inputs:
+              command: 'output'
+              workingDirectory: '$(hubWorkspacePath)'
+              environmentServiceName: '$(hubServiceConnection)'
+
+- stage: Post_Hub_Deployment_Validation
+  displayName: 'Post-Hub Deployment Validation'
+  dependsOn: Apply_Hub
+  jobs:
+  - job: Validate_Hub_Resources
+    displayName: 'Validate Hub Resources Deployment'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Hub Network Resources'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Hub Network Deployment Validation ==="
+          
+          # Validate Virtual Network
+          echo "Hub Virtual Network:"
+          az network vnet list --query "[?contains(name, 'hub')].{Name:name, AddressSpace:addressSpace.addressPrefixes}" --output table
+          
+          # Validate Network Security Groups
+          echo "Network Security Groups:"
+          az network nsg list --query "[?contains(name, 'hub')].{Name:name, Location:location}" --output table
+          
+          # Validate Route Tables
+          echo "Route Tables:"
+          az network route-table list --query "[?contains(name, 'hub')].{Name:name, Location:location}" --output table
+          
+          # Validate Azure Firewall if deployed
+          echo "Azure Firewall:"
+          az network firewall list --query "[].{Name:name, Location:location, SKU:sku.tier}" --output table
+          
+          # Validate VPN Gateway if deployed
+          echo "VPN Gateway:"
+          az network vnet-gateway list --query "[].{Name:name, Location:location, SKU:sku.name}" --output table
+          
+          echo "Hub network validation completed"
+
+    - task: AzureCLI@2
+      displayName: 'Validate Hub Connectivity'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "=== Hub Connectivity Validation ==="
+          
+          # Check VNet Peerings
+          echo "VNet Peerings:"
+          az network vnet list --query "[].{VNet:name, Peerings:peerings[].remoteVnet.id}" --output table
+          
+          # Check DNS configuration
+          echo "Private DNS Zones:"
+          az network private-dns zone list --query "[].{Name:name, ResourceGroup:resourceGroup}" --output table
+          
+          echo "Hub connectivity validation completed"

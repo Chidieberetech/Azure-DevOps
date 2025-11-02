@@ -5,7 +5,7 @@
 # Storage Account for migration data
 resource "azurerm_storage_account" "migration" {
   count                    = var.enable_migration_storage ? 1 : 0
-  name                     = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}migr${random_string.suffix.result}"
+  name                     = "st${lower(local.environment_abbr)}${lower(local.location_abbr_value)}migr${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.management.name
   location                 = azurerm_resource_group.management.location
   account_tier             = "Standard"
@@ -30,7 +30,7 @@ resource "azurerm_storage_account" "migration" {
 # Database Migration Service for migration (renamed to avoid conflict)
 resource "azurerm_database_migration_service" "migration" {
   count               = var.enable_database_migration_service ? 1 : 0
-  name                = "dms-migration-${local.env_abbr[var.environment]}-${local.location_abbr[var.location]}-${format("%03d", 1)}"
+  name                = "dms-migration-${local.environment_abbr}-${local.location_abbr_value}-${format("%03d", 1)}"
   location            = azurerm_resource_group.management.location
   resource_group_name = azurerm_resource_group.management.name
   subnet_id           = azurerm_subnet.spoke_alpha_workload[0].id
@@ -120,8 +120,7 @@ resource "azurerm_private_endpoint" "migration_storage" {
 
 # Storage Container for Import/Export - Fixed argument names
 resource "azurerm_storage_container" "import_export" {
-  count                 = var.enable_import_export ? 1 : 0
-  name                  = "import-export"
-  storage_account_name  = azurerm_storage_account.migration[0].name
-  container_access_type = "private"
+  count              = var.enable_import_export ? 1 : 0
+  name               = "import-export"
+  storage_account_id = azurerm_storage_account.migration[0].id
 }

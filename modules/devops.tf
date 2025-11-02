@@ -5,7 +5,7 @@
 # Container Registry for DevOps artifacts
 resource "azurerm_container_registry" "devops" {
   count               = var.enable_devops ? 1 : 0
-  name                = "acr${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}devops${random_string.suffix.result}"
+  name                = "acr${lower(local.environment_abbr)}${lower(local.location_abbr_value)}devops${random_string.suffix.result}"
   resource_group_name = azurerm_resource_group.spokes[0].name
   location            = azurerm_resource_group.spokes[0].location
   sku                 = "Premium"
@@ -21,7 +21,7 @@ resource "azurerm_container_registry" "devops" {
 # Storage Account for DevOps artifacts
 resource "azurerm_storage_account" "devops" {
   count                    = var.enable_devops ? 1 : 0
-  name                     = "st${lower(local.env_abbr[var.environment])}${lower(local.location_abbr[var.location])}devops${random_string.suffix.result}"
+  name                     = "st${lower(local.environment_abbr)}${lower(local.location_abbr_value)}devops${random_string.suffix.result}"
   resource_group_name      = azurerm_resource_group.spokes[0].name
   location                 = azurerm_resource_group.spokes[0].location
   account_tier             = "Standard"

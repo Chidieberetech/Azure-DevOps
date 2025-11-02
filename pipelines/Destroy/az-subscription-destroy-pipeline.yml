@@ -1,0 +1,379 @@
+# ==============================================================================
+# AZURE SUBSCRIPTION DESTROY PIPELINE - PRODUCTION ENVIRONMENT
+# ==============================================================================
+#
+# PURPOSE:
+#   This pipeline destroys all Terraform-managed resources in the production
+#   environment (hub, spokes, VMs, databases, networks, etc.)
+#
+# CRITICAL INFORMATION - WHAT IS NOT DESTROYED:
+#   ⚠️  This pipeline NEVER destroys the Terraform state infrastructure:
+#       - Resource Group: rg-trl-hubspoke-tfstate
+#       - Storage Account: sttrlhubspoketfstate
+#       - Storage Containers: tfstate (and all other containers)
+#       - State Files: prod.tfstate, dev.tfstate, int.tfstate, hub.tfstate, etc.
+#
+#   The state storage account is NOT managed by Terraform - it's a prerequisite
+#   that exists BEFORE Terraform runs and persists AFTER Terraform destroys.
+#   State files are updated with empty state but NEVER deleted.
+#
+# WHAT IS DESTROYED:
+#   ✓ All resources defined in the Terraform modules (modules/*.tf)
+#   ✓ Hub resource groups and resources
+#   ✓ Spoke resource groups and resources
+#   ✓ Management resource groups and resources
+#   ✓ Virtual machines, databases, storage accounts (app-level)
+#   ✓ Networks, subnets, NSGs, firewalls
+#   ✓ Key Vaults, Log Analytics, monitoring resources
+#
+# CLEANUP PERFORMED:
+#   - After destroying resources, the state file is updated to reflect empty state
+#   - The state file blob is NOT deleted - it remains with empty resource tracking
+#   - This preserves the state history and allows for future deployments
+#
+# SAFETY FEATURES:
+#   - Manual approval required in 'Production-Destroy' environment
+#   - Destroy plan is generated and reviewed before execution
+#   - State lock is checked and released if stuck
+#   - State files are preserved with updated empty state (not deleted)
+#   - Complete state history maintained for audit and future deployments
+#
+# ==============================================================================
+
+name: Prod Environment Destruction
+
+trigger: none  # Never auto-trigger this pipeline
+
+pr: none  # Never run on pull requests
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+
+# ==============================================================================
+# STAGE 1: PLAN DESTRUCTION
+# ==============================================================================
+# This stage generates a Terraform destroy plan showing exactly which resources
+# will be deleted. The plan is saved as an artifact for review.
+#
+# No actual destruction occurs in this stage - it's read-only analysis.
+# ==============================================================================
+stages:
+- stage: Plan_Destroy_Prod
+  displayName: 'Plan Destroy Prod'
+  jobs:
+  - job: Plan_Destroy
+    displayName: 'Terraform Destroy Plan for Prod'
+    pool:
+      name: TRL-Agents
+    steps:
+    # ========================================================================
+    # STEP 1: Initialize Terraform with Remote State
+    # ========================================================================
+    # This step connects to the Terraform state storage account to read
+    # the current state of managed resources.
+    #
+    # IMPORTANT: This step READS from the state storage account but does
+    # NOT destroy it. The storage account (sttrlhubspoketfstate) is a
+    # prerequisite infrastructure component that exists outside Terraform.
+    # ========================================================================
+    - task: AzureCLI@2
+      displayName: 'Terraform Init'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Prod workspace for destruction planning..."
+          Set-Location '$(prodWorkspacePath)'
+          
+          # Access the state storage account to read current state
+          # NOTE: This does NOT delete or modify the storage account itself
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          # This connects to: rg-trl-hubspoke-tfstate/sttrlhubspoketfstate
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(prodBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Prod workspace initialized successfully for destruction planning"
+
+    # ========================================================================
+    # STEP 2: Check and Release State Lock (if necessary)
+    # ========================================================================
+    # Terraform uses blob leases to lock the state file during operations.
+    # If a previous run failed, the lock might still be active.
+    #
+    # This step ONLY breaks the lease on the state file BLOB, it does NOT:
+    # - Delete the storage account
+    # - Delete the container
+    # - Delete the state file itself
+    # ========================================================================
+    - task: AzureCLI@2
+      displayName: 'Check and Release State Lock'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Checking for state lock in Azure Storage..."
+          
+          # Get storage account key for authentication
+          # We need this to check the blob lease status
+          $STORAGE_KEY = az storage account keys list `
+            --resource-group $(backendResourceGroupName) `
+            --account-name $(backendStorageAccountName) `
+            --query '[0].value' `
+            -o tsv
+          
+          if (-not $STORAGE_KEY) {
+            Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+            exit 0
+          }
+          
+          # Check if the state file blob has a lease (lock)
+          # This checks ONLY the lock status, not the content
+          $blobLease = az storage blob show `
+            --account-name $(backendStorageAccountName) `
+            --container-name $(backendContainerName) `
+            --name $(prodBackendKey) `
+            --account-key $STORAGE_KEY `
+            --query 'properties.lease.status' `
+            -o tsv 2>$null
+          
+          if ($blobLease -eq "locked") {
+            Write-Host "##[warning]State file is locked in Azure Storage"
+            Write-Host "Attempting to break the lease..."
+            
+            # Break the lease (lock) on the blob
+            # This does NOT delete the blob, just removes the lock
+            az storage blob lease break `
+              --account-name $(backendStorageAccountName) `
+              --container-name $(backendContainerName) `
+              --blob-name $(prodBackendKey) `
+              --account-key $STORAGE_KEY `
+              --lease-break-period 0
+            
+            Write-Host "##[section]State lock lease broken successfully"
+            Start-Sleep -Seconds 2
+          } elseif ($blobLease -eq "unlocked") {
+            Write-Host "No state lock detected. Proceeding..."
+          } else {
+            Write-Host "State file not found or unable to check lease status"
+          }
+      continueOnError: true
+      timeoutInMinutes: 1
+
+    # ========================================================================
+    # STEP 3: Generate Terraform Destroy Plan
+    # ========================================================================
+    # Creates a destruction plan showing exactly which resources will be
+    # deleted. This allows review before actual destruction.
+    #
+    # SCOPE: Only destroys resources managed by Terraform (defined in modules)
+    # NOT AFFECTED: State storage account (rg-trl-hubspoke-tfstate)
+    # ========================================================================
+    - task: AzureCLI@2
+      displayName: 'Terraform Destroy Plan'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Creating Terraform destroy plan..."
+          Set-Location '$(prodWorkspacePath)'
+          
+          # Get subscription ID from Azure CLI context
+          $SUBSCRIPTION_ID = az account show --query id -o tsv
+          Write-Host "Using subscription: $SUBSCRIPTION_ID"
+          
+          # Generate destroy plan for review
+          # This PLANS the destruction but does NOT execute it yet
+          terraform plan -destroy `
+            -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" `
+            -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="backendResourceGroupName=$(backendResourceGroupName)" `
+            -var="backendStorageAccountName=$(backendStorageAccountName)" `
+            -var="backendContainerName=$(backendContainerName)" `
+            -var="hubBackendKey=$(hubBackendKey)" `
+            -var="subscription_id=$SUBSCRIPTION_ID" `
+            -out=destroy_plan
+          
+          Write-Host "Terraform destroy plan created successfully"
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Terraform Destroy Plan'
+      inputs:
+        pathtoPublish: '$(prodWorkspacePath)/destroy_plan'
+        artifactName: 'terraform-destroy-plan-prod'
+
+# ==============================================================================
+# STAGE 2: DESTROY PRODUCTION ENVIRONMENT
+# ==============================================================================
+# This stage requires manual approval in the 'Production-Destroy' environment.
+# Once approved, it will:
+#   1. Re-initialize Terraform with the state backend
+#   2. Check and release any state locks
+#   3. Execute the destroy plan (remove all managed resources)
+#   4. Update the state file to reflect empty state (NO resources deleted from backend)
+#
+# REMINDER: The complete state storage infrastructure is NEVER destroyed:
+#   - rg-trl-hubspoke-tfstate (Resource Group)
+#   - sttrlhubspoketfstate (Storage Account)
+#   - tfstate (Container)
+#   - prod.tfstate (State File) - Updated with empty state, NOT deleted
+# ==============================================================================
+- stage: Destroy_Prod
+  displayName: 'Destroy Prod (Manual Approval Required)'
+  dependsOn: Plan_Destroy_Prod
+  condition: succeeded()
+  jobs:
+  - deployment: DestroyProduction
+    displayName: 'Terraform Destroy for Prod'
+    environment: 'Production-Destroy'
+    pool:
+      name: TRL-Agents
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Terraform Destroy Plan'
+            inputs:
+              artifactName: 'terraform-destroy-plan-prod'
+              downloadPath: '$(prodWorkspacePath)'
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Init'
+            inputs:
+              azureSubscription: '$(prodServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Initializing Prod workspace for destruction..."
+                Set-Location '$(prodWorkspacePath)'
+                
+                # Get storage account key
+                $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+                
+                # Initialize Terraform with backend configuration
+                terraform init `
+                  -backend-config="resource_group_name=$(backendResourceGroupName)" `
+                  -backend-config="storage_account_name=$(backendStorageAccountName)" `
+                  -backend-config="container_name=$(backendContainerName)" `
+                  -backend-config="key=$(prodBackendKey)" `
+                  -backend-config="access_key=$STORAGE_KEY"
+                
+                Write-Host "Prod workspace initialized successfully for destruction"
+
+          - task: AzureCLI@2
+            displayName: 'Check and Release State Lock'
+            inputs:
+              azureSubscription: '$(prodServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Checking for state lock in Azure Storage before destruction..."
+                
+                # Get storage account key for authentication
+                $STORAGE_KEY = az storage account keys list `
+                  --resource-group $(backendResourceGroupName) `
+                  --account-name $(backendStorageAccountName) `
+                  --query '[0].value' `
+                  -o tsv
+                
+                if (-not $STORAGE_KEY) {
+                  Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+                  exit 0
+                }
+                
+                # Check if the state file blob has a lease (lock)
+                $blobLease = az storage blob show `
+                  --account-name $(backendStorageAccountName) `
+                  --container-name $(backendContainerName) `
+                  --name $(prodBackendKey) `
+                  --account-key $STORAGE_KEY `
+                  --query 'properties.lease.status' `
+                  -o tsv 2>$null
+                
+                if ($blobLease -eq "locked") {
+                  Write-Host "##[warning]State file is locked in Azure Storage"
+                  Write-Host "Attempting to break the lease..."
+                  
+                  az storage blob lease break `
+                    --account-name $(backendStorageAccountName) `
+                    --container-name $(backendContainerName) `
+                    --blob-name $(prodBackendKey) `
+                    --account-key $STORAGE_KEY `
+                    --lease-break-period 0
+                  
+                  Write-Host "##[section]State lock lease broken successfully"
+                  Start-Sleep -Seconds 2
+                } elseif ($blobLease -eq "unlocked") {
+                  Write-Host "No state lock detected. Proceeding with destruction..."
+                } else {
+                  Write-Host "State file check completed"
+                }
+            continueOnError: true
+            timeoutInMinutes: 1
+
+          # ====================================================================
+          # STEP: Execute Terraform Destroy
+          # ====================================================================
+          # This step executes the destroy plan and removes all Terraform-
+          # managed resources from Azure.
+          #
+          # WHAT GETS DESTROYED:
+          #   ✓ All resources in modules/*.tf (VMs, networks, databases, etc.)
+          #   ✓ Hub and spoke resource groups
+          #   ✓ Management resource groups
+          #   ✓ All application-level storage accounts, key vaults, etc.
+          #
+          # WHAT DOES NOT GET DESTROYED:
+          #   ✗ Resource Group: rg-trl-hubspoke-tfstate
+          #   ✗ Storage Account: sttrlhubspoketfstate
+          #   ✗ Storage Containers: tfstate (and all other containers)
+          #   ✗ State files stored in the backend
+          #
+          # The backend storage is NOT managed by Terraform and is preserved.
+          # ====================================================================
+          - task: AzureCLI@2
+            displayName: 'Terraform Destroy - Execute Destruction'
+            inputs:
+              azureSubscription: '$(prodServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "=========================================="
+                Write-Host "EXECUTING TERRAFORM DESTROY"
+                Write-Host "=========================================="
+                Write-Host "This will DELETE all Terraform-managed resources"
+                Write-Host ""
+                Write-Host "PRESERVED (NOT deleted):"
+                Write-Host "  - rg-trl-hubspoke-tfstate (Resource Group)"
+                Write-Host "  - sttrlhubspoketfstate (Storage Account)"
+                Write-Host "  - All storage containers and state files"
+                Write-Host "=========================================="
+                
+                Set-Location '$(prodWorkspacePath)'
+                
+                # Get subscription ID from Azure CLI context
+                $SUBSCRIPTION_ID = az account show --query id -o tsv
+                Write-Host "Using subscription: $SUBSCRIPTION_ID"
+                
+                # Execute the destroy plan
+                # This applies the destruction plan created in the previous stage
+                terraform apply -input=false -auto-approve destroy_plan
+                
+                Write-Host "=========================================="
+                Write-Host "Terraform destroy completed successfully"
+                Write-Host "Backend state storage account preserved"
+                Write-Host "State file updated with empty state"
+                Write-Host "=========================================="
+

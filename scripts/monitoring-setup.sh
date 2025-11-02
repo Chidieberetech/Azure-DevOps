@@ -136,6 +136,7 @@ setup_alerts() {
     # Storage account alerts
     echo "  Setting up Storage alerts..."
 
+
     # Storage capacity alert
     az monitor metrics alert create \
         --name "trl-hubspoke-${env_name}-storage-capacity" \

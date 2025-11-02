@@ -9,6 +9,7 @@ echo ":) Starting cost analysis for TRL Hub and Spoke Infrastructure..."
 # Configuration
 DAYS_TO_ANALYZE=30
 OUTPUT_FILE="cost-analysis-$(date +%Y%m%d-%H%M%S).json"
+OUTPUT_FORMAT="json"
 
 # Function to display usage
 usage() {
@@ -68,12 +69,13 @@ analyze_subscription_costs() {
     # Set subscription context
     az account set --subscription "$subscription_name"
 
-    # Get cost data
+    # Get cost data using configured format
     az consumption usage list \
         --start-date "$START_DATE" \
         --end-date "$END_DATE" \
         --query "value[?contains(instanceName, 'trl-hubspoke')]" \
-        > "${env_name}_costs_raw.json"
+        -o "$OUTPUT_FORMAT" \
+        > "${env_name}_costs_raw.${OUTPUT_FORMAT}"
 
     # Get billing data
     az consumption budget list --query "value[].{Name:name, Amount:amount, CurrentSpend:currentSpend.amount, Status:status}" -o table
@@ -159,6 +161,31 @@ EOF
 
 echo "|) Cost optimization recommendations saved to cost-optimization-recommendations.md"
 
+# Generate consolidated summary file
+echo ""
+echo ":) Generating consolidated cost summary..."
+{
+    echo "Cost Analysis Summary Report"
+    echo "============================"
+    echo "Generated: $(date)"
+    echo "Analysis Period: $START_DATE to $END_DATE"
+    echo ""
+    echo "Subscriptions Analyzed:"
+    echo "- Sub-TRL-dev-weu (Development)"
+    echo "- Sub-TRL-int-weu (Integration)"
+    echo "- Sub-TRL-prod-weu (Production)"
+    echo ""
+    echo "Output Format: $OUTPUT_FORMAT"
+    echo ""
+    echo "Generated Files:"
+    echo "- dev_costs_raw.$OUTPUT_FORMAT"
+    echo "- int_costs_raw.$OUTPUT_FORMAT"
+    echo "- prod_costs_raw.$OUTPUT_FORMAT"
+    echo "- cost-optimization-recommendations.md"
+} > "$OUTPUT_FILE"
+
+echo "|) Consolidated summary saved to $OUTPUT_FILE"
+
 # Generate summary report
 echo ""
 echo ":) Cost Analysis Summary"
@@ -170,10 +197,11 @@ echo "   - Sub-TRL-int-weu (Integration)"
 echo "   - Sub-TRL-prod-weu (Production)"
 echo ""
 echo ":) Cost data files generated:"
-echo "   - dev_costs_raw.json"
-echo "   - int_costs_raw.json"
-echo "   - prod_costs_raw.json"
+echo "   - dev_costs_raw.$OUTPUT_FORMAT"
+echo "   - int_costs_raw.$OUTPUT_FORMAT"
+echo "   - prod_costs_raw.$OUTPUT_FORMAT"
 echo "   - cost-optimization-recommendations.md"
+echo "   - $OUTPUT_FILE"
 echo ""
 echo "|) Next steps:"
 echo "   1. Review cost data files for detailed breakdown"

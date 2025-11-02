@@ -33,7 +33,7 @@ resource "azurerm_user_assigned_identity" "main" {
 # This creates a placeholder resource group for B2C configuration
 resource "azurerm_resource_group" "aad_b2c" {
   count    = var.enable_aad_b2c ? 1 : 0
-  name     = "rg-trl-${local.env_abbr[var.environment]}-b2c-${format("%03d", 1)}"
+  name     = "rg-trl-${local.environment_abbr}-b2c-${format("%03d", 1)}"
   location = var.location
   # Note: country_code is applied during tenant creation, not resource group
 

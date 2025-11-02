@@ -76,6 +76,8 @@ resource "azurerm_subnet" "spoke_alpha_workload" {
   resource_group_name  = azurerm_resource_group.spokes[0].name
   virtual_network_name = azurerm_virtual_network.spokes[0].name
   address_prefixes     = [local.spoke_alpha_subnets.workload_subnet]
+
+  service_endpoints = ["Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.Sql"]
 }
 
 resource "azurerm_subnet" "spoke_alpha_vm" {
@@ -123,6 +125,8 @@ resource "azurerm_subnet" "spoke_beta_workload" {
   resource_group_name  = azurerm_resource_group.spokes[1].name
   virtual_network_name = azurerm_virtual_network.spokes[1].name
   address_prefixes     = [local.spoke_beta_subnets.workload_subnet]
+
+  service_endpoints = ["Microsoft.Storage", "Microsoft.KeyVault", "Microsoft.Sql"]
 }
 
 resource "azurerm_subnet" "spoke_beta_vm" {
@@ -131,6 +135,26 @@ resource "azurerm_subnet" "spoke_beta_vm" {
   resource_group_name  = azurerm_resource_group.spokes[1].name
   virtual_network_name = azurerm_virtual_network.spokes[1].name
   address_prefixes     = [local.spoke_beta_subnets.vm_subnet]
+}
+
+resource "azurerm_subnet" "spoke_beta_database" {
+  count                = var.spoke_count >= 2 ? 1 : 0
+  name                 = "snet-${local.resource_prefix}-beta-db-${format("%03d", 1)}"
+  resource_group_name  = azurerm_resource_group.spokes[1].name
+  virtual_network_name = azurerm_virtual_network.spokes[1].name
+  address_prefixes     = [local.spoke_beta_subnets.database_subnet]
+
+  delegation {
+    name = "fs"
+    service_delegation {
+      name = "Microsoft.DBforPostgreSQL/flexibleServers"
+      actions = [
+        "Microsoft.Network/virtualNetworks/subnets/join/action",
+      ]
+    }
+  }
+
+  service_endpoints = ["Microsoft.Storage"]
 }
 
 resource "azurerm_subnet" "spoke_beta_private_endpoint" {
@@ -171,6 +195,17 @@ resource "azurerm_virtual_network_peering" "spoke_to_hub" {
   allow_forwarded_traffic   = true
   allow_gateway_transit     = false
   use_remote_gateways       = false  # Fixed: Don't use for Firewall - only for VPN/ER gateways
+
+  # Prevent race condition - wait for hub VNet and all its subnets to be ready
+  depends_on = [
+    azurerm_virtual_network.hub,
+    azurerm_subnet.firewall,
+    azurerm_subnet.bastion,
+    azurerm_subnet.gateway,
+    azurerm_subnet.shared_services,
+    azurerm_subnet.hub_private_endpoint,
+    azurerm_virtual_network_peering.hub_to_spoke
+  ]
 }
 
 #================================================
@@ -253,6 +288,24 @@ resource "azurerm_route_table" "spoke_beta_workload" {
 resource "azurerm_route_table" "spoke_beta_vm" {
   count                         = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
   name                          = "rt-${local.resource_prefix}-beta-vm"
+  location                      = azurerm_resource_group.spokes[1].location
+  resource_group_name           = azurerm_resource_group.spokes[1].name
+  bgp_route_propagation_enabled = false
+
+  route {
+    name           = "DefaultRoute"
+    address_prefix = "0.0.0.0/0"
+    next_hop_type  = "VirtualAppliance"
+    next_hop_in_ip_address = var.enable_firewall ? azurerm_firewall.main[0].ip_configuration[0].private_ip_address : null
+  }
+
+  tags = local.common_tags
+}
+
+# Route Table for Spoke Beta Database Subnet
+resource "azurerm_route_table" "spoke_beta_database" {
+  count                         = var.spoke_count >= 2 && var.enable_firewall ? 1 : 0
+  name                          = "rt-${local.resource_prefix}-beta-db"
   location                      = azurerm_resource_group.spokes[1].location
   resource_group_name           = azurerm_resource_group.spokes[1].name
   bgp_route_propagation_enabled = false

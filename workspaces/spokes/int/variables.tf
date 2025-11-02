@@ -1,4 +1,4 @@
-# Hub Workspace Variables
+# Int Spoke Workspace Variables
 
 #================================================
 # BACKEND CONFIGURATION
@@ -19,6 +19,11 @@ variable "backendContainerName" {
   type        = string
 }
 
+variable "hubBackendKey" {
+  description = "State file key for hub workspace"
+  type        = string
+}
+
 #================================================
 # CORE CONFIGURATION
 #================================================
@@ -29,9 +34,9 @@ variable "subscription_id" {
 }
 
 variable "environment" {
-  description = "Environment name for the hub workspace"
+  description = "Environment name for the spoke workspace"
   type        = string
-  default     = "prod"
+  default     = "int"
   validation {
     condition     = contains(["dev", "int", "prod"], var.environment)
     error_message = "Environment must be dev, int, or prod."
@@ -39,45 +44,36 @@ variable "environment" {
 }
 
 variable "location" {
-  description = "Primary Azure region for hub resources"
+  description = "Primary Azure region for spoke resources"
   type        = string
   default     = "West Europe"
 }
 
 #================================================
 # NETWORK CONFIGURATION
+# Network components disabled - managed by hub
 #================================================
 
 variable "enable_firewall" {
-  description = "Enable Azure Firewall in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_bastion" {
-  description = "Enable Azure Bastion in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_private_dns" {
-  description = "Enable private DNS zones in the hub"
-  type        = bool
-  default     = true
-}
-
-variable "enable_ddos_protection" {
-  description = "Enable DDoS Protection Plan"
+  description = "Enable Azure Firewall (always false - managed by hub)"
   type        = bool
   default     = false
 }
 
-#================================================
-# SPOKE CONFIGURATION
-#================================================
+variable "enable_bastion" {
+  description = "Enable Azure Bastion (always false - managed by hub)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_private_dns" {
+  description = "Enable private DNS zones (always false - managed by hub)"
+  type        = bool
+  default     = false
+}
 
 variable "spoke_count" {
-  description = "Number of spoke networks to create from hub"
+  description = "Number of spoke networks to deploy"
   type        = number
   default     = 2
   validation {
@@ -110,36 +106,22 @@ variable "admin_password" {
   default     = ""
 }
 
-#================================================
-# SECURITY CONFIGURATION
-#================================================
-
-variable "enable_key_vault" {
-  description = "Enable Azure Key Vault in the hub"
+variable "enable_vm_auto_shutdown" {
+  description = "Enable automatic VM shutdown for cost optimization"
   type        = bool
   default     = true
 }
 
-variable "enable_key_vault_soft_delete" {
-  description = "Enable Key Vault soft delete"
+variable "vm_shutdown_time" {
+  description = "Time to automatically shutdown VMs (24-hour format)"
+  type        = string
+  default     = "2000"
+}
+
+variable "enable_vm_monitoring" {
+  description = "Enable VM Insights monitoring"
   type        = bool
   default     = true
-}
-
-#================================================
-# DATABASE CONFIGURATION
-#================================================
-
-variable "enable_sql_database" {
-  description = "Enable SQL Database deployment"
-  type        = bool
-  default     = false
-}
-
-variable "enable_cosmos_db" {
-  description = "Enable Cosmos DB deployment"
-  type        = bool
-  default     = false
 }
 
 #================================================
@@ -166,48 +148,30 @@ variable "storage_replication_type" {
   }
 }
 
-variable "enable_premium_storage" {
-  description = "Enable premium storage account"
-  type        = bool
-  default     = false
-}
-
-variable "enable_data_lake_storage" {
-  description = "Enable Data Lake Storage Gen2"
-  type        = bool
-  default     = false
-}
-
 #================================================
-# PRIVATE ENDPOINTS
+# DATABASE CONFIGURATION
 #================================================
 
-variable "enable_private_endpoints" {
-  description = "Enable private endpoints for services"
+variable "enable_sql_database" {
+  description = "Enable SQL Database deployment"
   type        = bool
   default     = true
 }
 
-#================================================
-# ADVANCED COMPUTE CONFIGURATION
-#================================================
-
-variable "enable_vm_auto_shutdown" {
-  description = "Enable automatic VM shutdown for cost optimization"
-  type        = bool
-  default     = true
-}
-
-variable "vm_shutdown_time" {
-  description = "Time to automatically shutdown VMs (24-hour format)"
+variable "sql_database_sku" {
+  description = "SQL Database SKU"
   type        = string
-  default     = "1900"
+  default     = "S0"
+  validation {
+    condition     = contains(["Basic", "S0", "S1", "S2"], var.sql_database_sku)
+    error_message = "SQL Database SKU must be Basic, S0, S1, or S2."
+  }
 }
 
-variable "enable_vm_monitoring" {
-  description = "Enable VM Insights monitoring"
+variable "enable_cosmos_db" {
+  description = "Enable Cosmos DB deployment"
   type        = bool
-  default     = true
+  default     = false
 }
 
 #================================================
@@ -223,81 +187,11 @@ variable "enable_monitoring" {
 variable "log_retention_days" {
   description = "Number of days to retain logs"
   type        = number
-  default     = 30
+  default     = 60
   validation {
     condition     = var.log_retention_days >= 30 && var.log_retention_days <= 365
     error_message = "Log retention must be between 30 and 365 days."
   }
-}
-
-variable "log_analytics_sku" {
-  description = "Log Analytics workspace SKU"
-  type        = string
-  default     = "PerGB2018"
-  validation {
-    condition     = contains(["Free", "PerNode", "PerGB2018", "Premium"], var.log_analytics_sku)
-    error_message = "Log Analytics SKU must be Free, PerNode, PerGB2018, or Premium."
-  }
-}
-
-variable "log_analytics_daily_quota_gb" {
-  description = "Daily data ingestion quota in GB for Log Analytics workspace"
-  type        = number
-  default     = -1
-}
-
-variable "app_insights_retention_days" {
-  description = "Application Insights data retention in days"
-  type        = number
-  default     = 90
-  validation {
-    condition     = var.app_insights_retention_days >= 30 && var.app_insights_retention_days <= 730
-    error_message = "Application Insights retention must be between 30 and 730 days."
-  }
-}
-
-variable "enable_monitoring_dashboard" {
-  description = "Enable custom monitoring dashboard"
-  type        = bool
-  default     = true
-}
-
-#================================================
-# ALERTING CONFIGURATION
-#================================================
-
-variable "enable_infrastructure_alerts" {
-  description = "Enable infrastructure metric alerts"
-  type        = bool
-  default     = true
-}
-
-variable "alert_email_addresses" {
-  description = "List of email addresses for alert notifications"
-  type        = list(string)
-  default     = ["infrastructure@trl.com"]
-}
-
-variable "cpu_alert_threshold" {
-  description = "CPU usage percentage threshold for alerts"
-  type        = number
-  default     = 80
-  validation {
-    condition     = var.cpu_alert_threshold >= 1 && var.cpu_alert_threshold <= 100
-    error_message = "CPU alert threshold must be between 1 and 100."
-  }
-}
-
-variable "memory_alert_threshold_bytes" {
-  description = "Available memory threshold in bytes for alerts"
-  type        = number
-  default     = 1073741824
-}
-
-variable "enable_security_alerts" {
-  description = "Enable security-related alerts"
-  type        = bool
-  default     = true
 }
 
 #================================================
@@ -365,7 +259,7 @@ variable "backup_required" {
 variable "disaster_recovery_tier" {
   description = "Disaster recovery tier (Tier1=Critical, Tier2=Important, Tier3=Standard)"
   type        = string
-  default     = "Tier1"
+  default     = "Tier2"
   validation {
     condition     = contains(["Tier1", "Tier2", "Tier3"], var.disaster_recovery_tier)
     error_message = "DR tier must be Tier1, Tier2, or Tier3."
@@ -376,18 +270,5 @@ variable "maintenance_window" {
   description = "Preferred maintenance window"
   type        = string
   default     = "Saturday 02:00-06:00 UTC"
-}
-
-variable "additional_tags" {
-  description = "Additional custom tags to apply to all resources"
-  type        = map(string)
-  default = {
-    Workspace       = "Hub"
-    Purpose         = "Shared Services and Spokes"
-    ManagedBy       = "Terraform"
-    Repository      = "Azure.IAC.hubspoke"
-    AutoShutdown    = "Enabled"
-    CostOptimized   = "true"
-  }
 }
 

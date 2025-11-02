@@ -108,7 +108,7 @@ backup_vms() {
                 --vault-name "$RSV_NAME" \
                 --container-name "$vm_name" \
                 --item-name "$vm_name" \
-                --retain-until $(date -d "+$BACKUP_RETENTION_DAYS days" +%Y-%m-%d) \
+                --retain-until "$(date -d "+$BACKUP_RETENTION_DAYS days" +%Y-%m-%d)" \
                 --backup-management-type AzureIaasVM 2>/dev/null || echo "    :| Backup trigger failed"
         fi
     done <<< "$VMS"
@@ -167,7 +167,7 @@ validate_backups() {
             echo "$BACKUP_ITEMS"
 
             # Check backup jobs status
-            RECENT_JOBS=$(az backup job list --resource-group "$rg_name" --vault-name "$vault_name" --start-date $(date -d "7 days ago" +%Y-%m-%d) --query "[].{Job:jobType, Status:status, StartTime:startTime}" -o table)
+            RECENT_JOBS=$(az backup job list --resource-group "$rg_name" --vault-name "$vault_name" --start-date "$(date -d "7 days ago" +%Y-%m-%d)" --query "[].{Job:jobType, Status:status, StartTime:startTime}" -o table)
             echo "    Recent Jobs (last 7 days):"
             echo "$RECENT_JOBS"
         fi
@@ -192,33 +192,40 @@ EOF
     for env_config in "Sub-TRL-dev-weu:dev" "Sub-TRL-int-weu:int" "Sub-TRL-prod-weu:prod"; do
         IFS=':' read -r subscription env_name <<< "$env_config"
 
-        echo "" >> "$BACKUP_REPORT"
-        echo "$env_name Environment ($subscription)" >> "$BACKUP_REPORT"
-        echo "$(printf '=%.0s' {1..50})" >> "$BACKUP_REPORT"
+        {
+            echo ""
+            echo "$env_name Environment ($subscription)"
+            printf '=%.0s' {1..50}
+            echo ""
+        } >> "$BACKUP_REPORT"
 
         if az account show --subscription "$subscription" >/dev/null 2>&1; then
             az account set --subscription "$subscription"
 
             # VM backup status
-            echo "VM Backup Status:" >> "$BACKUP_REPORT"
-            VMS=$(az vm list --query "[?starts_with(name, 'trl-hubspoke-$env_name')].name" -o tsv)
-            if [ -n "$VMS" ]; then
-                echo "$VMS" | while read vm; do
-                    echo "  $vm: Configured" >> "$BACKUP_REPORT"
-                done
-            else
-                echo "  No VMs found" >> "$BACKUP_REPORT"
-            fi
+            {
+                echo "VM Backup Status:"
+                VMS=$(az vm list --query "[?starts_with(name, 'trl-hubspoke-$env_name')].name" -o tsv)
+                if [ -n "$VMS" ]; then
+                    echo "$VMS" | while read -r vm; do
+                        echo "  $vm: Configured"
+                    done
+                else
+                    echo "  No VMs found"
+                fi
+            } >> "$BACKUP_REPORT"
 
             # Database backup status
-            echo "" >> "$BACKUP_REPORT"
-            echo "Database Backup Status:" >> "$BACKUP_REPORT"
-            SQL_DBS=$(az sql server list --query "[?starts_with(name, 'trl-hubspoke-$env_name')].name" -o tsv)
-            if [ -n "$SQL_DBS" ]; then
-                echo "  SQL Databases: Automatic Azure backups enabled" >> "$BACKUP_REPORT"
-            else
-                echo "  No SQL databases found" >> "$BACKUP_REPORT"
-            fi
+            {
+                echo ""
+                echo "Database Backup Status:"
+                SQL_DBS=$(az sql server list --query "[?starts_with(name, 'trl-hubspoke-$env_name')].name" -o tsv)
+                if [ -n "$SQL_DBS" ]; then
+                    echo "  SQL Databases: Automatic Azure backups enabled"
+                else
+                    echo "  No SQL databases found"
+                fi
+            } >> "$BACKUP_REPORT"
 
         else
             echo "ERROR: Cannot access subscription" >> "$BACKUP_REPORT"

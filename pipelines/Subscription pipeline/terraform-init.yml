@@ -1,0 +1,348 @@
+# terraform-init.yml
+name: Terraform-Init-$(Date:yyyy-MM-dd)$(Rev:.r)
+
+trigger: none
+
+pr: none
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+
+stages:
+- stage: Validate_Backend
+  displayName: 'Validate Backend Storage'
+  jobs:
+  - job: Validate_Storage
+    displayName: 'Validate Storage Account Access'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Storage Account'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating storage account: $(backendStorageAccountName)"
+          az storage account show --name $(backendStorageAccountName) --resource-group $(backendResourceGroupName)
+          Write-Host "Storage account validation successful"
+
+- stage: Setup_Terraform
+  displayName: 'Setup Terraform Environment'
+  dependsOn: Validate_Backend
+  jobs:
+  - job: Setup
+    displayName: 'Setup Terraform'
+    pool:
+      name: TRL-Agents
+    steps:
+    - powershell: |
+        Write-Host "Checking Terraform version..."
+        terraform version
+        Write-Host "Terraform is available"
+      displayName: 'Verify Terraform Installation'
+
+- stage: Init_Workspaces
+  displayName: 'Initialize Terraform Workspaces'
+  dependsOn: Setup_Terraform
+  jobs:
+  - job: Init_Hub
+    displayName: 'Initialize Hub Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Terraform Init - Hub'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Hub workspace..."
+          Set-Location '$(hubWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(hubBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Hub workspace initialized successfully"
+
+  - job: Init_Management
+    displayName: 'Initialize Management Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Terraform Init - Management'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Management workspace..."
+          Set-Location '$(managementWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(managementBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Management workspace initialized successfully"
+
+  - job: Init_Dev
+    displayName: 'Initialize Dev Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Terraform Init - Dev'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Dev workspace..."
+          Set-Location '$(devWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(devBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Dev workspace initialized successfully"
+
+  - job: Init_Int
+    displayName: 'Initialize Int Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Terraform Init - Int'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Int workspace..."
+          Set-Location '$(intWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(intBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Int workspace initialized successfully"
+
+  - job: Init_Prod
+    displayName: 'Initialize Prod Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Terraform Init - Prod'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Prod workspace..."
+          Set-Location '$(prodWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(prodBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Prod workspace initialized successfully"
+
+- stage: Validate_Initialization
+  displayName: 'Validate Initialization'
+  dependsOn: Init_Workspaces
+  jobs:
+  - job: Validate_Hub
+    displayName: 'Validate Hub Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Hub'
+      inputs:
+        azureSubscription: '$(hubServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Hub workspace..."
+          Set-Location '$(hubWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Reinitialize to ensure providers are installed
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(hubBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY"
+          
+          # Validate configuration
+          terraform validate
+          Write-Host "Hub workspace validated successfully!"
+
+  - job: Validate_Management
+    displayName: 'Validate Management Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Management'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Management workspace..."
+          Set-Location '$(managementWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Reinitialize to ensure providers are installed
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(managementBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY"
+          
+          # Validate configuration
+          terraform validate
+          Write-Host "Management workspace validated successfully!"
+
+  - job: Validate_Dev
+    displayName: 'Validate Dev Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Dev'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Dev workspace..."
+          Set-Location '$(devWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Reinitialize to ensure providers are installed
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(devBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY"
+          
+          # Validate configuration
+          terraform validate
+          Write-Host "Dev workspace validated successfully!"
+
+  - job: Validate_Int
+    displayName: 'Validate Int Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Int'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Int workspace..."
+          Set-Location '$(intWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Reinitialize to ensure providers are installed
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(intBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY"
+          
+          # Validate configuration
+          terraform validate
+          Write-Host "Int workspace validated successfully!"
+
+  - job: Validate_Prod
+    displayName: 'Validate Prod Workspace'
+    pool:
+      name: TRL-Agents
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Validate Prod'
+      inputs:
+        azureSubscription: '$(prodServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Prod workspace..."
+          Set-Location '$(prodWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Reinitialize to ensure providers are installed
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(prodBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY"
+          
+          # Validate configuration
+          terraform validate
+          Write-Host "Prod workspace validated successfully!"

@@ -1,0 +1,93 @@
+name: Int Environment Deployment
+
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - Modules/*
+    - workspaces/spokes/int/*
+
+pr: none
+
+variables:
+- group: trl-hubspoke-config
+- group: trl-hubspoke-secrets
+
+stages:
+- stage: Plan_Int
+  displayName: 'Plan Int'
+  jobs:
+  - job: Plan
+    displayName: 'Terraform Plan for Int'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init'
+      inputs:
+        command: init
+        workingDirectory: '$(intWorkspacePath)'
+        environmentServiceName: '$(intServiceConnection)'
+        backendType: azurerm
+        backendServiceArm: '$(intServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name=$(backendStorageAccountName)
+          container_name=$(backendContainerName)
+          key=$(intBackendKey)
+          subscription_id=$(SUBSCRIPTION_ID_INT)
+          resource_group_name=$(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Plan'
+      inputs:
+        command: plan
+        workingDirectory: '$(intWorkspacePath)'
+        environmentServiceName: '$(intServiceConnection)'
+        commandOptions: '-var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)"'
+
+- stage: Apply_Int
+  displayName: 'Apply Int'
+  dependsOn: Plan_Int
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: Apply
+    displayName: 'Terraform Apply for Int'
+    pool:
+      name: $(agentPoolName)
+    steps:
+    - task: TerraformInstaller@1
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '$(terraformVersion)'
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Init'
+      inputs:
+        command: init
+        workingDirectory: '$(intWorkspacePath)'
+        environmentServiceName: '$(intServiceConnection)'
+        backendType: azurerm
+        backendServiceArm: '$(intServiceConnection)'
+        ensureBackend: true
+        backendConfig: |
+          storage_account_name=$(backendStorageAccountName)
+          container_name=$(backendContainerName)
+          key=$(intBackendKey)
+          subscription_id=$(SUBSCRIPTION_ID_INT)
+          resource_group_name=$(backendResourceGroupName)
+
+    - task: TerraformCLI@0
+      displayName: 'Terraform Apply'
+      inputs:
+        command: apply
+        workingDirectory: '$(intWorkspacePath)'
+        environmentServiceName: '$(intServiceConnection)'
+        commandOptions: '-auto-approve -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)"'

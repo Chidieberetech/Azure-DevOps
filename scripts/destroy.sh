@@ -32,13 +32,13 @@ echo "   - Private DNS zones"
 echo "   - ALL DATA WILL BE LOST!"
 echo ""
 
-read -p "Type 'DESTROY' to confirm you want to proceed: " CONFIRM1
+read -r -p "Type 'DESTROY' to confirm you want to proceed: " CONFIRM1
 if [ "${CONFIRM1}" != "DESTROY" ]; then
     echo ":( Destroy cancelled - confirmation failed"
     exit 1
 fi
 
-read -p "Are you absolutely sure? Type 'YES' to continue: " CONFIRM2
+read -r -p "Are you absolutely sure? Type 'YES' to continue: " CONFIRM2
 if [ "${CONFIRM2}" != "YES" ]; then
     echo ":( Destroy cancelled - final confirmation failed"
     exit 1
@@ -63,7 +63,7 @@ terraform show -no-color "${DESTROY_PLAN}" | grep -E "Plan:|Changes to Outputs:"
 echo ""
 
 # Final confirmation
-read -p ":| Proceed with destruction? Type 'CONFIRM' to destroy: " FINAL_CONFIRM
+read -r -p ":| Proceed with destruction? Type 'CONFIRM' to destroy: " FINAL_CONFIRM
 if [ "${FINAL_CONFIRM}" != "CONFIRM" ]; then
     echo ":( Destroy cancelled - final safety check failed"
     rm -f "${DESTROY_PLAN}"
@@ -72,13 +72,10 @@ fi
 
 # Execute destroy
 echo ":( Executing terraform destroy..."
-terraform apply \
+if terraform apply \
   -lock=true \
   -lock-timeout=300s \
-  "${DESTROY_PLAN}"
-
-# Check destroy result
-if [ $? -eq 0 ]; then
+  "${DESTROY_PLAN}"; then
     echo ""
     echo ":) Infrastructure destroyed successfully!"
     echo ":) All resources have been removed"

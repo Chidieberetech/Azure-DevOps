@@ -5,6 +5,327 @@ Azure DevOps is a cloud-based platform that provides integrated tools for softwa
 
 This project implements a secure Hub and Spoke network topology in Azure using Terraform, with comprehensive Azure service coverage across all major categories and utilizing Azure free tier services.
 
+## 📁 Terraform File Structure and Functions
+
+This project uses a modular Terraform structure with distinct file types, each serving a specific purpose. Understanding these components is essential for working with the infrastructure code.
+
+### **modules/** - Reusable Infrastructure Components
+
+**Purpose**: Contains reusable Terraform code that can be called by multiple workspaces.
+
+**Functions**:
+- **Centralized Logic**: All Azure resource definitions live here (VMs, networks, databases, etc.)
+- **Code Reusability**: Write once, use in dev/int/prod environments
+- **Consistency**: Ensures all environments use the same infrastructure patterns
+- **Maintainability**: Update infrastructure logic in one place
+- **Resource Organization**: Resources grouped by Azure service category (compute.tf, network.tf, database.tf, etc.)
+
+**Structure**:
+```
+modules/
+├── main.tf              # Core resource group and common resources
+├── network.tf           # VNets, subnets, firewall, bastion
+├── compute.tf           # Virtual machines
+├── database.tf          # SQL Database, Cosmos DB
+├── storage.tf           # Storage accounts
+├── keyvault.tf          # Azure Key Vault
+├── monitor.tf           # Log Analytics, Application Insights
+├── security.tf          # NSGs, security policies
+├── variables.tf         # Module input parameters
+├── outputs.tf           # Module output values
+└── [other service files]
+```
+
+**Example Usage**:
+```terraform
+# In workspaces/spokes/prod/main.tf
+module "spoke_infrastructure" {
+  source = "../../../modules"  # References the shared module
+  
+  environment = "prod"
+  vm_size     = "Standard_B2s"  # Production uses larger VMs
+}
+```
+
+---
+
+### **main.tf** - Infrastructure Deployment Configuration
+
+**Purpose**: Defines **what** infrastructure to deploy and **how** to configure it for a specific workspace.
+
+**Functions**:
+
+1. **Terraform Configuration**
+   - Specifies required Terraform version
+   - Declares required providers (AzureRM, Random, etc.)
+   
+2. **Backend Configuration**
+   - Stores state files remotely in Azure Storage
+   - Enables team collaboration and state locking
+   - Example: `prod.terraform.tfstate`, `hub.terraform.tfstate`
+
+3. **Provider Setup**
+   - Configures Azure Resource Manager (AzureRM) provider
+   - Sets feature flags (e.g., Key Vault purge protection)
+   - Defines provider-specific settings
+
+4. **Data Sources** (optional)
+   - References other workspace state files
+   - Example: Spoke workspaces reference hub workspace for networking
+
+5. **Module Invocation**
+   - Calls the infrastructure module with workspace-specific parameters
+   - Passes variables and configuration to the module
+   - Defines resource tags and naming
+
+**Example from `workspaces/spokes/prod/main.tf`**:
+```terraform
+terraform {
+  required_version = ">= 1.5.0"
+  
+  backend "azurerm" {
+    key = "prod.terraform.tfstate"  # Prod state file
+  }
+}
+
+provider "azurerm" {
+  features {
+    key_vault {
+      purge_soft_delete_on_destroy = true
+    }
+  }
+}
+
+module "spoke_infrastructure" {
+  source = "../../../modules"
+  
+  # Pass variables to module
+  environment     = var.environment
+  location        = var.location
+  vm_size         = var.vm_size
+  
+  # Production-specific tags
+  additional_tags = {
+    Environment         = "Production"
+    "Criticality Level" = "High"
+  }
+}
+```
+
+---
+
+### **variables.tf** - Input Parameters
+
+**Purpose**: Declares **input variables** that customize the infrastructure deployment for each environment.
+
+**Functions**:
+
+1. **Input Declaration**
+   - Defines all configurable parameters
+   - Allows environment-specific customization
+
+2. **Type Safety**
+   - Specifies data types (string, bool, number, list, map)
+   - Prevents incorrect value assignments
+
+3. **Default Values**
+   - Provides sensible defaults per environment
+   - Example: Dev uses `Standard_B1s` VMs, Prod uses `Standard_B2s`
+
+4. **Validation Rules**
+   - Ensures values meet requirements
+   - Example: Environment must be "dev", "int", or "prod"
+   - Example: VM size must be from approved list
+
+5. **Documentation**
+   - Describes what each variable controls
+   - Guides users on proper values
+
+6. **Sensitive Flags**
+   - Marks secrets (passwords, keys) to hide from logs
+
+**Example from `workspaces/spokes/prod/variables.tf`**:
+```terraform
+variable "vm_size" {
+  description = "Size of the virtual machines"
+  type        = string
+  default     = "Standard_B2s"  # Larger for production
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "prod"
+  validation {
+    condition     = contains(["dev", "int", "prod"], var.environment)
+    error_message = "Environment must be dev, int, or prod."
+  }
+}
+
+variable "admin_username" {
+  description = "Admin username for VMs"
+  type        = string
+  default     = "azureadmin"
+  sensitive   = true  # Hide from logs
+}
+```
+
+**Environment-Specific Defaults**:
+
+| Variable                   | Dev          | Int          | Prod         |
+|----------------------------|--------------|--------------|--------------|
+| `vm_size`                  | Standard_B1s | Standard_B1s | Standard_B2s |
+| `enable_vm_auto_shutdown`  | true (7pm)   | true (8pm)   | false        |
+| `storage_replication_type` | LRS          | LRS          | GRS          |
+| `log_retention_days`       | 30           | 60           | 90           |
+| `disaster_recovery_tier`   | Tier3        | Tier2        | Tier1        |
+
+---
+
+### **outputs.tf** - Export Values
+
+**Purpose**: Exports **resource information** after deployment for use by other workspaces, pipelines, or users.
+
+**Functions**:
+
+1. **Resource IDs**
+   - Exports Azure resource IDs for reference
+   - Example: VNet IDs, VM IDs, Key Vault IDs
+
+2. **Resource Names**
+   - Exports human-readable resource names
+   - Used for documentation and integration
+
+3. **Connectivity Information**
+   - Exports IP addresses, endpoints, connection strings
+   - Example: VM private IPs, storage blob endpoints
+
+4. **Integration Points**
+   - Provides data for other Terraform workspaces
+   - Example: Spoke workspaces reference hub VNet ID for peering
+
+5. **Deployment Summary**
+   - Shows what was deployed and its configuration
+   - Useful for validation and documentation
+
+6. **Sensitive Outputs** (marked)
+   - Exports secrets with `sensitive = true`
+   - Example: Log Analytics shared keys
+
+**Example from `workspaces/spokes/prod/outputs.tf`**:
+```terraform
+output "vm_private_ips" {
+  description = "Private IP addresses of the virtual machines"
+  value       = module.spoke_infrastructure.vm_private_ips
+}
+
+output "sql_server_name" {
+  description = "Name of the SQL Server"
+  value       = module.spoke_infrastructure.sql_server_name
+}
+
+output "deployment_summary" {
+  description = "Summary of deployed resources"
+  value = {
+    environment            = var.environment
+    location               = var.location
+    spoke_count            = var.spoke_count
+    vm_auto_shutdown       = var.enable_vm_auto_shutdown
+    disaster_recovery_tier = var.disaster_recovery_tier
+  }
+}
+
+output "log_analytics_key" {
+  description = "Log Analytics workspace shared key"
+  value       = module.spoke_infrastructure.log_analytics_primary_shared_key
+  sensitive   = true  # Hide from console output
+}
+```
+
+---
+
+### **How They Work Together**
+
+```
+┌─────────────────┐      ┌──────────────┐      ┌─────────────────┐
+│  variables.tf   │ ──→  │   main.tf    │ ──→  │   outputs.tf    │
+│                 │      │              │      │                 │
+│ Input Parameters│      │Deploy Module │      │Export Resources │
+└─────────────────┘      └──────────────┘      └─────────────────┘
+        ↓                        ↓                       ↓
+  vm_size = "B2s"         Create VM with         VM IP: 10.1.0.4
+  environment="prod"      specified size         VM ID: /subscriptions/...
+  location="West EU"      in West Europe         Summary: {...}
+                                 ↓
+                          ┌──────────────┐
+                          │   modules/   │
+                          │              │
+                          │ Resource     │
+                          │ Definitions  │
+                          └──────────────┘
+```
+
+**Deployment Flow**:
+
+1. **variables.tf** defines inputs (VM size, location, tags, etc.)
+2. **main.tf** calls the module with those variables
+3. **modules/** creates the actual Azure resources
+4. **outputs.tf** exports information about deployed resources
+
+**Cross-Workspace Integration**:
+
+```terraform
+# Spoke workspace references hub workspace outputs
+data "terraform_remote_state" "hub" {
+  backend = "azurerm"
+  config = {
+    key = "hub.terraform.tfstate"
+  }
+}
+
+# Use hub's VNet ID for peering
+hub_vnet_id = data.terraform_remote_state.hub.outputs.hub_vnet_id
+```
+
+---
+
+### **File Organization Best Practices**
+
+✅ **DO**:
+- Keep `variables.tf` focused on inputs only
+- Use descriptive variable names and descriptions
+- Set environment-appropriate defaults
+- Mark sensitive variables with `sensitive = true`
+- Group related outputs together in `outputs.tf`
+- Use consistent formatting and naming
+
+❌ **DON'T**:
+- Mix resource definitions in workspace files (belongs in modules/)
+- Hard-code values in `main.tf` (use variables instead)
+- Forget to add validation rules for critical variables
+- Expose sensitive data in outputs without `sensitive = true`
+- Duplicate code across workspaces (use modules instead)
+
+---
+
+## 📚 Documentation
+
+### Pipeline Documentation
+- **[PIPELINE-SETUP-GUIDE.md](PIPELINE-SETUP-GUIDE.md)** - Complete guide for setting up Azure DevOps pipelines
+- **[PIPELINE-VARIABLES-GUIDE.md](PIPELINE-VARIABLES-GUIDE.md)** - Comprehensive guide for pipeline variables, variable groups, and secrets management
+- **[PARALLELISM-ERROR-FIX.md](PARALLELISM-ERROR-FIX.md)** - Solutions for Azure DevOps parallelism errors and self-hosted agent setup
+
+### Workspace Documentation
+- **[Hub Workspace](workspaces/hub/VARIABLES-SUMMARY.md)** - Shared services and central security
+- **[Management Workspace](workspaces/management/README.md)** - Centralized monitoring and governance
+- **[Spoke Workspaces](workspaces/spokes/README.md)** - Environment-specific deployments (dev, int, prod)
+
+### Additional Guides
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines
+- **[WORKSPACE-COMPARISON.md](WORKSPACE-COMPARISON.md)** - Comparison of workspace configurations
+
+---
+
 ## TRL Naming Convention
 
 This project follows the standardized TRL naming convention: `<org>-<project>-<env>-<resourceType>[-<suffix>]`
@@ -19,33 +340,33 @@ This project follows the standardized TRL naming convention: `<org>-<project>-<e
 
 This infrastructure deployment covers **all major Azure service categories**:
 
-### 🤖 AI + Machine Learning
+### AI + Machine Learning
 - **Cognitive Services**: Text analytics, computer vision, speech recognition
 - **Machine Learning Workspace**: ML model training and deployment
 - **Application Insights**: AI-powered application monitoring
 - **Container Registry for ML**: ML model container storage
 
-### 📊 Analytics
+### Analytics
 - **Azure Synapse Analytics**: Enterprise data warehousing
 - **Data Factory**: Data integration and ETL pipelines
 - **Event Hub**: Real-time data streaming
 - **Stream Analytics**: Real-time data processing
 - **Time Series Insights**: IoT data analytics
 
-### 🐳 Containers
+### Containers
 - **Azure Kubernetes Service (AKS)**: Managed Kubernetes orchestration
 - **Container Registry**: Container image storage and management
 - **Container Instances**: Serverless container hosting
 - **Private AKS clusters**: Secure Kubernetes deployments
 
-### 🔧 DevOps
+### DevOps
 - **Container Registry for DevOps**: Build artifact storage
 - **Storage Accounts**: DevOps artifact storage
 - **Key Vault**: DevOps secrets management
 - **App Configuration**: Feature flag management
 - **Service Bus**: Build notification messaging
 
-### ⚙️ General Services
+### General Services
 - **Logic Apps**: Workflow automation
 - **Automation Account**: Runbook execution
 - **API Management**: API gateway and management
@@ -53,7 +374,7 @@ This infrastructure deployment covers **all major Azure service categories**:
 - **Notification Hub**: Push notifications
 - **Azure Search**: Full-text search service
 
-### 🌐 Hybrid + Multicloud
+### Hybrid + Multicloud
 - **Azure Arc**: Hybrid and multicloud management
 - **Site Recovery**: Disaster recovery services
 - **Database Migration Service**: Database migration tools
@@ -61,21 +382,21 @@ This infrastructure deployment covers **all major Azure service categories**:
 - **Storage Sync**: Hybrid file synchronization
 - **ExpressRoute/VPN Gateways**: Hybrid connectivity
 
-### 🔐 Identity
+### Identity
 - **Azure AD Domain Services**: Managed domain services
 - **Managed Identity**: Secure service authentication
 - **Azure AD B2C**: Customer identity management
 - **Key Vault for Identity**: Identity secret storage
 - **Custom Roles**: Fine-grained access control
 
-### 🔗 Integration
+### Integration
 - **Service Bus**: Enterprise message queuing
 - **Event Grid**: Event-driven architecture
 - **Logic Apps**: Integration workflows
 - **Application Gateway**: Load balancing and WAF
 - **Azure Relay**: Hybrid connection service
 
-### 🌐 Internet of Things (IoT)
+### Internet of Things (IoT)
 - **IoT Hub**: Device connectivity and messaging
 - **IoT Device Provisioning**: Automated device setup
 - **Digital Twins**: IoT device modeling
@@ -83,7 +404,7 @@ This infrastructure deployment covers **all major Azure service categories**:
 - **IoT Central**: IoT application platform
 - **Azure Maps**: Location services
 
-### 📋 Management and Governance
+### Management and Governance
 - **Azure Policy**: Compliance and governance
 - **Management Groups**: Hierarchical organization
 - **Azure Blueprints**: Repeatable deployments
@@ -91,20 +412,20 @@ This infrastructure deployment covers **all major Azure service categories**:
 - **Resource Graph**: Resource queries and inventory
 - **Azure Advisor**: Best practice recommendations
 
-### 📦 Migration
+### Migration
 - **Azure Migrate**: Migration assessment and execution
 - **Database Migration Service**: Database migration
 - **Azure Data Box**: Offline data transfer
 - **Site Recovery**: VM migration and DR
 - **Import/Export Service**: Large data transfer
 
-### 🥽 Mixed Reality
+### Mixed Reality
 - **Spatial Anchors**: Shared spatial experiences
 - **Remote Rendering**: Cloud-based 3D rendering
 - **Object Anchors**: Real-world object detection
 - **CDN for Mixed Reality**: Content delivery optimization
 
-### 📈 Monitor
+### Monitor
 - **Application Insights**: Application performance monitoring
 - **Log Analytics**: Centralized logging
 - **Azure Monitor**: Infrastructure monitoring
@@ -112,7 +433,7 @@ This infrastructure deployment covers **all major Azure service categories**:
 - **Workbooks**: Custom monitoring dashboards
 - **Data Collection Rules**: Monitoring data configuration
 
-### 🌐 Web & Mobile
+### Web & Mobile
 - **App Service**: Web application hosting
 - **Function Apps**: Serverless compute
 - **Static Web Apps**: Static site hosting

@@ -48,7 +48,7 @@ terraform show -no-color "${PLAN_FILE}" | grep -E "Plan:|Changes to Outputs:"
 echo ""
 
 # Confirmation prompt
-read -p ":| Do you want to apply these changes? (yes/no): " CONFIRM
+read -r -p ":| Do you want to apply these changes? (yes/no): " CONFIRM
 
 if [ "${CONFIRM}" != "yes" ]; then
     echo ":( Apply cancelled by user"
@@ -57,13 +57,10 @@ fi
 
 # Apply the plan
 echo ":) Running terraform apply..."
-terraform apply \
+if terraform apply \
   -lock=true \
   -lock-timeout=300s \
-  "${PLAN_FILE}"
-
-# Check apply result
-if [ $? -eq 0 ]; then
+  "${PLAN_FILE}"; then
     echo ""
     echo ":) Terraform apply completed successfully!"
     echo ":) Infrastructure deployment summary:"

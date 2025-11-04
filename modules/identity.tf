@@ -109,8 +109,9 @@ resource "azurerm_private_endpoint" "identity_keyvault" {
 }
 
 # Role Assignment for Managed Identity
+# Note: Requires service principal to have User Access Administrator or Owner role
 resource "azurerm_role_assignment" "managed_identity_contributor" {
-  count                = var.enable_managed_identity ? 1 : 0
+  count                = var.enable_managed_identity && var.enable_role_assignments ? 1 : 0
   scope                = azurerm_resource_group.management.id
   role_definition_name = "Contributor"
   principal_id         = azurerm_user_assigned_identity.main[0].principal_id

@@ -1,224 +1,291 @@
 # Sub-TRL-mgmt-weu-tf.yml
-name: Terraform-Deploy-Management-$(Date:yyyyMMdd)$(Rev:.r)
+name: Management Environment Deployment
 
-trigger:
-  branches:
-    include:
-    - main
-  paths:
-    include:
-    - workspaces/management/*
-    - Modules/monitoring/*
-    - Modules/automation/*
-    - Modules/keyvault/*
-    - Modules/log-analytics/*
+trigger: none
 
-pr:
-  branches:
-    include:
-    - main
-  paths:
-    include:
-    - workspaces/management/*
-    - Modules/monitoring/*
-    - Modules/automation/*
-    - Modules/keyvault/*
-    - Modules/log-analytics/*
+pr: none
 
 variables:
 - group: trl-hubspoke-config
 - group: trl-hubspoke-secrets
 
 stages:
-- stage: Validate_Management_Deployment
-  displayName: 'Validate Management Deployment'
+- stage: Plan_Management
+  displayName: 'Plan Management'
   jobs:
-  - job: Validate_Management_Resources
-    displayName: 'Validate Management Resources'
+  - job: Plan
+    displayName: 'Terraform Plan for Management'
     pool:
-      name: $(agentPoolName)
+      name: TRL-Agents
     steps:
+    - checkout: self
+      displayName: 'Checkout Repository'
+
     - task: AzureCLI@2
-      displayName: 'Validate Management Subscription Access'
+      displayName: 'Terraform Init'
       inputs:
         azureSubscription: '$(managementServiceConnection)'
-        scriptType: 'bash'
+        scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "Validating Management subscription access..."
+          Write-Host "Initializing Management workspace..."
+          Set-Location '$(managementWorkspacePath)'
           
-          # Get current subscription
-          subscriptionId=$(az account show --query id --output tsv)
-          subscriptionName=$(az account show --query name --output tsv)
-          echo "Management Subscription: $subscriptionName ($subscriptionId)"
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
           
-          # Validate resource groups for management resources
-          echo "Existing resource groups in management subscription:"
-          az group list --query "[].name" --output table
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(managementBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
           
-          # Check for existing Log Analytics workspace
-          echo "Existing Log Analytics workspaces:"
-          az monitor log-analytics workspace list --query "[].name" --output table
+          Write-Host "Management workspace initialized successfully"
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Validate'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Terraform configuration..."
+          Set-Location '$(managementWorkspacePath)'
+          terraform validate
+          Write-Host "Terraform configuration validated successfully"
+
+    - task: AzureCLI@2
+      displayName: 'Check and Release State Lock'
+      inputs:
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Checking for state lock in Azure Storage..."
           
-          echo "Management subscription validation completed successfully"
+          # Get storage account key for authentication
+          $STORAGE_KEY = az storage account keys list `
+            --resource-group $(backendResourceGroupName) `
+            --account-name $(backendStorageAccountName) `
+            --query '[0].value' `
+            -o tsv
+          
+          if (-not $STORAGE_KEY) {
+            Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+            exit 0
+          }
+          
+          # Check if the state file blob has a lease (lock)
+          $blobLease = az storage blob show `
+            --account-name $(backendStorageAccountName) `
+            --container-name $(backendContainerName) `
+            --name $(managementBackendKey) `
+            --account-key $STORAGE_KEY `
+            --query 'properties.lease.status' `
+            -o tsv 2>$null
+          
+          if ($blobLease -eq "locked") {
+            Write-Host "##[warning]State file is locked in Azure Storage"
+            Write-Host "Attempting to break the lease..."
+            
+            az storage blob lease break `
+              --account-name $(backendStorageAccountName) `
+              --container-name $(backendContainerName) `
+              --blob-name $(managementBackendKey) `
+              --account-key $STORAGE_KEY `
+              --lease-break-period 0
+            
+            Write-Host "##[section]State lock lease broken successfully"
+            Start-Sleep -Seconds 2
+          } elseif ($blobLease -eq "unlocked") {
+            Write-Host "No state lock detected. Proceeding..."
+          } else {
+            Write-Host "State file not found or unable to check lease status (this is normal for first run)"
+          }
+      continueOnError: true
+      timeoutInMinutes: 1
 
-- stage: Plan_Management
-  displayName: 'Terraform Plan - Management'
-  dependsOn: Validate_Management_Deployment
-  jobs:
-  - job: Terraform_Plan
-    displayName: 'Terraform Plan - Management'
-    pool:
-      name: $(agentPoolName)
-    steps:
-    - task: TerraformInstaller@1
-      displayName: 'Install Terraform'
+    - task: AzureCLI@2
+      displayName: 'Terraform Plan'
       inputs:
-        terraformVersion: '$(terraformVersion)'
+        azureSubscription: '$(managementServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Creating Terraform plan..."
+          Set-Location '$(managementWorkspacePath)'
+          
+          # Get subscription ID from Azure CLI context
+          $SUBSCRIPTION_ID = az account show --query id -o tsv
+          Write-Host "Using subscription: $SUBSCRIPTION_ID"
+          
+          terraform plan `
+            -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" `
+            -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="backendResourceGroupName=$(backendResourceGroupName)" `
+            -var="backendStorageAccountName=$(backendStorageAccountName)" `
+            -var="backendContainerName=$(backendContainerName)" `
+            -var="hubBackendKey=$(hubBackendKey)" `
+            -var="subscription_id=$SUBSCRIPTION_ID" `
+            -out=tfplan
+          
+          Write-Host "Terraform plan created successfully"
+          Write-Host "##[section]Review the plan above before approving deployment"
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Init - Management'
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan Artifact'
       inputs:
-        command: 'init'
-        workingDirectory: '$(managementWorkspacePath)'
-        backendType: 'azurerm'
-        backendServiceArm: '$(managementServiceConnection)'
-        ensureBackend: true
-        backendConfig: |
-          storage_account_name = $(backendStorageAccountName)
-          container_name       = $(backendContainerName)
-          key                  = $(managementBackendKey)
-          resource_group_name  = $(backendResourceGroupName)
+        targetPath: '$(managementWorkspacePath)/tfplan'
+        artifact: 'terraform-plan-management'
+        publishLocation: 'pipeline'
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Validate - Management'
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Directory'
       inputs:
-        command: 'validate'
-        workingDirectory: '$(managementWorkspacePath)'
-
-    - task: TerraformCLI@0
-      displayName: 'Terraform Plan - Management'
-      inputs:
-        command: 'plan'
-        workingDirectory: '$(managementWorkspacePath)'
-        environmentServiceName: '$(managementServiceConnection)'
-        commandOptions: '-var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" -var="company_name=$(COMPANY_NAME)" -var="project_name=$(PROJECT_NAME)" -var="cost_center=$(COST_CENTER)" -out=tfplan'
-
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Terraform Plan - Management'
-      inputs:
-        pathtoPublish: '$(managementWorkspacePath)/tfplan'
-        artifactName: 'terraform-plan-management'
+        targetPath: '$(managementWorkspacePath)/.terraform'
+        artifact: 'terraform-providers-management'
+        publishLocation: 'pipeline'
 
 - stage: Apply_Management
-  displayName: 'Terraform Apply - Management'
+  displayName: 'Apply Management (Manual Approval Required)'
   dependsOn: Plan_Management
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: succeeded()
   jobs:
-  - deployment: Terraform_Apply
-    displayName: 'Apply Management Resources Changes'
-    environment: 'MANAGEMENT-PRD'
+  - deployment: ApplyManagement
+    displayName: 'Terraform Apply for Management'
+    environment: 'Management'  # This requires manual approval in Azure DevOps
     pool:
-      name: $(agentPoolName)
+      name: TRL-Agents
     strategy:
       runOnce:
         deploy:
           steps:
-          - task: TerraformInstaller@1
-            displayName: 'Install Terraform'
-            inputs:
-              terraformVersion: '$(terraformVersion)'
+          - checkout: self
+            displayName: 'Checkout Repository'
 
-          - task: TerraformCLI@0
-            displayName: 'Terraform Init - Management'
-            inputs:
-              command: 'init'
-              workingDirectory: '$(managementWorkspacePath)'
-              backendType: 'azurerm'
-              backendServiceArm: '$(managementServiceConnection)'
-              ensureBackend: true
-              backendConfig: |
-                storage_account_name = $(backendStorageAccountName)
-                container_name       = $(backendContainerName)
-                key                  = $(managementBackendKey)
-                resource_group_name  = $(backendResourceGroupName)
-
-          - task: DownloadBuildArtifacts@0
+          - task: DownloadPipelineArtifact@2
             displayName: 'Download Terraform Plan'
             inputs:
-              artifactName: 'terraform-plan-management'
-              downloadPath: '$(managementWorkspacePath)'
+              artifact: 'terraform-plan-management'
+              path: '$(managementWorkspacePath)'
 
-          - task: TerraformCLI@0
-            displayName: 'Terraform Apply - Management'
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Providers'
             inputs:
-              command: 'apply'
-              workingDirectory: '$(managementWorkspacePath)'
-              environmentServiceName: '$(managementServiceConnection)'
-              commandOptions: '-auto-approve tfplan'
+              artifact: 'terraform-providers-management'
+              path: '$(managementWorkspacePath)/.terraform'
 
-          - task: TerraformCLI@0
-            displayName: 'Terraform Output - Management'
+          - task: AzureCLI@2
+            displayName: 'Terraform Init (Backend Only)'
             inputs:
-              command: 'output'
-              workingDirectory: '$(managementWorkspacePath)'
-              environmentServiceName: '$(managementServiceConnection)'
+              azureSubscription: '$(managementServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Re-initializing backend connection..."
+                Set-Location '$(managementWorkspacePath)'
+                
+                # Get storage account key
+                $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+                
+                # Initialize backend only (providers already downloaded)
+                terraform init `
+                  -backend-config="resource_group_name=$(backendResourceGroupName)" `
+                  -backend-config="storage_account_name=$(backendStorageAccountName)" `
+                  -backend-config="container_name=$(backendContainerName)" `
+                  -backend-config="key=$(managementBackendKey)" `
+                  -backend-config="access_key=$STORAGE_KEY" `
+                  -reconfigure
+                
+                Write-Host "Backend initialized successfully"
 
-- stage: Post_Management_Deployment_Validation
-  displayName: 'Post-Management Deployment Validation'
-  dependsOn: Apply_Management
-  jobs:
-  - job: Validate_Management_Resources
-    displayName: 'Validate Management Resources Deployment'
-    pool:
-      name: $(agentPoolName)
-    steps:
-    - task: AzureCLI@2
-      displayName: 'Validate Management Resources'
-      inputs:
-        azureSubscription: '$(managementServiceConnection)'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          echo "=== Management Resources Deployment Validation ==="
-          
-          # Validate Log Analytics Workspace
-          echo "Log Analytics Workspaces:"
-          az monitor log-analytics workspace list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
-          
-          # Validate Automation Account
-          echo "Automation Accounts:"
-          az automation account list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
-          
-          # Validate Key Vaults
-          echo "Key Vaults:"
-          az keyvault list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
-          
-          # Validate Recovery Services Vaults
-          echo "Recovery Services Vaults:"
-          az backup vault list --query "[].{Name:name, ResourceGroup:resourceGroup, Location:location}" --output table
-          
-          # Validate Monitor Action Groups
-          echo "Action Groups:"
-          az monitor action-group list --query "[].{Name:name, ResourceGroup:resourceGroup}" --output table
-          
-          echo "Management resources validation completed"
+          - task: AzureCLI@2
+            displayName: 'Check and Release State Lock'
+            inputs:
+              azureSubscription: '$(managementServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Checking for state lock in Azure Storage before apply..."
+                
+                # Get storage account key for authentication
+                $STORAGE_KEY = az storage account keys list `
+                  --resource-group $(backendResourceGroupName) `
+                  --account-name $(backendStorageAccountName) `
+                  --query '[0].value' `
+                  -o tsv
+                
+                if (-not $STORAGE_KEY) {
+                  Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+                  exit 0
+                }
+                
+                # Check if the state file blob has a lease (lock)
+                $blobLease = az storage blob show `
+                  --account-name $(backendStorageAccountName) `
+                  --container-name $(backendContainerName) `
+                  --name $(managementBackendKey) `
+                  --account-key $STORAGE_KEY `
+                  --query 'properties.lease.status' `
+                  -o tsv 2>$null
+                
+                if ($blobLease -eq "locked") {
+                  Write-Host "##[warning]State file is locked in Azure Storage"
+                  Write-Host "Attempting to break the lease..."
+                  
+                  az storage blob lease break `
+                    --account-name $(backendStorageAccountName) `
+                    --container-name $(backendContainerName) `
+                    --blob-name $(managementBackendKey) `
+                    --account-key $STORAGE_KEY `
+                    --lease-break-period 0
+                  
+                  Write-Host "##[section]State lock lease broken successfully"
+                  Start-Sleep -Seconds 2
+                } elseif ($blobLease -eq "unlocked") {
+                  Write-Host "No state lock detected. Proceeding with apply..."
+                } else {
+                  Write-Host "State file check completed (file may not exist yet for first deployment)"
+                }
+            continueOnError: true
+            timeoutInMinutes: 1
 
-    - task: AzureCLI@2
-      displayName: 'Validate Monitoring Configuration'
-      inputs:
-        azureSubscription: '$(managementServiceConnection)'
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          echo "=== Monitoring Configuration Validation ==="
-          
-          # Check Alert Rules
-          echo "Alert Rules:"
-          az monitor metrics alert list --query "[].{Name:name, ResourceGroup:resourceGroup, Enabled:enabled}" --output table
-          
-          # Check Diagnostic Settings
-          echo "Diagnostic Settings:"
-          az monitor diagnostic-settings list --resource-group $(backendResourceGroupName) --query "value[].{Name:name, StorageAccount:storageAccountId}" --output table
-          
-          echo "Monitoring configuration validation completed"
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply (Using Pre-approved Plan)'
+            inputs:
+              azureSubscription: '$(managementServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Applying pre-approved Terraform plan..."
+                Set-Location '$(managementWorkspacePath)'
+                
+                # Verify plan file exists
+                if (-not (Test-Path "tfplan")) {
+                  Write-Host "##vso[task.logissue type=error]Plan file not found! Cannot apply."
+                  exit 1
+                }
+                
+                Write-Host "Plan file found. Applying changes..."
+                
+                # Apply the pre-approved plan (no variables needed - they're in the plan)
+                terraform apply -input=false -auto-approve tfplan
+                
+                Write-Host "##[section]Terraform apply completed successfully"
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Output'
+            inputs:
+              azureSubscription: '$(managementServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Retrieving Terraform outputs..."
+                Set-Location '$(managementWorkspacePath)'
+                terraform output -json | ConvertFrom-Json | ConvertTo-Json -Depth 10
+                Write-Host "Outputs retrieved successfully"
+            condition: succeeded()

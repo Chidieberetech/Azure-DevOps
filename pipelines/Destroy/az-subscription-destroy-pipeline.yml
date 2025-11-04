@@ -67,6 +67,9 @@ stages:
     pool:
       name: TRL-Agents
     steps:
+    - checkout: self
+      displayName: 'Checkout Repository'
+
     # ========================================================================
     # STEP 1: Initialize Terraform with Remote State
     # ========================================================================
@@ -206,12 +209,24 @@ stages:
             -out=destroy_plan
           
           Write-Host "Terraform destroy plan created successfully"
+          Write-Host "##[warning]=========================================="
+          Write-Host "##[warning]⚠️  REVIEW THE DESTROY PLAN CAREFULLY  ⚠️"
+          Write-Host "##[warning]=========================================="
+          Write-Host "##[section]Review all resources marked for deletion before approving"
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Terraform Destroy Plan'
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Destroy Plan Artifact'
       inputs:
-        pathtoPublish: '$(prodWorkspacePath)/destroy_plan'
-        artifactName: 'terraform-destroy-plan-prod'
+        targetPath: '$(prodWorkspacePath)/destroy_plan'
+        artifact: 'terraform-destroy-plan-prod'
+        publishLocation: 'pipeline'
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Providers'
+      inputs:
+        targetPath: '$(prodWorkspacePath)/.terraform'
+        artifact: 'terraform-providers-destroy-prod'
+        publishLocation: 'pipeline'
 
 # ==============================================================================
 # STAGE 2: DESTROY PRODUCTION ENVIRONMENT
@@ -243,34 +258,44 @@ stages:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: DownloadPipelineArtifact@2
             displayName: 'Download Terraform Destroy Plan'
             inputs:
-              artifactName: 'terraform-destroy-plan-prod'
-              downloadPath: '$(prodWorkspacePath)'
+              artifact: 'terraform-destroy-plan-prod'
+              path: '$(prodWorkspacePath)'
+
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Providers'
+            inputs:
+              artifact: 'terraform-providers-destroy-prod'
+              path: '$(prodWorkspacePath)/.terraform'
 
           - task: AzureCLI@2
-            displayName: 'Terraform Init'
+            displayName: 'Terraform Init (Backend Only)'
             inputs:
               azureSubscription: '$(prodServiceConnection)'
               scriptType: 'ps'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                Write-Host "Initializing Prod workspace for destruction..."
+                Write-Host "Re-initializing backend connection for destruction..."
                 Set-Location '$(prodWorkspacePath)'
                 
                 # Get storage account key
                 $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
                 
-                # Initialize Terraform with backend configuration
+                # Initialize backend only (providers already downloaded)
                 terraform init `
                   -backend-config="resource_group_name=$(backendResourceGroupName)" `
                   -backend-config="storage_account_name=$(backendStorageAccountName)" `
                   -backend-config="container_name=$(backendContainerName)" `
                   -backend-config="key=$(prodBackendKey)" `
-                  -backend-config="access_key=$STORAGE_KEY"
+                  -backend-config="access_key=$STORAGE_KEY" `
+                  -reconfigure
                 
-                Write-Host "Prod workspace initialized successfully for destruction"
+                Write-Host "Backend initialized successfully for destruction"
 
           - task: AzureCLI@2
             displayName: 'Check and Release State Lock'
@@ -344,7 +369,7 @@ stages:
           # The backend storage is NOT managed by Terraform and is preserved.
           # ====================================================================
           - task: AzureCLI@2
-            displayName: 'Terraform Destroy - Execute Destruction'
+            displayName: 'Terraform Destroy - Execute Pre-approved Plan'
             inputs:
               azureSubscription: '$(prodServiceConnection)'
               scriptType: 'ps'
@@ -363,16 +388,20 @@ stages:
                 
                 Set-Location '$(prodWorkspacePath)'
                 
-                # Get subscription ID from Azure CLI context
-                $SUBSCRIPTION_ID = az account show --query id -o tsv
-                Write-Host "Using subscription: $SUBSCRIPTION_ID"
+                # Verify destroy plan file exists
+                if (-not (Test-Path "destroy_plan")) {
+                  Write-Host "##vso[task.logissue type=error]Destroy plan file not found! Cannot proceed."
+                  exit 1
+                }
                 
-                # Execute the destroy plan
-                # This applies the destruction plan created in the previous stage
+                Write-Host "Destroy plan file found. Executing destruction..."
+                
+                # Execute the pre-approved destroy plan
+                # No variables needed - they're embedded in the plan
                 terraform apply -input=false -auto-approve destroy_plan
                 
                 Write-Host "=========================================="
-                Write-Host "Terraform destroy completed successfully"
+                Write-Host "##[section]Terraform destroy completed successfully"
                 Write-Host "Backend state storage account preserved"
                 Write-Host "State file updated with empty state"
                 Write-Host "=========================================="

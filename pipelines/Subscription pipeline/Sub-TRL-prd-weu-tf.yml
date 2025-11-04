@@ -18,6 +18,9 @@ stages:
     pool:
       name: TRL-Agents
     steps:
+    - checkout: self
+      displayName: 'Checkout Repository'
+
     - task: AzureCLI@2
       displayName: 'Terraform Init'
       inputs:
@@ -25,7 +28,7 @@ stages:
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          Write-Host "Initializing Prod workspace for planning..."
+          Write-Host "Initializing Prod workspace..."
           Set-Location '$(prodWorkspacePath)'
           
           # Get storage account key
@@ -40,7 +43,7 @@ stages:
             -backend-config="access_key=$STORAGE_KEY" `
             -reconfigure
           
-          Write-Host "Prod workspace initialized successfully for planning"
+          Write-Host "Prod workspace initialized successfully"
 
     - task: AzureCLI@2
       displayName: 'Terraform Validate'
@@ -131,12 +134,21 @@ stages:
             -out=tfplan
           
           Write-Host "Terraform plan created successfully"
+          Write-Host "##[section]Review the plan above before approving deployment"
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publish Terraform Plan'
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan Artifact'
       inputs:
-        pathtoPublish: '$(prodWorkspacePath)/tfplan'
-        artifactName: 'terraform-plan-prod'
+        targetPath: '$(prodWorkspacePath)/tfplan'
+        artifact: 'terraform-plan-prod'
+        publishLocation: 'pipeline'
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Directory'
+      inputs:
+        targetPath: '$(prodWorkspacePath)/.terraform'
+        artifact: 'terraform-providers-prod'
+        publishLocation: 'pipeline'
 
 - stage: Apply_Prod
   displayName: 'Apply Prod (Manual Approval Required)'
@@ -145,41 +157,51 @@ stages:
   jobs:
   - deployment: ApplyProduction
     displayName: 'Terraform Apply for Prod'
-    environment: 'Production'
+    environment: 'Production'  # This requires manual approval in Azure DevOps
     pool:
       name: TRL-Agents
     strategy:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
+          - checkout: self
+            displayName: 'Checkout Repository'
+
+          - task: DownloadPipelineArtifact@2
             displayName: 'Download Terraform Plan'
             inputs:
-              artifactName: 'terraform-plan-prod'
-              downloadPath: '$(prodWorkspacePath)'
+              artifact: 'terraform-plan-prod'
+              path: '$(prodWorkspacePath)'
+
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Providers'
+            inputs:
+              artifact: 'terraform-providers-prod'
+              path: '$(prodWorkspacePath)/.terraform'
 
           - task: AzureCLI@2
-            displayName: 'Terraform Init'
+            displayName: 'Terraform Init (Backend Only)'
             inputs:
               azureSubscription: '$(prodServiceConnection)'
               scriptType: 'ps'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                Write-Host "Initializing Prod workspace for apply..."
+                Write-Host "Re-initializing backend connection..."
                 Set-Location '$(prodWorkspacePath)'
                 
                 # Get storage account key
                 $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
                 
-                # Initialize Terraform with backend configuration
+                # Initialize backend only (providers already downloaded)
                 terraform init `
                   -backend-config="resource_group_name=$(backendResourceGroupName)" `
                   -backend-config="storage_account_name=$(backendStorageAccountName)" `
                   -backend-config="container_name=$(backendContainerName)" `
                   -backend-config="key=$(prodBackendKey)" `
-                  -backend-config="access_key=$STORAGE_KEY"
+                  -backend-config="access_key=$STORAGE_KEY" `
+                  -reconfigure
                 
-                Write-Host "Prod workspace initialized successfully for apply"
+                Write-Host "Backend initialized successfully"
 
           - task: AzureCLI@2
             displayName: 'Check and Release State Lock'
@@ -233,32 +255,27 @@ stages:
             timeoutInMinutes: 1
 
           - task: AzureCLI@2
-            displayName: 'Terraform Apply'
+            displayName: 'Terraform Apply (Using Pre-approved Plan)'
             inputs:
               azureSubscription: '$(prodServiceConnection)'
               scriptType: 'ps'
               scriptLocation: 'inlineScript'
               inlineScript: |
-                Write-Host "Applying Terraform plan..."
+                Write-Host "Applying pre-approved Terraform plan..."
                 Set-Location '$(prodWorkspacePath)'
                 
-                # Get subscription ID from Azure CLI context
-                $SUBSCRIPTION_ID = az account show --query id -o tsv
-                Write-Host "Using subscription: $SUBSCRIPTION_ID"
+                # Verify plan file exists
+                if (-not (Test-Path "tfplan")) {
+                  Write-Host "##vso[task.logissue type=error]Plan file not found! Cannot apply."
+                  exit 1
+                }
                 
-                terraform apply `
-                  -input=false `
-                  -auto-approve `
-                  -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" `
-                  -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" `
-                  -var="admin_password=$(VM_ADMIN_PASSWORD)" `
-                  -var="backendResourceGroupName=$(backendResourceGroupName)" `
-                  -var="backendStorageAccountName=$(backendStorageAccountName)" `
-                  -var="backendContainerName=$(backendContainerName)" `
-                  -var="hubBackendKey=$(hubBackendKey)" `
-                  -var="subscription_id=$SUBSCRIPTION_ID"
+                Write-Host "Plan file found. Applying changes..."
                 
-                Write-Host "Terraform apply completed successfully"
+                # Apply the pre-approved plan (no variables needed - they're in the plan)
+                terraform apply -input=false -auto-approve tfplan
+                
+                Write-Host "##[section]Terraform apply completed successfully"
 
           - task: AzureCLI@2
             displayName: 'Terraform Output'
@@ -269,5 +286,6 @@ stages:
               inlineScript: |
                 Write-Host "Retrieving Terraform outputs..."
                 Set-Location '$(prodWorkspacePath)'
-                terraform output
+                terraform output -json | ConvertFrom-Json | ConvertTo-Json -Depth 10
                 Write-Host "Outputs retrieved successfully"
+            condition: succeeded()

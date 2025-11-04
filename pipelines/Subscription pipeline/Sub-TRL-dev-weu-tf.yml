@@ -1,13 +1,7 @@
+# Sub-TRL-dev-weu-tf.yml
 name: Dev Environment Deployment
 
-trigger:
-  branches:
-    include:
-    - main
-  paths:
-    include:
-    - Modules/*
-    - workspaces/spokes/dev/*
+trigger: none
 
 pr: none
 
@@ -22,72 +16,276 @@ stages:
   - job: Plan
     displayName: 'Terraform Plan for Dev'
     pool:
-      name: $(agentPoolName)
+      name: TRL-Agents
     steps:
-    - task: TerraformInstaller@1
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: '$(terraformVersion)'
+    - checkout: self
+      displayName: 'Checkout Repository'
 
-    - task: TerraformCLI@0
+    - task: AzureCLI@2
       displayName: 'Terraform Init'
       inputs:
-        command: init
-        workingDirectory: '$(devWorkspacePath)'
-        environmentServiceName: '$(devServiceConnection)'
-        backendType: azurerm
-        backendServiceArm: '$(devServiceConnection)'
-        ensureBackend: true
-        backendConfig: |
-          storage_account_name=$(backendStorageAccountName)
-          container_name=$(backendContainerName)
-          key=$(devBackendKey)
-          subscription_id=$(SUBSCRIPTION_ID_DEV)
-          resource_group_name=$(backendResourceGroupName)
+        azureSubscription: '$(devServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Initializing Dev workspace..."
+          Set-Location '$(devWorkspacePath)'
+          
+          # Get storage account key
+          $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+          
+          # Initialize Terraform with backend configuration
+          terraform init `
+            -backend-config="resource_group_name=$(backendResourceGroupName)" `
+            -backend-config="storage_account_name=$(backendStorageAccountName)" `
+            -backend-config="container_name=$(backendContainerName)" `
+            -backend-config="key=$(devBackendKey)" `
+            -backend-config="access_key=$STORAGE_KEY" `
+            -reconfigure
+          
+          Write-Host "Dev workspace initialized successfully"
 
-    - task: TerraformCLI@0
+    - task: AzureCLI@2
+      displayName: 'Terraform Validate'
+      inputs:
+        azureSubscription: '$(devServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Validating Terraform configuration..."
+          Set-Location '$(devWorkspacePath)'
+          terraform validate
+          Write-Host "Terraform configuration validated successfully"
+
+    - task: AzureCLI@2
+      displayName: 'Check and Release State Lock'
+      inputs:
+        azureSubscription: '$(devServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Checking for state lock in Azure Storage..."
+          
+          # Get storage account key for authentication
+          $STORAGE_KEY = az storage account keys list `
+            --resource-group $(backendResourceGroupName) `
+            --account-name $(backendStorageAccountName) `
+            --query '[0].value' `
+            -o tsv
+          
+          if (-not $STORAGE_KEY) {
+            Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+            exit 0
+          }
+          
+          # Check if the state file blob has a lease (lock)
+          $blobLease = az storage blob show `
+            --account-name $(backendStorageAccountName) `
+            --container-name $(backendContainerName) `
+            --name $(devBackendKey) `
+            --account-key $STORAGE_KEY `
+            --query 'properties.lease.status' `
+            -o tsv 2>$null
+          
+          if ($blobLease -eq "locked") {
+            Write-Host "##[warning]State file is locked in Azure Storage"
+            Write-Host "Attempting to break the lease..."
+            
+            az storage blob lease break `
+              --account-name $(backendStorageAccountName) `
+              --container-name $(backendContainerName) `
+              --blob-name $(devBackendKey) `
+              --account-key $STORAGE_KEY `
+              --lease-break-period 0
+            
+            Write-Host "##[section]State lock lease broken successfully"
+            Start-Sleep -Seconds 2
+          } elseif ($blobLease -eq "unlocked") {
+            Write-Host "No state lock detected. Proceeding..."
+          } else {
+            Write-Host "State file not found or unable to check lease status (this is normal for first run)"
+          }
+      continueOnError: true
+      timeoutInMinutes: 1
+
+    - task: AzureCLI@2
       displayName: 'Terraform Plan'
       inputs:
-        command: plan
-        workingDirectory: '$(devWorkspacePath)'
-        environmentServiceName: '$(devServiceConnection)'
-        commandOptions: '-var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)"'
+        azureSubscription: '$(devServiceConnection)'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          Write-Host "Creating Terraform plan..."
+          Set-Location '$(devWorkspacePath)'
+          
+          # Get subscription ID from Azure CLI context
+          $SUBSCRIPTION_ID = az account show --query id -o tsv
+          Write-Host "Using subscription: $SUBSCRIPTION_ID"
+          
+          terraform plan `
+            -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" `
+            -var="vm_admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="admin_password=$(VM_ADMIN_PASSWORD)" `
+            -var="backendResourceGroupName=$(backendResourceGroupName)" `
+            -var="backendStorageAccountName=$(backendStorageAccountName)" `
+            -var="backendContainerName=$(backendContainerName)" `
+            -var="hubBackendKey=$(hubBackendKey)" `
+            -var="subscription_id=$SUBSCRIPTION_ID" `
+            -out=tfplan
+          
+          Write-Host "Terraform plan created successfully"
+          Write-Host "##[section]Review the plan above before approving deployment"
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Plan Artifact'
+      inputs:
+        targetPath: '$(devWorkspacePath)/tfplan'
+        artifact: 'terraform-plan-dev'
+        publishLocation: 'pipeline'
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish Terraform Directory'
+      inputs:
+        targetPath: '$(devWorkspacePath)/.terraform'
+        artifact: 'terraform-providers-dev'
+        publishLocation: 'pipeline'
 
 - stage: Apply_Dev
-  displayName: 'Apply Dev'
+  displayName: 'Apply Dev (Manual Approval Required)'
   dependsOn: Plan_Dev
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: succeeded()
   jobs:
-  - job: Apply
+  - deployment: ApplyDevelopment
     displayName: 'Terraform Apply for Dev'
+    environment: 'Development'  # This requires manual approval in Azure DevOps
     pool:
-      name: $(agentPoolName)
-    steps:
-    - task: TerraformInstaller@1
-      displayName: 'Install Terraform'
-      inputs:
-        terraformVersion: '$(terraformVersion)'
+      name: TRL-Agents
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            displayName: 'Checkout Repository'
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Init'
-      inputs:
-        command: init
-        workingDirectory: '$(devWorkspacePath)'
-        environmentServiceName: '$(devServiceConnection)'
-        backendType: azurerm
-        backendServiceArm: '$(devServiceConnection)'
-        ensureBackend: true
-        backendConfig: |
-          storage_account_name=$(backendStorageAccountName)
-          container_name=$(backendContainerName)
-          key=$(devBackendKey)
-          subscription_id=$(SUBSCRIPTION_ID_DEV)
-          resource_group_name=$(backendResourceGroupName)
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Plan'
+            inputs:
+              artifact: 'terraform-plan-dev'
+              path: '$(devWorkspacePath)'
 
-    - task: TerraformCLI@0
-      displayName: 'Terraform Apply'
-      inputs:
-        command: apply
-        workingDirectory: '$(devWorkspacePath)'
-        environmentServiceName: '$(devServiceConnection)'
-        commandOptions: '-auto-approve -var="sql_admin_password=$(SQL_ADMIN_PASSWORD)" -var="vm_admin_password=$(VM_ADMIN_PASSWORD)"'
+          - task: DownloadPipelineArtifact@2
+            displayName: 'Download Terraform Providers'
+            inputs:
+              artifact: 'terraform-providers-dev'
+              path: '$(devWorkspacePath)/.terraform'
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Init (Backend Only)'
+            inputs:
+              azureSubscription: '$(devServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Re-initializing backend connection..."
+                Set-Location '$(devWorkspacePath)'
+                
+                # Get storage account key
+                $STORAGE_KEY = az storage account keys list --resource-group $(backendResourceGroupName) --account-name $(backendStorageAccountName) --query '[0].value' -o tsv
+                
+                # Initialize backend only (providers already downloaded)
+                terraform init `
+                  -backend-config="resource_group_name=$(backendResourceGroupName)" `
+                  -backend-config="storage_account_name=$(backendStorageAccountName)" `
+                  -backend-config="container_name=$(backendContainerName)" `
+                  -backend-config="key=$(devBackendKey)" `
+                  -backend-config="access_key=$STORAGE_KEY" `
+                  -reconfigure
+                
+                Write-Host "Backend initialized successfully"
+
+          - task: AzureCLI@2
+            displayName: 'Check and Release State Lock'
+            inputs:
+              azureSubscription: '$(devServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Checking for state lock in Azure Storage before apply..."
+                
+                # Get storage account key for authentication
+                $STORAGE_KEY = az storage account keys list `
+                  --resource-group $(backendResourceGroupName) `
+                  --account-name $(backendStorageAccountName) `
+                  --query '[0].value' `
+                  -o tsv
+                
+                if (-not $STORAGE_KEY) {
+                  Write-Host "##[warning]Could not retrieve storage account key. Skipping lock check."
+                  exit 0
+                }
+                
+                # Check if the state file blob has a lease (lock)
+                $blobLease = az storage blob show `
+                  --account-name $(backendStorageAccountName) `
+                  --container-name $(backendContainerName) `
+                  --name $(devBackendKey) `
+                  --account-key $STORAGE_KEY `
+                  --query 'properties.lease.status' `
+                  -o tsv 2>$null
+                
+                if ($blobLease -eq "locked") {
+                  Write-Host "##[warning]State file is locked in Azure Storage"
+                  Write-Host "Attempting to break the lease..."
+                  
+                  az storage blob lease break `
+                    --account-name $(backendStorageAccountName) `
+                    --container-name $(backendContainerName) `
+                    --blob-name $(devBackendKey) `
+                    --account-key $STORAGE_KEY `
+                    --lease-break-period 0
+                  
+                  Write-Host "##[section]State lock lease broken successfully"
+                  Start-Sleep -Seconds 2
+                } elseif ($blobLease -eq "unlocked") {
+                  Write-Host "No state lock detected. Proceeding with apply..."
+                } else {
+                  Write-Host "State file check completed (file may not exist yet for first deployment)"
+                }
+            continueOnError: true
+            timeoutInMinutes: 1
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Apply (Using Pre-approved Plan)'
+            inputs:
+              azureSubscription: '$(devServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Applying pre-approved Terraform plan..."
+                Set-Location '$(devWorkspacePath)'
+                
+                # Verify plan file exists
+                if (-not (Test-Path "tfplan")) {
+                  Write-Host "##vso[task.logissue type=error]Plan file not found! Cannot apply."
+                  exit 1
+                }
+                
+                Write-Host "Plan file found. Applying changes..."
+                
+                # Apply the pre-approved plan (no variables needed - they're in the plan)
+                terraform apply -input=false -auto-approve tfplan
+                
+                Write-Host "##[section]Terraform apply completed successfully"
+
+          - task: AzureCLI@2
+            displayName: 'Terraform Output'
+            inputs:
+              azureSubscription: '$(devServiceConnection)'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                Write-Host "Retrieving Terraform outputs..."
+                Set-Location '$(devWorkspacePath)'
+                terraform output -json | ConvertFrom-Json | ConvertTo-Json -Depth 10
+                Write-Host "Outputs retrieved successfully"
+            condition: succeeded()

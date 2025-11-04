@@ -44,27 +44,21 @@ locals {
   # Spoke names
   spoke_names = ["alpha", "beta", "gamma"]
 
-  # Common tags
+  # Common tags - Azure allows maximum 15 tags per resource
   common_tags = merge({
-    Environment       = var.environment
-    Project           = "Azure.IAC.hubspoke"
-    ManagedBy         = "Terraform"
-    CreatedDate       = timestamp()
-    CostCenter        = "IT-Infrastructure"
-    Owner             = "Platform-Team"
-    BusinessUnit      = "Technology"
-    Application       = "Hub-Spoke-Network"
-    BackupRequired    = "Yes"
-    MaintenanceWindow = "Sunday-02:00-06:00-UTC"
-    Compliance        = "Internal"
+    Environment        = var.environment
+    Project            = "Azure.IAC.hubspoke"
+    ManagedBy          = "Terraform"
+    CostCenter         = "IT-Infrastructure"
+    Owner              = "Platform-Team"
+    BusinessUnit       = "Technology"
+    Application        = "Hub-Spoke-Network"
+    BackupRequired     = "Yes"
+    Compliance         = "Internal"
     DataClassification = "Internal"
-    SupportLevel      = "L2"
-    AutoShutdown      = var.environment == "dev" ? "Yes" : "No"
-    MonitoringEnabled = "Yes"
-    SecurityLevel     = "Standard"
-    ProvisionedBy     = "Azure-DevOps"
-    TerraformModule   = "hub-spoke-v1.0"
-    ReviewDate        = formatdate("YYYY-MM-DD", timeadd(timestamp(), "8760h")) # 1 year from now
+    AutoShutdown       = var.environment == "dev" ? "Yes" : "No"
+    MonitoringEnabled  = "Yes"
+    ProvisionedBy      = "Azure-DevOps"
   }, var.additional_tags)
 
   # Network address spaces

@@ -49,6 +49,12 @@ variable "enable_private_dns" {
   default     = true
 }
 
+variable "enable_ddos_protection" {
+  description = "Enable DDoS Protection Plan"
+  type        = bool
+  default     = false
+}
+
 variable "enable_private_endpoints" {
   description = "Enable private endpoints for services"
   type        = bool
@@ -177,6 +183,12 @@ variable "storage_replication_type" {
   default     = "LRS"
 }
 
+variable "enable_premium_storage" {
+  description = "Enable premium storage account"
+  type        = bool
+  default     = false
+}
+
 variable "storage_availability_threshold" {
   description = "Storage availability alert threshold percentage"
   type        = number
@@ -185,6 +197,12 @@ variable "storage_availability_threshold" {
 
 variable "enable_data_lake" {
   description = "Enable Data Lake Storage"
+  type        = bool
+  default     = false
+}
+
+variable "enable_data_lake_storage" {
+  description = "Enable Data Lake Storage Gen2"
   type        = bool
   default     = false
 }
@@ -366,6 +384,18 @@ variable "enable_monitoring_workbooks" {
   default     = false
 }
 
+variable "app_insights_retention_days" {
+  description = "Application Insights data retention in days"
+  type        = number
+  default     = 90
+}
+
+variable "enable_monitoring_dashboard" {
+  description = "Enable custom monitoring dashboard"
+  type        = bool
+  default     = true
+}
+
 #================================================
 # SECURITY CONFIGURATION
 #================================================
@@ -404,6 +434,12 @@ variable "enable_managed_identity" {
   description = "Enable Managed Identity"
   type        = bool
   default     = true
+}
+
+variable "enable_role_assignments" {
+  description = "Enable role assignments (requires elevated permissions on the service principal)"
+  type        = bool
+  default     = false
 }
 
 #================================================
@@ -1096,6 +1132,24 @@ variable "warning_alert_emails" {
   description = "Warning alert email addresses"
   type        = list(string)
   default     = []
+}
+
+variable "alert_email_addresses" {
+  description = "List of email addresses for alert notifications"
+  type        = list(string)
+  default     = []
+}
+
+variable "cpu_alert_threshold" {
+  description = "CPU usage percentage threshold for alerts"
+  type        = number
+  default     = 80
+}
+
+variable "memory_alert_threshold_bytes" {
+  description = "Available memory threshold in bytes for alerts"
+  type        = number
+  default     = 1073741824
 }
 
 variable "critical_alert_sms" {

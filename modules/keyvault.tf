@@ -56,7 +56,7 @@ resource "azurerm_key_vault_secret" "vm_admin_password" {
   name         = "vm-admin-password"
   value        = random_password.vm_admin_password.result
   key_vault_id = azurerm_key_vault.main.id
-  tags         = local.common_tags
+  # Tags removed - Key Vault secrets have strict tag limits
 
   depends_on = [azurerm_key_vault_access_policy.current_user]
 }
@@ -72,7 +72,7 @@ resource "azurerm_key_vault_secret" "sql_admin_password" {
   name         = "sql-admin-password"
   value        = random_password.sql_admin_password.result
   key_vault_id = azurerm_key_vault.main.id
-  tags         = local.common_tags
+  # Tags removed - Key Vault secrets have strict tag limits
 
   depends_on = [azurerm_key_vault_access_policy.current_user]
 }

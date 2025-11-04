@@ -29,7 +29,7 @@ terraform {
 provider "azurerm" {
   features {
     key_vault {
-      purge_soft_delete_on_destroy    = true
+      purge_soft_delete_on_destroy    = false  # Service principal lacks purge permission
       recover_soft_deleted_key_vaults = true
     }
     resource_group {
@@ -84,24 +84,10 @@ module "management_infrastructure" {
   storage_account_tier     = var.storage_account_tier
   storage_replication_type = var.storage_replication_type
 
-  # Tags for resources
+  # Tags for resources - Limited to 2 additional tags to stay within Azure's 15 tag limit
+  # Base common_tags already include: Environment, CostCenter, BusinessUnit, Compliance, DataClassification, BackupRequired
   additional_tags = {
-    Workspace                 = "Management"
-    Purpose                   = "Monitoring and Governance"
-    Environment               = var.environment
-    "Created By"              = var.created_by
-    "Service Provider"        = var.service_provider
-    "Cost Center"             = var.cost_center
-    "Business Unit"           = var.business_unit
-    "Project Name"            = var.project_name
-    "Owner Email"             = var.owner_email
-    "Data Classification"     = var.data_classification
-    "Compliance Requirements" = join(", ", var.compliance_requirements)
-    "Backup Required"         = var.backup_required ? "Yes" : "No"
-    "Disaster Recovery Tier"  = var.disaster_recovery_tier
-    "Maintenance Window"      = var.maintenance_window
-    ManagedBy                 = "Terraform"
-    Repository                = "Azure.IAC.hubspoke"
-    WorkspaceType             = "Management"
+    Workspace = "Management"
+    Purpose   = "Monitoring-Governance"
   }
 }

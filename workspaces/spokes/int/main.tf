@@ -21,7 +21,7 @@ terraform {
 provider "azurerm" {
   features {
     key_vault {
-      purge_soft_delete_on_destroy    = true
+      purge_soft_delete_on_destroy    = false  # Service principal lacks purge permission
       recover_soft_deleted_key_vaults = true
     }
     resource_group {
@@ -79,24 +79,11 @@ module "spoke_infrastructure" {
   enable_monitoring  = var.enable_monitoring
   log_retention_days = var.log_retention_days
 
-  # Tags for resources
+  # Tags for resources - Limited to 2 additional tags to stay within Azure's 15 tag limit
+  # Base common_tags already include: Environment, CostCenter, BusinessUnit, Compliance, DataClassification, BackupRequired
   additional_tags = {
-    Workspace                 = "Spoke-Int"
-    Environment               = var.environment
-    Purpose                   = "Integration Testing"
-    "Created By"              = var.created_by
-    "Service Provider"        = var.service_provider
-    "Cost Center"             = var.cost_center
-    "Business Unit"           = var.business_unit
-    "Project Name"            = var.project_name
-    "Owner Email"             = var.owner_email
-    "Data Classification"     = var.data_classification
-    "Compliance Requirements" = join(", ", var.compliance_requirements)
-    "Backup Required"         = var.backup_required ? "Yes" : "No"
-    "Disaster Recovery Tier"  = var.disaster_recovery_tier
-    "Maintenance Window"      = var.maintenance_window
-    ManagedBy                 = "Terraform"
-    Repository                = "Azure.IAC.hubspoke"
+    Workspace = "Spoke-Int"
+    Purpose   = "Integration-Testing"
   }
 }
 
